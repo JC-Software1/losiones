@@ -16,7 +16,15 @@ const ProductSchema = new mongoose.Schema({
     },
     sold: {
         type: Boolean,
-        default: false  // Por defecto, el producto no está vendido
+        default: false
+    },
+    soldDate: {
+        type: Date,
+        default: null
+    },
+    soldTo: {
+        type: String,
+        default: null
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,

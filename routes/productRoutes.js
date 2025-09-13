@@ -83,6 +83,7 @@ router.delete("/:id", auth, async (req, res) => {
 });
 
 // Marcar un producto como vendido
+// Marcar un producto como vendido
 router.put("/:id/sell", auth, async (req, res) => {
     try {
         const product = await Product.findOne({ _id: req.params.id, user: req.user.id });
@@ -91,11 +92,23 @@ router.put("/:id/sell", auth, async (req, res) => {
             return res.status(404).json({ error: "Producto no encontrado" });
         }
 
-        product.sold = true; // Marcar como vendido
+        // Buscar la venta más reciente que contenga este producto y esté liquidada
+        const sale = await Sale.findOne({
+            user: req.user.id,
+            productName: product.name,
+            settled: true
+        }).sort({ settledDate: -1 });
+
+        // Marcar como vendido y guardar datos del cliente
+        product.sold = true;
+        product.soldDate = new Date();
+        product.soldTo = sale ? sale.clientName : "Cliente no registrado";
+
         await product.save();
 
         res.json({ message: "Producto marcado como vendido", product });
     } catch (error) {
+        console.error("Error al marcar como vendido:", error);
         res.status(500).json({ error: "Error al marcar como vendido" });
     }
 });

@@ -130,6 +130,26 @@ btnDelete.classList.remove("hidden");   // <- ahora sí se ve
 btnAddPayment.classList.remove("hidden");
 }
 
+
+async function loadProductsForSelect() {
+    try {
+        const token = getToken();
+        const products = await apiFetch("/products", "GET", null, token);
+        const select = document.getElementById("productName");
+
+        select.innerHTML = '<option value="">Seleccioná un producto</option>';
+
+        products.filter(p => !p.sold).forEach(product => {
+            const option = document.createElement("option");
+            option.value = product.name;
+            option.textContent = `${product.name} ($${product.salePrice.toLocaleString()})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error al cargar productos:", error);
+    }
+}
+
 /* ---------- guardar nueva ---------- */
 /* ---------- guardar nueva ---------- */
 async function saveSale() {
@@ -154,6 +174,19 @@ async function saveSale() {
         const token = getToken();
         await apiFetch("/sales/new", "POST", saleData, token);
         alert("Venta guardada correctamente.");
+
+        // ✅ Marcar producto como vendido
+try {
+    const productToSell = await apiFetch("/products", "GET", null, token);
+    const soldProduct = productToSell.find(p => p.name === saleData.productName && !p.sold);
+
+    if (soldProduct) {
+        await apiFetch(`/products/${soldProduct._id}/sell`, "PUT", null, token);
+    }
+} catch (err) {
+    console.warn("No se pudo marcar el producto como vendido:", err);
+}
+
         form.reset();
         // ponemos la fecha de hoy por defecto de nuevo
         inputDate.value = new Date().toISOString().split('T')[0];
@@ -161,8 +194,16 @@ async function saveSale() {
     } catch (error) {
         console.error("Error al guardar la venta:", error.message);
         alert("No se pudo guardar la venta: " + error.message);
+
+
     }
+
+    await loadProductsForDropdown(); // ✅ recarga el dropdown
+
+
 }
+
+
 /* ---------- actualizar ---------- */
 async function updateSale() {
     const id = inputId.value;
@@ -247,9 +288,100 @@ document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toLocaleDateString('en-CA'); // formato YYYY-MM-DD
     document.getElementById("saleDate").value = today;
     loadSales();
+    loadProductsForSelect();
+
+    loadProductsForDropdown();
+document.getElementById("productDropdown").addEventListener("click", (e) => {
+    if (!e.target.closest(".btn-edit-dropdown")) {
+        toggleDropdown();
+    }
 });
 
+});
+
+async function loadProductsForDropdown() {
+    const token = getToken();
+    const products = await apiFetch("/products", "GET", null, token);
+    const panel = document.getElementById("productDropdownPanel");
+    panel.innerHTML = "";
+
+    const availableProducts = products.filter(p => !p.sold);
+
+    availableProducts.forEach(product => {
+        const item = document.createElement("div");
+        item.className = "dropdown-item";
+        item.innerHTML = `
+            <div class="product-card-dropdown">
+                <div class="info">
+                    <div class="name">${product.name}</div>
+                    <div class="price">$${product.salePrice.toLocaleString()}</div>
+                </div>
+                <div class="actions">
+                    <button class="btn-edit-dropdown" data-id="${product._id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // ✅ Acá va el evento
+        item.querySelector('.btn-edit-dropdown').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const productId = e.currentTarget.dataset.id;
+            window.location.href = `productos.html?edit=${productId}`;
+        });
+
+        item.addEventListener("click", (e) => {
+            if (e.target.closest('.btn-edit-dropdown')) return;
+            selectProduct(product);
+        });
+
+        panel.appendChild(item);
+    });
+}
+
+function selectProduct(product) {
+    document.getElementById("productName").value = product.name;
+    document.getElementById("productNameDisplay").value = `${product.name} ($${product.salePrice.toLocaleString()})`;
+    document.getElementById("price").value = product.salePrice;
+
+    // Cerrar dropdown
+    document.getElementById("productDropdownPanel").classList.add("hidden");
+    document.querySelector(".dropdown-trigger").classList.remove("active");
+}
+
+function toggleDropdown() {
+    const panel = document.getElementById("productDropdownPanel");
+    const trigger = document.querySelector(".dropdown-trigger");
+    panel.classList.toggle("hidden");
+    trigger.classList.toggle("active");
+}
+
+window.editProductFromDropdown = function(productId) {
+    window.location.href = `productos.html?edit=${productId}`;
+};
+
 document.addEventListener("DOMContentLoaded", () => {
+
+    document.getElementById("productName").addEventListener("change", (e) => {
+    const selectedProductName = e.target.value;
+    if (!selectedProductName) {
+        document.getElementById("price").value = "";
+        return;
+    }
+
+    // Buscar el producto seleccionado
+    const token = getToken();
+    apiFetch("/products", "GET", null, token).then(products => {
+        const product = products.find(p => p.name === selectedProductName);
+        if (product) {
+            document.getElementById("price").value = product.salePrice;
+        }
+    }).catch(error => {
+        console.error("Error al cargar productos:", error);
+    });
+});
+
     loadSales();
     if (document.getElementById("paymentSection")) {
         document.getElementById("paymentSection").style.display = "none";

@@ -36,6 +36,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Error al inicializar:", error);
         showError("Error al cargar la aplicación");
     }
+
+    // ✅ ✅ ✅ MOVER AQUÍ ✅ ✅ ✅
+    const params = new URLSearchParams(window.location.search);
+    const editId = params.get('edit');
+
+    if (editId) {
+        // ✅ Cargar productos y activar edición
+        loadProducts().then(() => {
+            const product = products.find(p => p._id === editId);
+            if (product) {
+                editProduct(product._id); // ✅ activa el formulario
+                window.scrollTo({ top: 0, behavior: 'smooth' }); // ✅ sube al form
+            }
+        });
+    }
 });
 
 // Cargar productos
