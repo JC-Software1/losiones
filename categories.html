@@ -1,257 +1,356 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Ventas</title>
-    <link rel="stylesheet" href="css/dashboard.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-      /* Ajustes para iPhone X */
-      @media screen and (max-width: 375px) {
-        .container {
-          width: 90%;
-          padding: 15px;
+        /* ==========  Variables CSS (nuevo estilo)  ========== */
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --white: #ffffff;
+            --dark: #2c3e50;
+            --beige: #f5f5dc;
+            --cream: #faf8f3;
+            --light-gray: #f8f9fa;
+            --medium-gray: #6c757d;
+            --border: #e9ecef;
+            --shadow: 0 2px 4px rgba(0,0,0,0.08);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+            --radius: 8px;
+            --radius-lg: 12px;
+            --transition: all 0.3s ease;
         }
-        .navbar ul {
-          flex-direction: column;
-          gap: 10px;
-          align-items: center;
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+            background:linear-gradient(135deg,var(--cream) 0%,var(--light-gray) 100%);
+            color:var(--dark);
+            line-height:1.5;
+            min-height:100vh;
         }
-        .wave-group .input {
-          width: 100%;
+        .container{max-width:100%;margin:0 auto;padding:16px;min-height:100vh}
+
+        /* ==========  Header  ========== */
+        .header{
+            background:var(--white);
+            border-radius:var(--radius-lg);
+            padding:20px;
+            margin-bottom:20px;
+            box-shadow:var(--shadow);
+            text-align:center;
+            border:1px solid var(--border);
         }
-        button {
-          width: 100%;
+        .header h1{color:var(--primary);font-size:24px;font-weight:600;margin-bottom:8px}
+        .header p{color:var(--medium-gray);font-size:14px}
+
+        /* ==========  Menú (nuevo estilo)  ========== */
+        .menu-toggle{
+            position:fixed;
+            top:18px;
+            right:18px;
+            width:52px;
+            height:52px;
+            background:var(--white);
+            border:1px solid var(--border);
+            border-radius:50%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            cursor:pointer;
+            box-shadow:var(--shadow);
+            z-index:10010;
+            transition:transform .22s ease,background .22s ease,color .22s ease;
         }
-      }
+        .menu-toggle:active{transform:scale(.98)}
+        .menu-toggle:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
+        .menu-toggle .menu-icon{font-size:18px;color:var(--primary)}
+        .menu-toggle.open{background:var(--primary);color:var(--white)}
+        .menu-toggle.open .menu-icon{color:var(--white)}
+        .backdrop{
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,.45);
+            z-index:10005;
+            opacity:0;
+            visibility:hidden;
+            transition:opacity .28s ease,visibility .28s;
+        }
+        .backdrop.show{opacity:1;visibility:visible}
+        .menu-items{
+            position:fixed;
+            left:50%;
+            top:50%;
+            transform:translate(-50%,-50%) scale(.92);
+            min-width:260px;
+            max-width:92%;
+            background:linear-gradient(180deg,var(--white),#fbfbfb);
+            border-radius:14px;
+            padding:14px;
+            box-shadow:0 20px 50px rgba(0,0,0,.22);
+            z-index:10010;
+            opacity:0;
+            visibility:hidden;
+            transition:transform .32s cubic-bezier(.2,.9,.2,1),opacity .22s ease,visibility .22s;
+            border:1px solid rgba(0,0,0,.03);
+            overflow:hidden;
+            outline:0;
+        }
+        .menu-items.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+        .menu-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px}
+        .menu-head strong{color:var(--primary);font-size:14px}
+        .menu-close{background:transparent;border:none;font-size:16px;color:var(--medium-gray);cursor:pointer;padding:6px;border-radius:8px}
+        .menu-close:hover{color:var(--danger);transform:translateY(-2px)}
+        .menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;align-items:stretch}
+        .menu-link{display:flex;gap:10px;align-items:center;justify-content:center;text-decoration:none;background:linear-gradient(180deg,#fff,var(--light-gray));padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.03);box-shadow:0 6px 18px rgba(0,0,0,.06);transition:transform .18s ease,box-shadow .18s ease,background .18s;color:var(--primary);font-weight:600;font-size:13px;text-align:center}
+        .menu-link i{font-size:16px;width:20px;text-align:center;color:var(--accent)}
+        .menu-link span{display:inline-block;line-height:1}
+        .menu-link:hover{transform:translateY(-6px);box-shadow:0 14px 36px rgba(0,0,0,.14);background:linear-gradient(180deg,var(--accent),#2a86c8);color:#fff}
+        .menu-link:hover i{color:#fff}
+        @media (max-width:420px){.menu-grid{grid-template-columns:repeat(3,1fr);gap:8px}.menu-link{padding:8px;font-size:12px;border-radius:8px}}
+        .menu-link{opacity:0;transform:translateY(6px) scale(.995);transition-property:transform,opacity,box-shadow,background;transition-duration:320ms}
+        .menu-items.show .menu-link{opacity:1;transform:translateY(0) scale(1)}
+        .menu-link:focus{outline:3px solid rgba(52,152,219,.18);transform:translateY(-3px)}
+
+        /* ==========  Búsqueda  ========== */
+        .search-container{margin:20px 0}
+        .search-input{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--white);font-size:16px;transition:var(--transition)}
+        .search-input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px rgba(52,152,219,.1)}
+
+        /* ==========  Formulario (estilo nuevo)  ========== */
+        .form-container{background:var(--white);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px;box-shadow:var(--shadow);border:1px solid var(--border)}
+        .form-title{font-size:20px;font-weight:600;color:var(--primary);margin-bottom:20px;text-align:center}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+        .form-group{display:flex;flex-direction:column}
+        .form-group.full-width{grid-column:1/-1}
+        .form-group label{font-weight:500;color:var(--dark);margin-bottom:6px;font-size:14px}
+        .form-group input,.form-group select,.form-group textarea{padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--white);font-size:16px;transition:var(--transition)}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px rgba(52,152,219,.1)}
+        .button-group{display:flex;gap:12px;justify-content:center;margin-top:20px}
+        .btn{padding:12px 24px;border:0;border-radius:var(--radius);font-weight:500;cursor:pointer;transition:var(--transition);text-decoration:none;display:inline-flex;align-items:center;gap:8px;font-size:14px}
+        .btn-primary{background:var(--accent);color:var(--white)}
+        .btn-success{background:var(--success);color:var(--white)}
+        .btn-warning{background:var(--warning);color:var(--white)}
+        .btn-danger{background:var(--danger);color:var(--white)}
+        .btn-secondary{background:var(--light-gray);color:var(--dark)}
+        .btn:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
+        .btn:active{transform:translateY(0)}
+        .btn-sm{padding:8px 16px;font-size:12px}
+
+        /* ==========  Listado (estilo nuevo)  ========== */
+        .sales-grid{display:grid;gap:16px;margin-bottom:24px}
+        .sale-card{background:var(--white);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border);transition:var(--transition);position:relative}
+        .sale-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
+        .sale-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+        .sale-info h3{font-size:16px;font-weight:600;color:var(--primary);margin-bottom:4px}
+        .sale-info p{font-size:14px;color:var(--medium-gray)}
+        .sale-amount{text-align:right}
+        .debt-amount{font-size:18px;font-weight:700;color:var(--danger)}
+        .progress-text{font-size:12px;color:var(--success)}
+        .sale-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+        .sale-actions .btn{flex:1;min-width:80px;justify-content:center}
+        .progress-bar{width:100%;height:6px;background:var(--light-gray);border-radius:3px;margin:12px 0;overflow:hidden}
+        .progress-fill{height:100%;background:linear-gradient(90deg,var(--success),var(--warning));border-radius:3px;transition:width .3s ease}
+
+        /* ==========  Modal  ========== */
+        .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:var(--transition)}
+        .modal.show{opacity:1;visibility:visible}
+        .modal-content{background:var(--white);border-radius:var(--radius-lg);padding:24px;max-width:400px;width:calc(100% - 32px);max-height:80vh;overflow-y:auto;position:relative}
+        .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+        .modal-title{font-size:18px;font-weight:600;color:var(--primary)}
+        .modal-close{background:0;border:none;font-size:20px;cursor:pointer;color:var(--medium-gray);padding:4px}
+        .modal-close:hover{color:var(--danger)}
+
+        /* ==========  Estados vacíos / loading  ========== */
+        .empty-state{text-align:center;padding:40px 20px;color:var(--medium-gray)}
+        .empty-state i{font-size:48px;margin-bottom:16px;opacity:.5}
+        .loading{display:flex;justify-content:center;align-items:center;padding:40px}
+        .spinner{width:32px;height:32px;border:3px solid var(--light-gray);border-top:3px solid var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+        /* ==========  Total deuda  ========== */
+        .total-debt{background:linear-gradient(135deg,var(--primary),var(--secondary));color:var(--white);border-radius:var(--radius-lg);padding:24px;text-align:center;margin-bottom:24px}
+        .total-debt h2{font-size:24px;margin-bottom:8px}
+        .total-debt p{opacity:.9;font-size:14px}
+
+        /* ==========  Responsive  ========== */
+        @media (max-width:768px){
+            .container{padding:12px}
+            .form-grid{grid-template-columns:1fr;gap:12px}
+            .button-group{flex-direction:column}
+            .sale-actions{flex-direction:column}
+            .sale-actions .btn{flex:none}
+            .modal-content{margin:16px;width:calc(100% - 32px)}
+        }
+        .hidden{display:none !important}
     </style>
-  </head>
-  <script src="loader.js"></script>
-  <body>
+</head>
+<body>
 
-   
-
+    <!-- ==========  MENÚ (nuevo estilo)  ========== -->
+    <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuItems" aria-label="Abrir menú">
+        <span class="menu-icon"><i class="fas fa-bars"></i></span>
+    </button>
+    <div class="backdrop" id="backdrop"></div>
+    <nav class="menu-items" id="menuItems" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="menu-head">
+            <strong>Acciones rápidas</strong>
+            <button class="menu-close" id="menuClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="menu-grid">
+            <a href="historial.html" class="menu-link"><i class="fas fa-user-plus"></i><span>Historial</span></a>
+            <a href="liquidados.html" class="menu-link"><i class="fas fa-check-circle"></i><span>Liquidados</span></a>
+            <a href="productos.html" class="menu-link"><i class="fas fa-box-open"></i><span>Agregar producto</span></a>
+            <a href="inventario.html" class="menu-link"><i class="fas fa-warehouse"></i><span>Inventario</span></a>
+            <a href="vendidos.html" class="menu-link"><i class="fas fa-tags"></i><span>Productos vendidos</span></a>
+            <a href="categories.html" class="menu-link"><i class="fas fa-file-alt"></i><span>Registro</span></a>
+        </div>
+    </nav>
 
     <div class="container">
 
-
-      
-    <div class="navbar-wrapper">
-      <div class="backdrop" id="backdrop"></div>
-    
-      
-      <nav class="navbar-menu" id="navbar">
-        <button class="menu-toggle" id="menuToggle">☰</button>
-        <div class="menu-items" id="menuItems">
-          <a href="historial.html" >Historial</a>
-          <a href="abonos.html" >Historial de abonos</a>
-          <a href="liquidados.html">Liquidados</a>
-          <a href="productos.html">Agregar Producto</a>         
-          <a href="inventario.html">Inventario</a>
-          <a href="vendidos.html">Productos Vendidos</a>
-         
-          
+        <!-- ==========  HEADER (nuevo estilo)  ========== -->
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> Registro de Ventas</h1>
+            <p>Gestiona tus ventas y pagos de manera eficiente</p>
         </div>
-        
-      </nav>
-    </div>
 
-    
-
-    <div class="busqueda-centrada" >
-      <input type="text" id="searchInput" placeholder="🔍 Buscar cliente por nombre..." />
-      </div>
-
-
-      <h1>Registro de Ventas</h1>
-
-      <!-- Formulario de Registro -->
-      <div class="form-container">
-        <form id="salesForm">
-          <input type="hidden" id="saleId" value="" />
-          
-          <div class="wave-group">
-            <input id="clientName" required type="text" class="input" />
-            <span class="bar"></span>
-            <label id="cliente" class="label">
-              <span class="label-char" style="--index: 0">N</span>
-              <span class="label-char" style="--index: 1">o</span>
-              <span class="label-char" style="--index: 2">m</span>
-              <span class="label-char" style="--index: 3">b</span>
-              <span class="label-char" style="--index: 4">r</span>
-              <span class="label-char" style="--index: 5">e</span>
-              <span class="label-char" style="--index: 6">ㅤ </span>
-
-              <span class="label-char" style="--index: 11">C</span>
-              <span class="label-char" style="--index: 12">l</span>
-              <span class="label-char" style="--index: 13">i</span>
-              <span class="label-char" style="--index: 14">e</span>
-              <span class="label-char" style="--index: 15">n</span>
-              <span class="label-char" style="--index: 16">t</span>
-              <span class="label-char" style="--index: 17">e</span>
-            </label>
-          </div>
-
-          <div class="wave-group">
-            <input id="productName" required type="text" class="input" />
-            <span class="bar"></span>
-            <label id="productos-nombre" class="label">
-              <span class="label-char" style="--index: 0">N</span>
-              <span class="label-char" style="--index: 1">o</span>
-              <span class="label-char" style="--index: 2">m</span>
-              <span class="label-char" style="--index: 3">b</span>
-              <span class="label-char" style="--index: 4">r</span>
-              <span class="label-char" style="--index: 5">e</span>
-              <span class="label-char" style="--index: 6"> ㅤ</span>
-
-              <span class="label-char" style="--index: 13">L</span>
-              <span class="label-char" style="--index: 14">o</span>
-              <span class="label-char" style="--index: 15">c</span>
-              <span class="label-char" style="--index: 16">i</span>
-              <span class="label-char" style="--index: 17">ó</span>
-              <span class="label-char" style="--index: 18">n</span>
-            </label>
-          </div>
-
-          <div class="wave-group">
-            <input id="saleDate" required type="date" class="input" />
-
-            <span class="bar"></span>
-            <label id="productos-nombre" class="label">
-              <span class="label-char" style="--index: 0">F</span>
-              <span class="label-char" style="--index: 1">e</span>
-              <span class="label-char" style="--index: 2">c</span>
-              <span class="label-char" style="--index: 3">h</span>
-              <span class="label-char" style="--index: 4">a</span>
-
-            </label>
-
-          </div>
-          
-          <div class="wave-group">
-            <input id="price" required type="number" class="input" />
-            <span class="bar"></span>
-            <label id="precio-venta" class="label">
-              <span class="label-char" style="--index: 0">P</span>
-              <span class="label-char" style="--index: 1">r</span>
-              <span class="label-char" style="--index: 2">e</span>
-              <span class="label-char" style="--index: 3">c</span>
-              <span class="label-char" style="--index: 4">i</span>
-              <span class="label-char" style="--index: 4">o</span>
-              <span class="label-char" style="--index: 5">ㅤ</span>
-              <span class="label-char" style="--index: 5">d</span>
-              <span class="label-char" style="--index: 5">e</span>
-              <span class="label-char" style="--index: 5">ㅤ</span>
-              <span class="label-char" style="--index: 5">v</span>
-              <span class="label-char" style="--index: 5">e</span>
-              <span class="label-char" style="--index: 5">n</span>
-              <span class="label-char" style="--index: 5">t</span>
-              <span class="label-char" style="--index: 5">a</span>
-            </label>
-          </div>
-          
-          <div class="wave-group">
-            <input id="installments" required type="text" class="input" />
-            <span class="bar"></span>
-            <label class="label">
-              <span class="label-char" style="--index: 0">C</span>
-              <span class="label-char" style="--index: 1">u</span>
-              <span class="label-char" style="--index: 2">o</span>
-              <span class="label-char" style="--index: 3">t</span>
-              <span class="label-char" style="--index: 4">a</span>
-              <span class="label-char" style="--index: 5">s</span>
-            </label>
-          </div>
-          
-          <div class="wave-group">
-            <input id="advancePayment" required type="number" class="input" />
-            <span class="bar"></span>
-            <label class="label">
-              <span class="label-char" style="--index: 0">A</span>
-              <span class="label-char" style="--index: 1">b</span>
-              <span class="label-char" style="--index: 2">o</span>
-              <span class="label-char" style="--index: 3">n</span>
-              <span class="label-char" style="--index: 4">o</span>
-            </label>
-          </div>
-
-          <div class="wave-group">
-            <input id="clientAddress" required type="text" class="input" />
-            <span class="bar"></span>
-            <label id="direccion-cliente" class="label">
-                <span class="label-char" style="--index: 0">D</span>
-                <span class="label-char" style="--index: 1">i</span>
-                <span class="label-char" style="--index: 2">r</span>
-                <span class="label-char" style="--index: 3">e</span>
-                <span class="label-char" style="--index: 4">c</span>
-                <span class="label-char" style="--index: 5">c</span>
-                <span class="label-char" style="--index: 6">i</span>
-                <span class="label-char" style="--index: 7">ó</span>
-                <span class="label-char" style="--index: 8">n</span>
-                <span class="label-char" style="--index: 9">ㅤ </span>
-                <span class="label-char" style="--index: 10">d</span>
-                <span class="label-char" style="--index: 11">e</span>
-                <span class="label-char" style="--index: 12">l</span>
-                <span class="label-char" style="--index: 13"> ㅤ</span>
-                <span class="label-char" style="--index: 14">C</span>
-                <span class="label-char" style="--index: 15">l</span>
-                <span class="label-char" style="--index: 16">i</span>
-                <span class="label-char" style="--index: 17">e</span>
-                <span class="label-char" style="--index: 18">n</span>
-                <span class="label-char" style="--index: 19">t</span>
-                <span class="label-char" style="--index: 20">e</span>
-            </label>
+        <!-- ==========  BÚSQUEDA  ========== -->
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar cliente por nombre...">
         </div>
-        
 
-          <!-- Añadir esta sección después del formulario existente -->
-<div id="paymentSection" class="form-container" style="display: none;">
-  <h3>Registrar Nuevo Abono</h3>
-  <div class="wave-group">
-    <input id="paymentDate" required type="date" class="input" />
-    <span class="bar"></span>
-    <label class="label">
-      <span class="label-char" style="--index: 0">F</span>
-      <span class="label-char" style="--index: 1">e</span>
-      <span class="label-char" style="--index: 2">c</span>
-      <span class="label-char" style="--index: 3">h</span>
-      <span class="label-char" style="--index: 4">a</span>
-      <span class="label-char" style="--index: 5">ㅤ</span>
-      <span class="label-char" style="--index: 6">d</span>
-      <span class="label-char" style="--index: 7">e</span>
-      <span class="label-char" style="--index: 8">ㅤ</span>
-      <span class="label-char" style="--index: 9">a</span>
-      <span class="label-char" style="--index: 10">b</span>
-      <span class="label-char" style="--index: 11">o</span>
-      <span class="label-char" style="--index: 12">n</span>
-      <span class="label-char" style="--index: 13">o</span>
-    </label>
-  </div>
-  
-  <div class="buttons">
-    <button type="button" id="addPayment">Registrar Abono</button>
-  </div>
+        <!-- ==========  FORMULARIO (estilo nuevo)  ========== -->
+        <div class="form-container">
+            <h2 class="form-title">Registrar Nueva Venta</h2>
+            <form id="salesForm">
+                <input type="hidden" id="saleId">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="clientName">Cliente</label>
+                        <input type="text" id="clientName" placeholder="Nombre del cliente" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="clientAddress">Dirección</label>
+                        <input type="text" id="clientAddress" placeholder="Dirección del cliente">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="productName">Producto</label>
+                        <input type="text" id="productName" placeholder="Nombre del producto" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="saleDate">Fecha de Venta</label>
+                        <input type="date" id="saleDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="price">Precio Total</label>
+                        <input type="number" id="price" placeholder="0" min="0" step="1000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="installments">Cuotas</label>
+                        <input type="text" id="installments" placeholder="Ej: 12 cuotas mensuales">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="advancePayment">Pago Inicial</label>
+                        <input type="number" id="advancePayment" placeholder="0" min="0" step="1000">
+                    </div>
+                </div>
+
+
+                    <button type="button" class="btn btn-success hidden" id="updateSale">
+                        <i class="fas fa-edit"></i> Actualizar
+                    </button>
+                    <button type="button" class="btn btn-secondary hidden" id="cancelUpdate">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+
+                    <div class="button-group">
+    <button type="button" class="btn btn-primary" id="saveSale">
+        <i class="fas fa-save"></i> Guardar Venta
+    </button>
+    <button type="button" class="btn btn-success hidden" id="updateSale">
+        <i class="fas fa-edit"></i> Actualizar
+    </button>
+    <button type="button" class="btn btn-secondary hidden" id="cancelUpdate">
+        <i class="fas fa-times"></i> Cancelar
+    </button>
+    <!-- 🔥 Agregá este botón que faltaba -->
+    <button type="button" class="btn btn-danger hidden" id="deleteSale">
+        <i class="fas fa-trash"></i> Eliminar
+    </button>
 </div>
 
-          <div class="buttons">
-            <button type="button" id="saveSale">Guardar</button>
-            <button type="button" id="updateSale" style="display: none">Actualizar</button>
-            <button type="button" id="cancelUpdate" style="display: none">Cancelar</button>
-            <button type="button" id="deleteSale" style="display: none">Eliminar</button>
-          </div>
-        </form>
-      </div>
+                </div>
+            </form>
+        </div>
 
-      <!-- Listado de Ventas -->
-      <div class="list-container">
-        <h2 id="titulo">CLIENTES</h2>
-        <ul id="salesList">
-          <!-- Aquí se agregarán dinámicamente las ventas -->
-        </ul>
-      </div>
+        <!-- ==========  SECCIÓN ABONO (estilo nuevo)  ========== -->
+        <div class="form-container" id="paymentSection" style="display:none">
+            <h3 class="form-title">Registrar Nuevo Abono</h3>
+            <div class="form-group full-width">
+                <label for="paymentDate">Fecha del Abono</label>
+                <input type="date" id="paymentDate" class="input">
+            </div>
+            <div class="button-group">
+                <button type="button" class="btn btn-success" id="addPayment">
+                    <i class="fas fa-plus-circle"></i> Registrar Abono
+                </button>
+            </div>
+        </div>
+
+        <!-- ==========  LISTADO (estilo nuevo)  ========== -->
+        <div class="sales-grid" id="salesList">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
     </div>
 
+    <!-- ==========  MODAL DE PAGO (estilo nuevo)  ========== -->
+    <div class="modal" id="paymentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Registrar Pago</h3>
+                <button class="modal-close" id="closePaymentModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label for="paymentAmount">Monto del Pago</label>
+                <input type="number" id="paymentAmount" placeholder="0" min="0" step="1000" required>
+            </div>
+            <div class="form-group">
+                <label for="paymentDate">Fecha del Pago</label>
+                <input type="date" id="paymentDate" required>
+            </div>
+            <div class="button-group">
+                <button type="button" class="btn btn-success" id="confirmPayment">
+                    <i class="fas fa-check"></i> Registrar Pago
+                </button>
+                <button type="button" class="btn btn-secondary" id="cancelPayment">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========  Scripts (sin tocar)  ========== -->
+    <script src="loader.js"></script>
     <script src="dashboard/categories.js" type="module"></script>
     <script src="main.js" type="module"></script>
-  </body>
+</body>
 </html>

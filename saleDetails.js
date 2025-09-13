@@ -133,7 +133,21 @@ function formatDate(dateString) {
         minute: '2-digit'
     };
     
-    return new Date(dateString).toLocaleDateString('es-CO', options);
+    function formatDate(dateString) {
+    const date = new Date(dateString);
+    const offset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() - offset);
+    
+    const options = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+    
+    return localDate.toLocaleDateString('es-CO', options);
+}
 }
 
 function goBack() {

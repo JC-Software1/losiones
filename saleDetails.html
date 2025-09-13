@@ -4,175 +4,403 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalles de la Venta</title>
-    <link rel="stylesheet" href="/css/dashboard.css">
     <style>
-        /* Estilos específicos para la página de detalles */
-        .sale-details-container {
+        /* Estilo general inspirado en un diseño profesional similar a categories.html: limpio, grid-based, responsive, con colores neutros y acentos. */
+        :root {
+            --primary-color: #007bff; /* Azul principal para acentos */
+            --secondary-color: #6c757d; /* Gris para textos secundarios */
+            --background-color: #f8f9fa; /* Fondo claro */
+            --text-primary: #212529; /* Texto principal */
+            --success-color: #28a745; /* Verde para pagado */
+            --warning-color: #ffc107; /* Amarillo para parcial/pendiente */
+            --danger-color: #dc3545; /* Rojo para deudas */
+            --border-radius: 8px;
+            --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        /* Contenedor de detalles: Grid responsive, similar a categorías con tarjetas. */
+        #saleDetails {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive: 1 columna en móvil, más en desktop */
+            gap: 1rem;
+            width: 100%;
+            max-width: 1200px;
             margin-bottom: 2rem;
         }
-        
+
         .detail-card {
-            background: var(--gradient-card);
-            border-radius: var(--border-radius-md);
-            padding: 1.5rem;
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--glass-shadow);
-            transition: all var(--transition-speed);
-            transform-style: preserve-3d;
-            perspective: 1000px;
+            background-color: white;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        
-        .detail-card:hover {
-            transform: translateY(-5px) rotateX(2deg);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
-        }
-        
+
         .detail-label {
-            color: var(--text-secondary);
             font-size: 0.9rem;
+            color: var(--secondary-color);
             margin-bottom: 0.5rem;
-            display: block;
         }
-        
+
         .detail-value {
-            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .price-value { color: var(--primary-color); }
+        .paid-value { color: var(--success-color); }
+        .debt-value { color: var(--danger-color); }
+
+        /* Estado de pago: Barra destacada con progreso. */
+        #paymentStatus {
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .payment-status {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            font-weight: bold;
             font-size: 1.2rem;
-            font-weight: 600;
+            box-shadow: var(--box-shadow);
         }
-        
-        .price-value {
+
+        .status-paid {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .status-pending {
+            background-color: var(--warning-color);
+            color: var(--text-primary);
+        }
+
+        .status-partial {
+            background-color: var(--warning-color);
+            color: var(--text-primary);
+            position: relative;
+        }
+
+        /* Barra de progreso para pago parcial */
+        .status-partial::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            width: var(--progress-width, 0%); /* Se setea dinámicamente en JS */
+            background-color: var(--success-color);
+            border-bottom-left-radius: var(--border-radius);
+            border-bottom-right-radius: var(--border-radius);
+        }
+
+        /* Historial de abonos: Tabla responsive. */
+        #paymentsDetails {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        h2 {
+            text-align: center;
             color: var(--primary-color);
-            font-size: 1.4rem;
-            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
         }
-        
-        .paid-value {
-            color: var(--success);
-        }
-        
-        .debt-value {
-            color: var(--danger);
-        }
-        
-        /* Tabla de pagos estilizada */
-        .payments-section {
-            margin-top: 2.5rem;
-            padding: 2rem;
-            background: var(--glass-bg);
-            border-radius: var(--border-radius-lg);
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--glass-shadow);
-        }
-        
+
         .payments-table {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 10px;
-            margin-top: 1.5rem;
+            border-collapse: collapse;
+            background-color: white;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--box-shadow);
         }
-        
-        .payments-table th {
-            color: var(--text-secondary);
-            font-weight: 600;
+
+        .payments-table th, .payments-table td {
             padding: 1rem;
             text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid #dee2e6;
         }
-        
-        .payments-table td {
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
+
+        .payments-table th {
+            background-color: var(--primary-color);
+            color: white;
         }
-        
-        .payments-table tr:hover td {
-            background: rgba(255, 255, 255, 0.1);
-            transform: scale(1.01);
-            transition: all var(--transition-speed);
-        }
-        
-        .payments-table td:first-child {
-            border-radius: var(--border-radius-md) 0 0 var(--border-radius-md);
-        }
-        
-        .payments-table td:last-child {
-            border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
-        }
-        
+
         .payment-amount {
-            font-weight: 600;
-            color: var(--success);
+            color: var(--success-color);
+            font-weight: bold;
         }
-        
-        /* Botón de volver estilizado */
-        .back-button {
-            display: flex;
-            justify-content: center;
-            margin-top: 2rem;
-        }
-        
-        .back-button button {
-            padding: 0.9rem 2rem;
-            font-weight: 600;
-            font-size: 1rem;
-            text-transform: uppercase;
-            background: var(--primary-color);
+
+        /* Botón volver: Estilo moderno. */
+        button {
+            background-color: var(--primary-color);
             color: white;
             border: none;
-            border-radius: var(--border-radius-md);
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--border-radius);
             cursor: pointer;
-            transition: all var(--transition-speed);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            font-size: 1rem;
+            margin-top: 1rem;
+            transition: background-color 0.3s;
         }
-        
-        .back-button button:hover {
-            transform: translateY(-5px);
-            background: var(--primary-hover);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+
+        button:hover {
+            background-color: #0056b3;
         }
-        
-        /* Estilos para el estado de pago */
-        .payment-status {
-            margin-top: 2rem;
-            padding: 1.5rem;
-            border-radius: var(--border-radius-md);
-            text-align: center;
-            font-weight: 700;
-            font-size: 1.2rem;
-        }
-        
-        .status-paid {
-            background: rgba(32, 227, 178, 0.1);
-            border: 1px solid var(--success);
-            color: var(--success);
-        }
-        
-        .status-pending {
-            background: rgba(255, 107, 107, 0.1);
-            border: 1px solid var(--danger);
-            color: var(--danger);
-        }
-        
-        .status-partial {
-            background: rgba(255, 190, 61, 0.1);
-            border: 1px solid var(--warning);
-            color: var(--warning);
+
+        /* Responsividad para iPhone 12 Pro (390px width) */
+        @media (max-width: 390px) {
+            body { padding: 0.5rem; }
+            h1 { font-size: 1.5rem; }
+            #saleDetails { grid-template-columns: 1fr; } /* Una columna en móvil */
+            .detail-card { padding: 0.8rem; }
+            .payments-table th, .payments-table td { padding: 0.8rem; font-size: 0.9rem; }
+            button { width: 100%; }
         }
     </style>
-    <script src="loader.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Detalles de la Venta</h1>
-        <div id="saleDetails" class="sale-details-container"></div>
-        <div id="paymentStatus"></div>
-        <div id="paymentsDetails" class="payments-section"></div>
-        <div class="back-button">
-            <button onclick="goBack()">Volver </button>
+
+        <button onclick="goBack()">Volver</button>
+
+    <h1>Detalles de la Venta</h1>
+    <div id="saleDetails"></div>
+    <div id="paymentStatus"></div>
+    <div id="paymentsDetails"></div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const saleDetailsContainer = document.getElementById("saleDetails");
+    const paymentsContainer = document.getElementById("paymentsDetails");
+    const paymentStatusContainer = document.getElementById("paymentStatus");
+    const sale = JSON.parse(localStorage.getItem("saleDetails"));
+
+    console.log('RAW saleDetails from localStorage:', sale);
+
+    if (!sale) {
+        saleDetailsContainer.innerHTML = `
+            <div class="detail-card" style="grid-column: 1 / -1;">
+                <p class="detail-value">No hay detalles disponibles.</p>
+            </div>`;
+        return;
+    }
+
+    // Calcular el total abonado
+    const totalPaid = sale.totalPaid || (sale.payments ? sale.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) : 0) || 0;
+    const remainingDebt = Number(sale.price || 0) - totalPaid;
+    const paymentPercentage = Number(sale.price) ? (totalPaid / Number(sale.price)) * 100 : 0;
+
+    // Formato para moneda colombiana
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: 'COP',
+            minimumFractionDigits: 0
+        }).format(value);
+    };
+
+    // Generar tarjetas de detalles
+    saleDetailsContainer.innerHTML = `
+        <div class="detail-card">
+            <span class="detail-label">Cliente</span>
+            <span class="detail-value">${escapeHtml(sale.clientName)}</span>
         </div>
-    </div>
-    <script src="saleDetails.js"></script>
+        <div class="detail-card">
+            <span class="detail-label">Producto</span>
+            <span class="detail-value">${escapeHtml(sale.productName)}</span>
+        </div>
+        <div class="detail-card">
+            <span class="detail-label">Fecha de Venta</span>
+            <span class="detail-value">${formatDate(sale.saleDate)}</span>
+        </div>
+        <div class="detail-card">
+            <span class="detail-label">Precio Total</span>
+            <span class="detail-value price-value">${formatCurrency(sale.price || 0)}</span>
+        </div>
+        <div class="detail-card">
+            <span class="detail-label">Cuotas Establecidas</span>
+            <span class="detail-value">${escapeHtml(sale.installments || '')}</span>
+        </div>
+        <div class="detail-card">
+            <span class="detail-label">Total Abonado</span>
+            <span class="detail-value paid-value">${formatCurrency(totalPaid)}</span>
+        </div>
+        <div class="detail-card">
+            <span class="detail-label">Deuda Restante</span>
+            <span class="detail-value debt-value">${formatCurrency(remainingDebt)}</span>
+        </div>
+        <div class="detail-card">
+            <span class="detail-label">Porcentaje Pagado</span>
+            <span class="detail-value paid-value">${paymentPercentage.toFixed(1)}%</span>
+        </div>
+        <div class="detail-card">
+            <span class="detail-label">Dirección de Entrega</span>
+            <span class="detail-value">${escapeHtml(sale.clientAddress || 'No disponible')}</span>
+        </div>
+    `;
+
+    // Estado del pago
+    let paymentStatusHTML = '';
+    if (remainingDebt <= 0) {
+        paymentStatusHTML = `<div class="payment-status status-paid">✓ PAGADO EN SU TOTALIDAD</div>`;
+    } else if (totalPaid <= 0) {
+        paymentStatusHTML = `<div class="payment-status status-pending">⚠ PENDIENTE DE PAGO</div>`;
+    } else {
+        paymentStatusHTML = `
+            <div class="payment-status status-partial" style="--progress-width: ${paymentPercentage}%">
+                ⚠ PAGO PARCIAL (${paymentPercentage.toFixed(1)}% completado)
+            </div>`;
+    }
+    paymentStatusContainer.innerHTML = paymentStatusHTML;
+
+    // Mostrar historial de abonos
+    if (sale.payments && sale.payments.length > 0) {
+        // Depuración: ver raw dates y cómo se parsean
+        console.log('payments raw:', sale.payments.map(p => ({raw: p.date, asDate: parseDateLocal(p.date).toString(), newDateRaw: new Date(p.date).toString()})));
+
+        let paymentsHTML = `
+            <h2>Historial de Abonos</h2>
+            <table class="payments-table">
+                <thead>
+                    <tr>
+                        <th>Fecha de Abono</th>
+                        <th>Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        // Ordenar pagos por fecha (más recientes primero) usando parseDateLocal para evitar fallo TZ
+        const sortedPayments = [...sale.payments].sort((a, b) => parseDateLocal(b.date) - parseDateLocal(a.date));
+
+        sortedPayments.forEach(payment => {
+            paymentsHTML += `
+                <tr>
+                    <td>${formatDate(payment.date)}</td>
+                    <td class="payment-amount">${formatCurrency(payment.amount)}</td>
+                </tr>
+            `;
+        });
+
+        paymentsHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        paymentsContainer.innerHTML = paymentsHTML;
+    } else {
+        paymentsContainer.innerHTML = `
+            <h2>Historial de Abonos</h2>
+            <p style="text-align: center; margin: 2rem 0; color: var(--text-secondary);">
+                No hay abonos registrados para esta venta.
+            </p>`;
+    }
+});
+
+/* -------------------------
+   Helpers para fechas (mejor manejo TZ)
+   ------------------------- */
+
+/**
+ * parseDateLocal:
+ * - Si la cadena es YYYY-MM-DD => construye Date en local (new Date(y,m-1,d))
+ * - Si la cadena es ISO y tiene indicación de zona (Z o +HH:MM/-HH:MM) => toma las componentes UTC
+ *   y crea un Date local con esas componentes (así la fecha mostrada coincide con la fecha guardada en la DB).
+ * - En otros casos (ISO sin zona) delega a new Date(...)
+ */
+function parseDateLocal(dateString) {
+    if (!dateString) return new Date(NaN);
+
+    // 1) date only: "YYYY-MM-DD"
+    const dateOnlyMatch = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+    if (dateOnlyMatch) {
+        const [y, m, d] = dateString.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    }
+
+    // 2) timezone-aware ISO (ends with Z or ±hh:mm)
+    const tzAware = /Z$|[+-]\d{2}:\d{2}$/.test(dateString);
+    if (tzAware) {
+        const d = new Date(dateString); // real instant
+        // Construimos un Date LOCAL con la misma Y-M-D (y hora) que el UTC del instante,
+        // así evitamos que la conversión a hora local desplace el día.
+        return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds());
+    }
+
+    // 3) fallback: ISO without timezone (treated as local by most engines)
+    return new Date(dateString);
+}
+
+/**
+ * formatDate: decide cómo formatear según si la cadena original tenía TZ o no.
+ * - Si la cadena tenía TZ y también incluye hora -> mostramos fecha+hora usando la zona UTC
+ * - Si tenía TZ pero no hora -> mostramos solo la fecha (tal cual)
+ * - Para date-only o local-ISO mostramos en 'es-CO' con componentes locales
+ */
+function formatDate(dateString) {
+    if (!dateString) return 'Fecha inválida';
+    const original = String(dateString);
+
+    // detección
+    const tzAware = /Z$|[+-]\d{2}:\d{2}$/.test(original);
+    const includesTime = /T\d{2}:\d{2}/.test(original);
+
+    // Si es timezone-aware y la intención es respetar la fecha que se guardó en la DB,
+    // mostramos usando UTC para mantener la fecha (o la hora en UTC si incluye hora).
+    if (tzAware && includesTime) {
+        // Mostrar con hora en UTC (para que no se desplace por el timezone local)
+        const d = new Date(original);
+        return d.toLocaleString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+    }
+
+    // Para tzAware sin hora (raro pero posible) o date-only: usamos parseDateLocal y mostramos solo la fecha
+    const d = parseDateLocal(original);
+    if (isNaN(d)) return 'Fecha inválida';
+
+    return d.toLocaleString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+/* Pequeña función para prevenir XSS si los datos vienen de localStorage */
+function escapeHtml(text){
+    if (text === undefined || text === null) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function goBack() {
+    window.location.href = "categories.html";
+}
+</script>
+
 </body>
 </html>
