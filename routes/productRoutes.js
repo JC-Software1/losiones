@@ -94,11 +94,10 @@ router.put("/:id/sell", auth, async (req, res) => {
         }
 
         // Buscar la venta más reciente que contenga este producto y esté liquidada
-        const sale = await Sale.findOne({
-            user: req.user.id,
-            productName: product.name,
-            settled: true
-        }).sort({ settledDate: -1 });
+const sale = await Sale.findOne({
+    user: req.user.id,
+    productName: product.name
+}).sort({ saleDate: -1 });
 
         // Marcar como vendido y guardar datos del cliente
         product.sold = true;

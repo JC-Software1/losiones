@@ -176,6 +176,7 @@ async function saveSale() {
         alert("Venta guardada correctamente.");
 
         // ✅ Marcar producto como vendido
+// ✅ Marcar producto como vendido
 try {
     const productToSell = await apiFetch("/products", "GET", null, token);
     const soldProduct = productToSell.find(p => p.name === saleData.productName && !p.sold);
@@ -186,7 +187,6 @@ try {
 } catch (err) {
     console.warn("No se pudo marcar el producto como vendido:", err);
 }
-
         form.reset();
         // ponemos la fecha de hoy por defecto de nuevo
         inputDate.value = new Date().toISOString().split('T')[0];
