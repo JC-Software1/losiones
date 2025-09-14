@@ -40,7 +40,21 @@ const SaleSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true
+    },
+    settled: {  // Añadir este campo
+        type: Boolean,
+        default: false
+    },
+    settledDate: {  // Fecha de liquidación
+        type: Date,
+        default: null
+    },
+    clientAddress: {  // Dirección del cliente
+        type: String,
+        required: false,  // Puedes hacerlo opcional si lo deseas
+        trim: true
     }
+
 }, { timestamps: true });
 
 // Método virtual para calcular el total abonado

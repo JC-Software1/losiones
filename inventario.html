@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* ========== Variables CSS ========== */
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --white: #ffffff;
+            --dark: #2c3e50;
+            --beige: #f5f5dc;
+            --cream: #faf8f3;
+            --light-gray: #f8f9fa;
+            --medium-gray: #6c757d;
+            --border: #e9ecef;
+            --shadow: 0 2px 4px rgba(0,0,0,0.08);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+            --radius: 8px;
+            --radius-lg: 12px;
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--cream) 0%, var(--light-gray) 100%);
+            color: var(--dark);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        /* ---------- Header ---------- */
+        .header {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .header h1 {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            color: var(--medium-gray);
+            font-size: 14px;
+        }
+
+        /* ---------- Menu (igual que productos.html) ---------- */
+        .menu-toggle {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            width: 52px;
+            height: 52px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 10010;
+            transition: transform .22s ease, background .22s ease, color .22s ease;
+        }
+        
+        .menu-toggle:active { transform: scale(.98); }
+        .menu-toggle:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+        .menu-toggle .menu-icon { font-size: 18px; color: var(--primary); }
+        .menu-toggle.open { background: var(--primary); color: var(--white); }
+        .menu-toggle.open .menu-icon { color: var(--white); }
+        
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 10005;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .28s ease, visibility .28s;
+        }
+        
+        .backdrop.show { opacity: 1; visibility: visible; }
+        
+        .menu-items {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%,-50%) scale(.92);
+            min-width: 260px;
+            max-width: 92%;
+            background: linear-gradient(180deg, var(--white), #fbfbfb);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 20px 50px rgba(0,0,0,.22);
+            z-index: 10010;
+            opacity: 0;
+            visibility: hidden;
+            transition: transform .32s cubic-bezier(.2,.9,.2,1), opacity .22s ease, visibility .22s;
+            border: 1px solid rgba(0,0,0,.03);
+            overflow: hidden;
+        }
+        
+        .menu-items.show { opacity: 1; visibility: visible; transform: translate(-50%,-50%) scale(1); }
+        
+        .menu-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+        
+        .menu-head strong { color: var(--primary); font-size: 14px; }
+        
+        .menu-close {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            color: var(--medium-gray);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+        }
+        
+        .menu-close:hover { color: var(--danger); transform: translateY(-2px); }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2,1fr);
+            gap: 10px;
+            align-items: stretch;
+        }
+        
+        .menu-link {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            background: linear-gradient(180deg, #fff, var(--light-gray));
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,.03);
+            box-shadow: 0 6px 18px rgba(0,0,0,.06);
+            transition: transform .18s ease, box-shadow .18s ease, background .18s;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center;
+        }
+        
+        .menu-link i { font-size: 16px; width: 20px; text-align: center; color: var(--accent); }
+        .menu-link span { display: inline-block; line-height: 1; }
+        
+        .menu-link:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 36px rgba(0,0,0,.14);
+            background: linear-gradient(180deg, var(--accent), #2a86c8);
+            color: #fff;
+        }
+        
+        .menu-link:hover i { color: #fff; }
+
+        /* ---------- Estadísticas ---------- */
+        .inventory-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            text-align: center;
+            transition: var(--transition);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 20px;
+            color: var(--white);
+        }
+        
+        .stat-icon.primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+        .stat-icon.success { background: linear-gradient(135deg, var(--success), #2ecc71); }
+        .stat-icon.accent { background: linear-gradient(135deg, var(--accent), #2980b9); }
+        .stat-icon.warning { background: linear-gradient(135deg, var(--warning), #e67e22); }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: var(--medium-gray);
+        }
+
+        /* ---------- Filtros y acciones ---------- */
+        .controls-container {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        
+        .controls-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        
+        .controls-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+        
+        .search-input:focus {
+            outline: 0;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52,152,219,.1);
+        }
+        
+        .filter-select {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 14px;
+            min-width: 140px;
+            transition: var(--transition);
+        }
+        
+        .filter-select:focus {
+            outline: 0;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52,152,219,.1);
+        }
+
+        /* ---------- Productos Grid ---------- */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .product-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        
+        .product-info h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        
+        .product-status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-available {
+            background: rgba(39, 174, 96, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(39, 174, 96, 0.3);
+        }
+        
+        .product-prices {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0;
+            padding: 12px;
+            background: rgba(52, 152, 219, 0.05);
+            border-radius: var(--radius);
+            border: 1px solid rgba(52, 152, 219, 0.1);
+        }
+        
+        .price-item {
+            text-align: center;
+        }
+        
+        .price-label {
+            font-size: 12px;
+            color: var(--medium-gray);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .price-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .profit-highlight {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.1), rgba(46, 204, 113, 0.05));
+            border: 1px solid rgba(39, 174, 96, 0.2);
+            border-radius: var(--radius);
+            padding: 12px;
+            margin: 16px 0;
+            text-align: center;
+        }
+        
+        .profit-text {
+            font-size: 14px;
+            color: var(--success);
+            font-weight: 600;
+        }
+        
+        .margin-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+        
+        .margin-high { background: var(--success); }
+        .margin-medium { background: var(--warning); }
+        .margin-low { background: var(--danger); }
+        
+        .product-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        /* ---------- Botones ---------- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+            text-decoration: none;
+        }
+        
+        .btn i { font-size: 15px; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--white);
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #2ecc71);
+            color: var(--white);
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, #2ecc71, var(--success));
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), #e67e22);
+            color: var(--white);
+        }
+        
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #e67e22, var(--warning));
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+        
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent), #2980b9);
+            color: var(--white);
+        }
+        
+        .btn-accent:hover {
+            background: linear-gradient(135deg, #2980b9, var(--accent));
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+        
+        .btn:active { transform: scale(0.96); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        /* ---------- Estados vacíos ---------- */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--medium-gray);
+            grid-column: 1 / -1;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+            color: var(--accent);
+        }
+        
+        .empty-state h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        
+        .empty-state p {
+            font-size: 16px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            grid-column: 1 / -1;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--light-gray);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ---------- Responsive ---------- */
+        @media (max-width: 768px) {
+            .container { padding: 12px; }
+            .products-grid { grid-template-columns: 1fr; }
+            .controls-row { flex-direction: column; align-items: stretch; }
+            .search-input { min-width: unset; }
+            .inventory-stats { grid-template-columns: repeat(2, 1fr); }
+            .product-prices { grid-template-columns: 1fr; }
+            .product-actions { flex-direction: column; }
+            .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .menu-link { padding: 8px; font-size: 12px; border-radius: 8px; }
+        }
+        
+        @media (max-width: 480px) {
+            .inventory-stats { grid-template-columns: 1fr; }
+        }
+        
+        /* ---------- Animaciones ---------- */
+        .product-card {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.4s ease forwards;
+        }
+        
+        .product-card:nth-child(2) { animation-delay: 0.1s; }
+        .product-card:nth-child(3) { animation-delay: 0.2s; }
+        .product-card:nth-child(4) { animation-delay: 0.3s; }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <!-- ========== MENÚ ========== -->
+    <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuItems" aria-label="Abrir menú">
+        <span class="menu-icon"><i class="fas fa-bars"></i></span>
+    </button>
+    <div class="backdrop" id="backdrop"></div>
+    <nav class="menu-items" id="menuItems" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="menu-head">
+            <strong>Acciones rápidas</strong>
+            <button class="menu-close" id="menuClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="menu-grid">
+            <a href="categories.html" class="menu-link"><i class="fas fa-user-plus"></i><span>Agregar cliente</span></a>
+            <a href="abonos.html" class="menu-link"><i class="fas fa-receipt"></i><span>Historial de abonos</span></a>
+            <a href="liquidados.html" class="menu-link"><i class="fas fa-check-circle"></i><span>Liquidados</span></a>
+            <a href="productos.html" class="menu-link"><i class="fas fa-plus-circle"></i><span>Agregar Producto</span></a>
+            <a href="categories.html" class="menu-link"><i class="fas fa-address-book"></i><span>Registro</span></a>
+            <a href="vendidos.html" class="menu-link"><i class="fas fa-tags"></i><span>Productos Vendidos</span></a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- ========== HEADER ========== -->
+        <div class="header">
+            <h1><i class="fas fa-warehouse"></i> Inventario de Productos</h1>
+            <p>Gestión completa del inventario disponible con estadísticas en tiempo real</p>
+        </div>
+
+        <!-- ========== ESTADÍSTICAS ========== -->
+        <div class="inventory-stats">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div class="stat-value" id="totalProducts">0</div>
+                <div class="stat-label">Productos disponibles</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-value" id="avgMargin">0%</div>
+                <div class="stat-label">Margen promedio</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon accent">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="stat-value" id="totalInventoryValue">$0</div>
+                <div class="stat-label">Valor total inventario</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon warning">
+                    <i class="fas fa-hand-holding-usd"></i>
+                </div>
+                <div class="stat-value" id="totalPotentialProfit">$0</div>
+                <div class="stat-label">Ganancia potencial</div>
+            </div>
+        </div>
+
+        <!-- ========== CONTROLES ========== -->
+        <div class="controls-container">
+            <div class="controls-row">
+                <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar productos por nombre...">
+                <select class="filter-select" id="marginFilter">
+                    <option value="all">Todos los márgenes</option>
+                    <option value="high">Margen alto (≥30%)</option>
+                    <option value="medium">Margen medio (20-29%)</option>
+                    <option value="low">Margen bajo (<20%)</option>
+                </select>
+                <select class="filter-select" id="priceFilter">
+                    <option value="all">Todos los precios</option>
+                    <option value="low">Hasta $50,000</option>
+                    <option value="medium">$50,000 - $200,000</option>
+                    <option value="high">Más de $200,000</option>
+                </select>
+            </div>
+            <div class="controls-row">
+                <button class="btn btn-accent" onclick="exportInventoryData()" title="Exportar inventario a CSV">
+                    <i class="fas fa-download"></i> Exportar inventario
+                </button>
+                <button class="btn btn-warning" onclick="showLowStockAlert()" title="Revisar productos con bajo margen">
+                    <i class="fas fa-exclamation-triangle"></i> Alertas de margen
+                </button>
+                <button class="btn btn-primary" onclick="generateInventoryReport()" title="Generar reporte completo">
+                    <i class="fas fa-file-alt"></i> Reporte completo
+                </button>
+                <button class="btn btn-success" onclick="showBestSellingTips()" title="Consejos de optimización">
+                    <i class="fas fa-lightbulb"></i> Consejos
+                </button>
+            </div>
+        </div>
+
+        <!-- ========== PRODUCTOS ========== -->
+        <div class="products-grid" id="productsList">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="inventario.js"></script>
+</body>
+</html>

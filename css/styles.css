@@ -197,7 +197,7 @@ body {
     margin: 20px auto;
 }
 
-.sales-list, .sales-history {
+.sales-list,.products-list, .sales-history {
     list-style: none;
     padding: 0;
     margin: 0;
@@ -255,6 +255,8 @@ body {
 
 #historial{
 
+  position: relative;
+  z-index: 1; /* Asegura que esté adelante */
   transform: translateX(20px);
   width: 310px;
   height: 400px;
@@ -275,10 +277,10 @@ body {
 
 }
 
-#searchInput {
+#searchInput  {
 
   margin-right: -300px;
-  transform: translateY(-260px);
+  transform: translateY(-280px);
   width: 250px;
   padding: 10px;
   font-size: 16px;
@@ -287,6 +289,22 @@ body {
   outline: none;
   transition: all 0.3s ease;
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#dateFilter{
+
+  position: absolute;
+  margin-right: 10px;
+  transform: translateY(-220px);
+  width: 250px;
+  padding: 10px;
+  font-size: 16px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+
 }
 
 #searchInput:focus {
@@ -331,7 +349,7 @@ body {
     margin: 10px auto;
   }
 
-  .sale-item {
+  .sale-item, .product-item {
     flex-direction: column;
     align-items: stretch;
   }
@@ -365,3 +383,238 @@ html, body {
   overflow-x: hidden;
   scroll-behavior: smooth;
 }
+
+/* Asegura que el historial y el totalDebtContainer estén en columna */
+.main-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px; /* Espacio entre historial y deuda */
+}
+
+#totalDebtContainer {
+  position: absolute; /* Lo mantiene en el flujo normal */
+  text-align: center;
+  font-weight: bold;
+  color: #ff4d4d; /* Rojo elegante */
+  background: rgba(255, 255, 255, 0.15); /* Transparencia */
+  padding: 1px;
+  border-radius: 15px;
+  width: 80%;
+  max-width: 500px;
+  backdrop-filter: blur(10px); /* Efecto de vidrio */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Sombra suave */
+  border: 1px solid rgba(255, 255, 255, 0.3); /* Borde sutil */
+  margin: 20px auto 0; /* Centrar debajo del historial */
+  font-size: 14px;
+  transition: transform 0.3s ease, background 0.3s ease;
+  transform: translateY(260px);
+}
+
+#totalDebtContainer:hover {
+  transform: scale(1px);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.product-item {
+  background: rgba(255, 255, 255, 0.205);
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: black;
+}
+
+/* ---- Barra de navegación ---- */
+.navbar {
+
+  transform: translateX(70px);
+  background-color: #03312E;
+  width: 50%;
+  max-width: 800px;
+  padding: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 20px;
+}
+
+.navbar ul {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+  padding: 0;
+  margin: 0;
+}
+
+.navbar a {
+
+  text-decoration: none;
+  color: white;
+  font-size: 16px;
+  padding: 8px 15px;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.navbar a:hover {
+  background-color: #c0b577;
+}
+
+
+.navbar {
+  width: 100%;
+  max-width: 100%;
+  transform: translateX(0);
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.navbar ul {
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar a {
+  width: 100%;
+  text-align: center;
+  display: block;
+}
+
+/* ---- Estilos para las tarjetas de los pagos ---- */
+.list-container li {
+  background: rgba(255, 255, 255, 0.1); /* Fondo sutil */
+  padding: 20px;
+  margin-bottom: 15px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Sombra suave */
+  color: #ffffff;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.list-container li:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.list-container li .info {
+  background-color: #007bff; /* Azul suave */
+  padding: 8px 12px;
+  border-radius: 5px;
+  color: white;
+  text-transform: capitalize;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.list-container li .info:hover {
+  background-color: #0056b3;
+}
+
+.list-container li .buttons-container {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.list-container li button {
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 25px; /* Bordes más redondeados */
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.list-container li .edit {
+  background-color: #28a745; /* Verde suave */
+  color: white;
+}
+
+.list-container li .delete {
+  background-color: #dc3545; /* Rojo */
+  color: white;
+}
+
+.list-container li button:hover {
+  transform: scale(1.05); /* Efecto de agrandar al pasar el mouse */
+  opacity: 0.85;
+}
+
+/* ---- Fondo de la página y ajustes ---- */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #1e2a47, #2a3e5c);
+  color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  padding: 10px;
+}
+
+/* Ajustes para el contenedor y las tarjetas dentro de un contenedor */
+.container {
+  max-width: 700px;
+  padding: 25px;
+  background: rgba(255, 255, 255, 0.1); /* Fondo oscuro y transparente */
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(12px);
+  overflow-y: auto;
+  width: 100%;
+  margin-top: 20px;
+}
+
+/* Títulos y subtítulos */
+h1, h2 {
+  text-align: center;
+  font-size: 1.6em;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+/* ---- Estilos adicionales para mejorar la apariencia ---- */
+input, select, button {
+  border-radius: 10px;
+  font-size: 14px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+input:focus, select:focus {
+  border-color: #6c757d;
+  outline: none;
+  box-shadow: 0 0 5px rgba(108, 117, 125, 0.5);
+}
+
+button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  padding: 10px 20px;
+  border-radius: 10px;
+}
+
+button:hover {
+  background-color: #5a636a;
+}
+
+

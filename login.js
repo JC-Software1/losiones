@@ -1,5 +1,6 @@
 import { apiFetch } from "../utils/api.js";
 import { setToken } from "../utils/auth.js";
+import "../keepAlive.js";
 
 async function handleLogin(event) {
   event.preventDefault();

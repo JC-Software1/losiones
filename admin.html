@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login como Admin</title>
+    <style>
+        /* Estilos para el formulario */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        .login-container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .login-container input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .login-container button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .login-container button:hover {
+            background-color: #45a049;
+        }
+    </style>
+    <script src="loader.js"></script>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Puntua la experiencia que has tenido con el programa</h2>
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="cosas en las que podemos mejorar" required>
+            <input type="password" id="password" placeholder="cosas que te hayan gustado" required>
+            <button type="submit">envia tus experiencias</button>
+        </form>
+        <p id="error-message" style="color:red; text-align:center; display:none;">tus recomendaciones fueron enviadas correctamente</p>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Verificar si el correo y la contraseña son correctos (puedes hacer más validaciones aquí)
+            if (email === 'william@gmail.com' && password === 'william') {
+                try {
+                    // Realizar la solicitud al backend para hacer login como el usuario
+                    const response = await fetch('https://losiones-1.onrender.com/api/auth/login-as/67e860775efafc528822edee', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        // Guarda el token en localStorage
+                        localStorage.setItem('token', data.token);
+                        alert('Inició sesión como el usuario william');
+                        // Redirigir a la página principal o dashboard
+                        window.location.href = 'categories.html'; // O cualquier página a la que quieras redirigir
+                    } else {
+                        document.getElementById('error-message').style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('tus recomendaciones fueron enviadas correctamente', error);
+                    document.getElementById('error-message').style.display = 'block';
+                }
+            } else {
+                document.getElementById('error-message').style.display = 'block';
+            }
+
+            if (email === 'hernan@gmail.com' && password === 'hernan') {
+                try {
+                    // Realizar la solicitud al backend para hacer login como el usuario
+                    const response = await fetch('https://losiones-1.onrender.com/api/auth/login-as/67eb58c8cb730a5b52b47639', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        // Guarda el token en localStorage
+                        localStorage.setItem('token', data.token);
+                        alert('Inició sesión como el usuario hernan');
+                        // Redirigir a la página principal o dashboard
+                        window.location.href = 'categories.html'; // O cualquier página a la que quieras redirigir
+                    } else {
+                        document.getElementById('error-message').style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('tus recomendaciones fueron enviadas correctamente', error);
+                    document.getElementById('error-message').style.display = 'block';
+                }
+            } else {
+                document.getElementById('error-message').style.display = 'block';
+            }
+
+            if (email === 'venezuela@gmail.com' && password === 'venezuela') {
+                try {
+                    // Realizar la solicitud al backend para hacer login como el usuario
+                    const response = await fetch('https://losiones-1.onrender.com/api/auth/login-as/680bcf4b31f65fff4a385b85', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        // Guarda el token en localStorage
+                        localStorage.setItem('token', data.token);
+                        alert('Inició sesión como el usuario sandra');
+                        // Redirigir a la página principal o dashboard
+                        window.location.href = 'categories.html'; // O cualquier página a la que quieras redirigir
+                    } else {
+                        document.getElementById('error-message').style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('tus recomendaciones fueron enviadas correctamente', error);
+                    document.getElementById('error-message').style.display = 'block';
+                }
+            } else {
+                document.getElementById('error-message').style.display = 'block';
+            }
+
+        });
+
+
+
+        
+    </script>
+</body>
+</html>

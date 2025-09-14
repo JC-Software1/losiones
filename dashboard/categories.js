@@ -1,7 +1,9 @@
+/* ---------- módulos (sin cambios) ---------- */
 import { apiFetch } from "../utils/api.js";
 import { getToken } from "../utils/auth.js";
+import "../keepAlive.js";
 
-// Referencias a elementos del DOM
+/* ---------- referencias DOM (sin cambios) ---------- */
 const form = document.getElementById("salesForm");
 const inputId = document.getElementById("saleId");
 const inputClient = document.getElementById("clientName");
@@ -18,45 +20,83 @@ const btnCancel = document.getElementById("cancelUpdate");
 const btnDelete = document.getElementById("deleteSale");
 const btnAddPayment = document.getElementById("addPayment");
 const list = document.getElementById("salesList");
+const searchInput = document.getElementById("searchInput");
 
-async function loadSales() {
-  try {
-      const token = getToken();
-      const sales = await apiFetch("/sales", "GET", null, token);
-      list.innerHTML = "";
-      sales.forEach((sale) => {
-          const totalPaid = sale.totalPaid || sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
-          const remainingDebt = sale.price - totalPaid;
-          const li = document.createElement("li");
-          li.innerHTML = `
-              <span>${sale.clientName} - ${sale.productName} -  ${remainingDebt} COP</span>
-              <div class="buttons-container">
-                  <button id="info" class="info btn">Info</button>
-                  <button class="edit btn">Editar</button>
-                  <button class="delete btn">Eliminar</button>
-              </div>
-          `;
+/* ---------- carga de ventas (adaptada al nuevo estilo) ---------- */
+async function loadSales(query = "") {
+    try {
+        const token = getToken();
+        const sales = await apiFetch("/sales", "GET", null, token);
+        list.innerHTML = "";
 
-          li.querySelector(".info").addEventListener("click", () => viewSaleDetails(sale));
-          li.querySelector(".edit").addEventListener("click", () => editSale(sale));
-          li.querySelector(".delete").addEventListener("click", () => deleteSale(sale._id));
-          list.appendChild(li);
-      });
-  } catch (error) {
-      console.error("Error al cargar ventas:", error);
-      alert("No se pudieron cargar las ventas");
-  }
-}
+        const filteredSales = sales.filter(sale => {
+            const clientMatch = sale.clientName.toLowerCase().includes(query.toLowerCase());
+            const productMatch = sale.productName.toLowerCase().includes(query.toLowerCase());
+            return clientMatch || productMatch;
+        });
 
-function viewSaleDetails(sale) {
-  localStorage.setItem("saleDetails", JSON.stringify(sale));
-  window.location.href = "saleDetails.html";
-}
+        if (filteredSales.length === 0) {
+            list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><h3>No se encontraron ventas</h3></div>`;
+            return;
+        }
 
-async function deleteSale(id) {
-    if (!confirm("¿Estás seguro de que deseas eliminar esta venta?")) {
-        return;
+        filteredSales.forEach((sale) => {
+            const totalPaid = sale.payments.reduce((sum, p) => sum + p.amount, 0);
+            const remainingDebt = sale.price - totalPaid;
+            const paymentPercentage = (totalPaid / sale.price) * 100;
+
+            const card = document.createElement("div");
+            card.className = "sale-card";
+            card.setAttribute("data-sale-id", sale._id);
+
+            card.innerHTML = `
+                <div class="sale-header">
+                    <div class="sale-info">
+                        <h3>${sale.clientName}</h3>
+                        <p>${sale.productName}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> ${sale.clientAddress || 'Sin dirección'}</p>
+                    </div>
+                    <div class="sale-amount">
+                        <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
+                        <div class="progress-text">${paymentPercentage.toFixed(0)}% pagado</div>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${paymentPercentage}%"></div>
+                </div>
+
+                <div class="sale-actions">
+                    <button class="btn btn-primary btn-sm btn-info"><i class="fas fa-eye"></i> Info</button>
+                    <button class="btn btn-warning btn-sm btn-edit"><i class="fas fa-edit"></i> Editar</button>
+                    <button class="btn btn-success btn-sm btn-pay"><i class="fas fa-credit-card"></i> Abonar</button>
+                    <button class="btn btn-danger btn-sm btn-delete"><i class="fas fa-trash"></i> Eliminar</button>
+                </div>
+            `;
+
+            // Eventos
+            card.querySelector(".btn-info").onclick   = () => viewSaleDetails(sale);
+            card.querySelector(".btn-edit").onclick   = () => editSale(sale);
+            card.querySelector(".btn-pay").onclick    = () => openPaymentModal(sale._id);
+            card.querySelector(".btn-delete").onclick = () => deleteSale(sale._id);
+
+            list.appendChild(card);
+        });
+    } catch (error) {
+        console.error("Error al cargar ventas:", error);
+        list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar ventas</h3><p>${error.message}</p></div>`;
     }
+}
+
+/* ---------- detalles ---------- */
+function viewSaleDetails(sale) {
+    localStorage.setItem("saleDetails", JSON.stringify(sale));
+    window.location.href = "saleDetails.html";
+}
+
+/* ---------- eliminar ---------- */
+async function deleteSale(id) {
+    if (!confirm("¿Eliminar esta venta?")) return;
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "DELETE", null, token);
@@ -68,85 +108,113 @@ async function deleteSale(id) {
     }
 }
 
+/* ---------- editar ---------- */
 function editSale(sale) {
-    inputId.value = sale._id;
-    inputClient.value = sale.clientName;
-    inputProduct.value = sale.productName;
-    inputDate.value = new Date(sale.saleDate).toISOString().split('T')[0];
-    inputPrice.value = sale.price;
+    inputId.value         = sale._id;
+    inputClient.value     = sale.clientName;
+    inputProduct.value    = sale.productName;
+    inputDate.value       = new Date(sale.saleDate).toISOString().split('T')[0];
+    inputPrice.value      = sale.price;
     inputInstallments.value = sale.installments;
-    
-    // Mostrar los elementos para agregar un pago
+    if (document.getElementById("clientAddress")) {
+        document.getElementById("clientAddress").value = sale.clientAddress || '';
+    }
+
     document.getElementById("paymentSection").style.display = "block";
     inputPaymentDate.value = new Date().toISOString().split('T')[0];
 
-    btnSave.style.display = "none";
-    btnUpdate.style.display = "inline-block";
-    btnCancel.style.display = "inline-block";
-    btnDelete.style.display = "inline-block";
-    btnAddPayment.style.display = "inline-block";
+btnSave.classList.add("hidden");
+btnUpdate.classList.remove("hidden");
+btnCancel.classList.remove("hidden");
+btnDelete.classList.remove("hidden");   // <- ahora sí se ve
+btnAddPayment.classList.remove("hidden");
 }
 
-btnDelete.addEventListener("click", async () => {
-    const id = inputId.value;
-    if (!id) {
-        alert("No se ha seleccionado ninguna venta.");
+
+async function loadProductsForSelect() {
+    try {
+        const token = getToken();
+        const products = await apiFetch("/products", "GET", null, token);
+        const select = document.getElementById("productName");
+
+        select.innerHTML = '<option value="">Seleccioná un producto</option>';
+
+        products.filter(p => !p.sold).forEach(product => {
+            const option = document.createElement("option");
+            option.value = product.name;
+            option.textContent = `${product.name} ($${product.salePrice.toLocaleString()})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error al cargar productos:", error);
+    }
+}
+
+/* ---------- guardar nueva ---------- */
+/* ---------- guardar nueva ---------- */
+async function saveSale() {
+    // 🔥 Agregá esta validación
+    if (!inputDate.value) {
+        alert("Por favor seleccioná una fecha de venta.");
+        inputDate.focus();
         return;
     }
-    await deleteSale(id);
-    cancelUpdate();
-});
 
-async function saveSale() {
-    // Log the value to debug
-    console.log("Valor de installments antes de guardar:", inputInstallments.value);
-    
     const saleData = {
         clientName: inputClient.value.trim(),
+        clientAddress: document.getElementById("clientAddress").value.trim(),
         productName: inputProduct.value.trim(),
-        saleDate: inputDate.value,
+        saleDate: inputDate.value,          // <- ahora seguro que tiene valor
         price: parseFloat(inputPrice.value),
-        installments: inputInstallments.value.trim(), // Make sure to trim the value
+        installments: inputInstallments.value.trim(),
         advancePayment: parseFloat(inputAdvance.value) || 0
     };
 
-    // Log the complete object to debug
-    console.log("Datos a guardar:", saleData);
-    
-    // Check for empty required fields, but handle installments separately
-    if (!saleData.clientName || !saleData.productName || !saleData.saleDate || isNaN(saleData.price)) {
-      alert("Completa todos los campos requeridos.");
-      return;
-    }
-  
     try {
         const token = getToken();
         await apiFetch("/sales/new", "POST", saleData, token);
         alert("Venta guardada correctamente.");
+
+        // ✅ Marcar producto como vendido
+// ✅ Marcar producto como vendido
+try {
+    const productToSell = await apiFetch("/products", "GET", null, token);
+    const soldProduct = productToSell.find(p => p.name === saleData.productName && !p.sold);
+
+    if (soldProduct) {
+        await apiFetch(`/products/${soldProduct._id}/sell`, "PUT", null, token);
+    }
+} catch (err) {
+    console.warn("No se pudo marcar el producto como vendido:", err);
+}
         form.reset();
+        // ponemos la fecha de hoy por defecto de nuevo
+        inputDate.value = new Date().toISOString().split('T')[0];
         loadSales();
     } catch (error) {
         console.error("Error al guardar la venta:", error.message);
         alert("No se pudo guardar la venta: " + error.message);
+
+
     }
+
+    await loadProductsForDropdown(); // ✅ recarga el dropdown
+
+
 }
+
+
+/* ---------- actualizar ---------- */
 async function updateSale() {
     const id = inputId.value;
-    
-    // Log the value to debug
-    console.log("Valor de installments antes de actualizar:", inputInstallments.value);
-    
     const saleData = {
         clientName: inputClient.value.trim(),
+        clientAddress: document.getElementById("clientAddress").value.trim(),
         productName: inputProduct.value.trim(),
         saleDate: inputDate.value,
         price: parseFloat(inputPrice.value),
-        installments: inputInstallments.value.trim() // Make sure to trim the value
+        installments: inputInstallments.value.trim()
     };
-    
-    // Log the complete object to debug
-    console.log("Datos a actualizar:", saleData);
-    
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "PUT", saleData, token);
@@ -159,51 +227,191 @@ async function updateSale() {
     }
 }
 
+/* ---------- agregar pago ---------- */
 async function addPayment() {
-    const id = inputId.value;
-    if (!id) {
-        alert("No se ha seleccionado ninguna venta.");
-        return;
-    }
+    const id   = document.getElementById("paymentModal").dataset.saleId;
+    const amount = parseFloat(document.getElementById("paymentAmount").value);
+    const date = document.getElementById("paymentDate").value;
 
-    const paymentData = {
-        amount: parseFloat(inputAdvance.value),
-        date: inputPaymentDate.value
-    };
-
-    if (!paymentData.amount || paymentData.amount <= 0) {
-        alert("El monto del abono debe ser mayor a cero.");
-        return;
-    }
+    if (!id) return alert("No se seleccionó ninguna venta.");
+    if (!amount || amount <= 0) return alert("Monto inválido");
 
     try {
         const token = getToken();
-        await apiFetch(`/sales/${id}/payment`, "POST", paymentData, token);
-        alert("Abono registrado correctamente.");
+        const response = await apiFetch(`/sales/${id}/payment`, "POST", { amount, date }, token);
+        const formattedAmount = amount.toLocaleString('es-CO');
+        alert(`Abono de $${formattedAmount} registrado correctamente.`);
+        if (response.justSettled || response.settled) {
+            alert("¡Venta liquidada automáticamente!");
+            if (confirm("¿Deseas ir a la sección de ventas liquidadas?")) {
+                window.location.href = "liquidados.html";
+                return;
+            }
+        }
+        cancelUpdate();
         loadSales();
     } catch (error) {
         console.error("Error al registrar el abono:", error.message);
-        alert("No se pudo registrar el abono.");
+        alert("No se pudo registrar el abono: " + error.message);
     }
 }
 
+/* ---------- cancelar edición ---------- */
 function cancelUpdate() {
-    btnSave.style.display = "inline-block";
-    btnUpdate.style.display = "none";
-    btnCancel.style.display = "none";
-    btnDelete.style.display = "none";
-    btnAddPayment.style.display = "none";
+btnSave.classList.remove("hidden");
+btnUpdate.classList.add("hidden");
+btnCancel.classList.add("hidden");
+btnDelete.classList.add("hidden");   // <- se oculta de nuevo
+btnAddPayment.classList.add("hidden");
     document.getElementById("paymentSection").style.display = "none";
     form.reset();
 }
 
+/* ---------- modal de pago (si lo usás) ---------- */
+function openPaymentModal(saleId) {
+    // Si usás el modal del HTML nuevo, mostralo acá
+    document.getElementById("paymentModal")?.classList.add("show");
+    document.getElementById("paymentAmount").value = "";
+    document.getElementById("paymentDate").value = new Date().toISOString().split("T")[0];
+    document.getElementById("paymentModal").dataset.saleId = saleId;
+}
+
+/* ---------- listeners (sin cambios) ---------- */
+searchInput.addEventListener("input", () => loadSales(searchInput.value.trim()));
 btnSave.addEventListener("click", saveSale);
 btnUpdate.addEventListener("click", updateSale);
 btnCancel.addEventListener("click", cancelUpdate);
 btnAddPayment.addEventListener("click", addPayment);
 
+// Al cargar la página
 document.addEventListener("DOMContentLoaded", () => {
+    const today = new Date().toLocaleDateString('en-CA'); // formato YYYY-MM-DD
+    document.getElementById("saleDate").value = today;
     loadSales();
-    // Ocultar la sección de pagos al inicio
-    document.getElementById("paymentSection") && (document.getElementById("paymentSection").style.display = "none");
+    loadProductsForSelect();
+
+    loadProductsForDropdown();
+document.getElementById("productDropdown").addEventListener("click", (e) => {
+    if (!e.target.closest(".btn-edit-dropdown")) {
+        toggleDropdown();
+    }
 });
+
+});
+
+async function loadProductsForDropdown() {
+    const token = getToken();
+    const products = await apiFetch("/products", "GET", null, token);
+    const panel = document.getElementById("productDropdownPanel");
+    panel.innerHTML = "";
+
+    const availableProducts = products.filter(p => !p.sold);
+
+    availableProducts.forEach(product => {
+        const item = document.createElement("div");
+        item.className = "dropdown-item";
+        item.innerHTML = `
+            <div class="product-card-dropdown">
+                <div class="info">
+                    <div class="name">${product.name}</div>
+                    <div class="price">$${product.salePrice.toLocaleString()}</div>
+                </div>
+                <div class="actions">
+                    <button class="btn-edit-dropdown" data-id="${product._id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // ✅ Acá va el evento
+        item.querySelector('.btn-edit-dropdown').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const productId = e.currentTarget.dataset.id;
+            window.location.href = `productos.html?edit=${productId}`;
+        });
+
+        item.addEventListener("click", (e) => {
+            if (e.target.closest('.btn-edit-dropdown')) return;
+            selectProduct(product);
+        });
+
+        panel.appendChild(item);
+    });
+}
+
+function selectProduct(product) {
+    document.getElementById("productName").value = product.name;
+    document.getElementById("productNameDisplay").value = `${product.name} ($${product.salePrice.toLocaleString()})`;
+    document.getElementById("price").value = product.salePrice;
+
+    // Cerrar dropdown
+    document.getElementById("productDropdownPanel").classList.add("hidden");
+    document.querySelector(".dropdown-trigger").classList.remove("active");
+}
+
+function toggleDropdown() {
+    const panel = document.getElementById("productDropdownPanel");
+    const trigger = document.querySelector(".dropdown-trigger");
+    panel.classList.toggle("hidden");
+    trigger.classList.toggle("active");
+}
+
+window.editProductFromDropdown = function(productId) {
+    window.location.href = `productos.html?edit=${productId}`;
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    document.getElementById("productName").addEventListener("change", (e) => {
+    const selectedProductName = e.target.value;
+    if (!selectedProductName) {
+        document.getElementById("price").value = "";
+        return;
+    }
+
+    // Buscar el producto seleccionado
+    const token = getToken();
+    apiFetch("/products", "GET", null, token).then(products => {
+        const product = products.find(p => p.name === selectedProductName);
+        if (product) {
+            document.getElementById("price").value = product.salePrice;
+        }
+    }).catch(error => {
+        console.error("Error al cargar productos:", error);
+    });
+});
+
+    loadSales();
+    if (document.getElementById("paymentSection")) {
+        document.getElementById("paymentSection").style.display = "none";
+    }
+    // Menú nuevo
+    const menuToggle = document.getElementById("menuToggle");
+    const menuItems  = document.getElementById("menuItems");
+    const backdrop   = document.getElementById("backdrop");
+    if (menuToggle && menuItems && backdrop) {
+        menuToggle.addEventListener("click", () => {
+            menuItems.classList.toggle("show");
+            backdrop.classList.toggle("show");
+        });
+        backdrop.addEventListener("click", () => {
+            menuItems.classList.remove("show");
+            backdrop.classList.remove("show");
+        });
+    }
+});
+/* ---------- conectar modal nuevo ---------- */
+const modal   = document.getElementById("paymentModal");
+const btnConf = document.getElementById("confirmPayment");
+const btnCerr = document.getElementById("cancelPayment");
+const btnX    = document.getElementById("closePaymentModal");
+
+// abrir modal ya está hecho en openPaymentModal
+btnConf.addEventListener("click", () => {
+    // usamos la misma lógica que el área "Registrar Abono"
+    addPayment();
+    modal.classList.remove("show");
+});
+btnCerr.addEventListener("click", () => modal.classList.remove("show"));
+btnX.addEventListener("click",   () => modal.classList.remove("show"));
