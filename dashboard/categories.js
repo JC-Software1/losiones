@@ -158,23 +158,30 @@ async function loadProductsForSelect() {
 /* ---------- guardar nueva ---------- */
 /* ---------- guardar nueva ---------- */
 async function saveSale() {
-    // 🔥 Agregá esta validación
+    // 🔥 Validación de fecha
     if (!inputDate.value) {
         alert("Por favor seleccioná una fecha de venta.");
         inputDate.focus();
         return;
     }
 
+    // 🔥 Validación de productos seleccionados
+    if (selectedProducts.length === 0) {
+        alert("Por favor seleccioná al menos un producto.");
+        return;
+    }
+
     const saleData = {
         clientName: inputClient.value.trim(),
         clientAddress: document.getElementById("clientAddress").value.trim(),
-products: selectedProducts.map(p => ({
-    name: p.name,
-    brand: p.brand,
-    category: p.category,
-    size: p.size,
-    salePrice: p.salePrice
-})),        saleDate: inputDate.value,          // <- ahora seguro que tiene valor
+        products: selectedProducts.map(p => ({
+            name: p.name,
+            brand: p.brand,
+            category: p.category,
+            size: p.size,
+            salePrice: p.salePrice
+        })),
+        saleDate: inputDate.value,
         price: parseFloat(inputPrice.value),
         installments: inputInstallments.value.trim(),
         advancePayment: parseFloat(inputAdvance.value) || 0
@@ -185,34 +192,31 @@ products: selectedProducts.map(p => ({
         await apiFetch("/sales/new", "POST", saleData, token);
         alert("Venta guardada correctamente.");
 
-        // ✅ Marcar producto como vendido
-// ✅ Marcar producto como vendido
+        // ✅ Marcar productos como vendidos
+// ✅ Marcar productos como vendidos con el nombre del cliente
 try {
-    const productToSell = await apiFetch("/products", "GET", null, token);
-    const soldProduct = productToSell.find(p => p.name === saleData.productName && !p.sold);
-
-    if (soldProduct) {
-        await apiFetch(`/products/${soldProduct._id}/sell`, "PUT", null, token);
+    for (const product of selectedProducts) {
+        await apiFetch(`/products/${product._id}/sell`, "PUT", { soldTo: inputClient.value.trim() }, token);
     }
-} catch (err) {
-    console.warn("No se pudo marcar el producto como vendido:", err);
-}
+}catch (err) {
+            console.warn("No se pudo marcar uno o más productos como vendidos:", err);
+        }
+
+        // Limpiar formulario y selección
         form.reset();
-        // ponemos la fecha de hoy por defecto de nuevo
         inputDate.value = new Date().toISOString().split('T')[0];
-        loadSales();
+        selectedProducts = [];
+        renderSelectedProducts();
+        updateTotalPrice();
+
+        // Recargar ventas y productos
+        await loadSales();
+        await loadProductsForDropdown();
+
     } catch (error) {
         console.error("Error al guardar la venta:", error.message);
         alert("No se pudo guardar la venta: " + error.message);
-
-
     }
-
-    await loadProductsForDropdown(); // ✅ recarga el dropdown
-
-    selectedProducts = []; // Limpiar selección
-renderSelectedProducts(); // Actualizar vista
-
 }
 
 

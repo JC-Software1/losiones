@@ -93,22 +93,22 @@ router.delete("/:id", auth, async (req, res) => {
 // Marcar un producto como vendido
 router.put("/:id/sell", auth, async (req, res) => {
     try {
+        const { soldTo } = req.body; // ✅ Recibís el nombre del cliente
+
         const product = await Product.findOne({ _id: req.params.id, user: req.user.id });
 
         if (!product) {
             return res.status(404).json({ error: "Producto no encontrado" });
         }
 
-        // Buscar la venta más reciente que contenga este producto y esté liquidada
-const sale = await Sale.findOne({
-    user: req.user.id,
-    productName: product.name
-}).sort({ saleDate: -1 });
+        if (product.sold) {
+            return res.status(400).json({ error: "El producto ya está marcado como vendido" });
+        }
 
-        // Marcar como vendido y guardar datos del cliente
+        // ✅ Marcás como vendido con el nombre del cliente
         product.sold = true;
         product.soldDate = new Date();
-        product.soldTo = sale ? sale.clientName : "Cliente no registrado";
+        product.soldTo = soldTo || "Cliente no registrado";
 
         await product.save();
 
