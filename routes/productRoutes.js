@@ -51,8 +51,7 @@ const product = new Product({
 
 // Update a product
 router.put("/:id", auth, async (req, res) => {
-    const { name, costPrice, salePrice } = req.body;
-
+const { name, costPrice, salePrice, category, brand, size } = req.body;
     try {
         const product = await Product.findOne({ _id: req.params.id, user: req.user.id });
 
