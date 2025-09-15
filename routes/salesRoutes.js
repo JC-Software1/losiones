@@ -123,21 +123,23 @@ router.get("/settled", auth, async (req, res) => {
 // Crear nueva venta
 router.post("/new", auth, async (req, res) => {
     try {
-        const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress } = req.body;
+        const { clientName, products, saleDate, price, installments, advancePayment, clientAddress } = req.body;
 
-        // Verificar si el pago inicial (advancePayment) es igual o mayor que el precio total
+        // Unir nombres de productos para productName
+        const productName = products.map(p => p.name).join(', ');
+
         const initiallySettled = advancePayment >= price;
 
         const sale = new Sale({
             clientName,
-            productName,
+            productName, // ✅ Ahora sí existe
+            products, // Guardamos el array completo
             saleDate,
             price,
             installments,
             advancePayment,
             clientAddress,
             user: req.user.id,
-            // Si el pago inicial cubre el precio total, marcar como liquidada inmediatamente
             settled: initiallySettled,
             settledDate: initiallySettled ? new Date() : null,
             payments: advancePayment > 0 ? [{ amount: advancePayment, date: new Date() }] : []

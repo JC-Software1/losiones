@@ -13,48 +13,23 @@ const PaymentSchema = new mongoose.Schema({
 });
 
 const SaleSchema = new mongoose.Schema({
-    clientName: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    productName: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    saleDate: {
-        type: Date,
-        required: true
-    },
-    price: {
-        type: Number,
-        required: true
-    },
-    installments: {
-        type: String,
-        default: 1
-    },
+    clientName: { type: String, required: true, trim: true },
+    productName: { type: String, required: true, trim: true }, // Mantenemos esto para compatibilidad
+    products: [{ // Nuevo campo para múltiples productos
+        name: String,
+        brand: String,
+        category: String,
+        size: String,
+        salePrice: Number
+    }],
+    saleDate: { type: Date, required: true },
+    price: { type: Number, required: true },
+    installments: { type: String, default: "1" },
     payments: [PaymentSchema],
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    },
-    settled: {  // Añadir este campo
-        type: Boolean,
-        default: false
-    },
-    settledDate: {  // Fecha de liquidación
-        type: Date,
-        default: null
-    },
-    clientAddress: {  // Dirección del cliente
-        type: String,
-        required: false,  // Puedes hacerlo opcional si lo deseas
-        trim: true
-    }
-
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    settled: { type: Boolean, default: false },
+    settledDate: { type: Date, default: null },
+    clientAddress: { type: String, required: false, trim: true }
 }, { timestamps: true });
 
 // Método virtual para calcular el total abonado

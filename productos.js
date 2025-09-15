@@ -18,6 +18,7 @@ const searchInput = document.getElementById("searchInput");
 const inputCategory = document.getElementById("productCategory");
 const inputBrand = document.getElementById("productBrand");
 const inputSize = document.getElementById("productSize");
+const inputQuantity = document.getElementById("productQuantity");
 
 // Variables globales
 let products = [];
@@ -271,34 +272,43 @@ function showMarginPreview(margin, profit) {
 }
 
 // Guardar producto
+// Guardar producto
 async function saveProduct() {
-const productData = {
-    name: inputName.value.trim(),
-    costPrice: parseFloat(inputCostPrice.value),
-    salePrice: parseFloat(inputSalePrice.value),
-    category: inputCategory.value.trim(),
-    brand: inputBrand.value.trim(),
-    size: inputSize.value.trim() || null
-};
-    if (!productData.name || isNaN(productData.costPrice) || isNaN(productData.salePrice)) {
+    const quantity = parseInt(inputQuantity.value) || 1;
+
+    const baseProduct = {
+        name: inputName.value.trim(),
+        costPrice: parseFloat(inputCostPrice.value),
+        salePrice: parseFloat(inputSalePrice.value),
+        category: inputCategory.value.trim(),
+        brand: inputBrand.value.trim(),
+        size: inputSize.value.trim() || null
+    };
+
+    if (!baseProduct.name || isNaN(baseProduct.costPrice) || isNaN(baseProduct.salePrice)) {
         showNotification("Completa todos los campos requeridos.", "error");
         return;
     }
-    
-    if (productData.costPrice < 0 || productData.salePrice < 0) {
+
+    if (baseProduct.costPrice < 0 || baseProduct.salePrice < 0) {
         showNotification("Los precios no pueden ser negativos.", "error");
         return;
     }
-    
-    if (productData.salePrice <= productData.costPrice) {
+
+    if (baseProduct.salePrice <= baseProduct.costPrice) {
         const confirm = window.confirm("El precio de venta es menor o igual al costo. ¿Deseas continuar?");
         if (!confirm) return;
     }
-    
+
     try {
         const token = getToken();
-        await apiFetch("/products/new", "POST", productData, token);
-        showNotification("Producto guardado correctamente.", "success");
+
+        // Guardar el producto la cantidad de veces indicada
+        for (let i = 0; i < quantity; i++) {
+            await apiFetch("/products/new", "POST", baseProduct, token);
+        }
+
+        showNotification(`${quantity} producto(s) guardado(s) correctamente.`, "success");
         form.reset();
         clearMarginPreview();
         await loadProducts();
@@ -307,7 +317,6 @@ const productData = {
         showNotification("No se pudo guardar el producto: " + error.message, "error");
     }
 }
-
 // Editar producto
 window.editProduct = function(productId) {
     const product = products.find(p => p._id === productId);

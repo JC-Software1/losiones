@@ -3,7 +3,12 @@ import { apiFetch } from "../utils/api.js";
 import { getToken } from "../utils/auth.js";
 import "../keepAlive.js";
 
+
+
 /* ---------- referencias DOM (sin cambios) ---------- */
+
+let selectedProducts = []; // productos seleccionados
+
 const form = document.getElementById("salesForm");
 const inputId = document.getElementById("saleId");
 const inputClient = document.getElementById("clientName");
@@ -163,8 +168,13 @@ async function saveSale() {
     const saleData = {
         clientName: inputClient.value.trim(),
         clientAddress: document.getElementById("clientAddress").value.trim(),
-        productName: inputProduct.value.trim(),
-        saleDate: inputDate.value,          // <- ahora seguro que tiene valor
+products: selectedProducts.map(p => ({
+    name: p.name,
+    brand: p.brand,
+    category: p.category,
+    size: p.size,
+    salePrice: p.salePrice
+})),        saleDate: inputDate.value,          // <- ahora seguro que tiene valor
         price: parseFloat(inputPrice.value),
         installments: inputInstallments.value.trim(),
         advancePayment: parseFloat(inputAdvance.value) || 0
@@ -200,6 +210,8 @@ try {
 
     await loadProductsForDropdown(); // ✅ recarga el dropdown
 
+    selectedProducts = []; // Limpiar selección
+renderSelectedProducts(); // Actualizar vista
 
 }
 
@@ -332,19 +344,47 @@ async function loadProductsForDropdown() {
         filtered.forEach(product => {
             const item = document.createElement("div");
             item.className = "dropdown-item";
-            item.innerHTML = `
-                <div class="product-card-dropdown">
-                    <div class="info">
-                        <div class="name">${product.name}</div>
-                        <div class="price">$${product.salePrice.toLocaleString()}</div>
-                    </div>
-                    <div class="actions">
-                        <button class="btn-edit-dropdown" data-id="${product._id}">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
+item.innerHTML = `
+    <div class="product-card-dropdown" style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--light-gray);
+        transition: background 0.2s ease;
+    " onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='var(--light-gray)'">
+
+        <div class="info" style="flex: 1;">
+            <div class="name" style="font-weight: 600; color: var(--primary); font-size: 14px;">
+                ${product.name}
+            </div>
+            <div class="price" style="font-size: 13px; color: var(--success); margin-top: 2px;">
+                $${product.salePrice.toLocaleString()}
+            </div>
+            <div style="font-size: 11px; color: var(--medium-gray); margin-top: 4px;">
+                <i class="fas fa-tag"></i> ${product.brand}
+                <i class="fas fa-folder" style="margin-left: 8px;"></i> ${product.category}
+                ${product.size ? `<i class="fas fa-ruler" style="margin-left: 8px;"></i> ${product.size}` : ''}
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-edit-dropdown" data-id="${product._id}" style="
+                background: var(--accent);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: background 0.2s ease;
+            " onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='var(--accent)'">
+                <i class="fas fa-edit"></i>
+            </button>
+        </div>
+    </div>
+`;
 
             item.querySelector('.btn-edit-dropdown').addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -375,13 +415,47 @@ async function loadProductsForDropdown() {
 }
 
 function selectProduct(product) {
-    document.getElementById("productName").value = product.name;
-    document.getElementById("productNameDisplay").value = `${product.name} ($${product.salePrice.toLocaleString()})`;
-    document.getElementById("price").value = product.salePrice;
+    // Evitar duplicados
+    if (selectedProducts.find(p => p._id === product._id)) {
+        alert("Este producto ya fue seleccionado.");
+        return;
+    }
 
-    // Cerrar dropdown
-    document.getElementById("productDropdownPanel").classList.add("hidden");
-    document.querySelector(".dropdown-trigger").classList.remove("active");
+    selectedProducts.push(product);
+    renderSelectedProducts();
+    updateTotalPrice();
+}
+
+function renderSelectedProducts() {
+    const container = document.getElementById("selectedProducts");
+    container.innerHTML = "";
+
+    selectedProducts.forEach((product, index) => {
+        const tag = document.createElement("div");
+        tag.className = "selected-product-tag";
+tag.innerHTML = `
+    ${product.name} (${product.brand}${product.size ? `, ${product.size}` : ''})
+    <button class="remove" data-index="${index}">×</button>
+`;
+
+// Agregar event listener
+tag.querySelector('.remove').addEventListener('click', (e) => {
+    const index = parseInt(e.target.dataset.index);
+    removeSelectedProduct(index);
+});
+        container.appendChild(tag);
+    });
+}
+
+function updateTotalPrice() {
+    const total = selectedProducts.reduce((sum, p) => sum + p.salePrice, 0);
+    document.getElementById("price").value = total;
+}
+
+function removeSelectedProduct(index) {
+    selectedProducts.splice(index, 1);
+    renderSelectedProducts();
+    updateTotalPrice();
 }
 
 function toggleDropdown() {

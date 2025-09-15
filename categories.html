@@ -301,6 +301,35 @@
     background: var(--light-gray);
 }
 
+.selected-product-tag {
+    background: var(--accent);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.selected-product-tag .remove {
+    background: rgba(255,255,255,0.3);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selected-product-tag .remove:hover {
+    background: rgba(255,255,255,0.5);
+}
+
     </style>
 </head>
 <body>
@@ -358,6 +387,7 @@
 <div class="form-group">
     <label for="productName">Producto</label>
     <div class="custom-dropdown" id="productDropdown">
+        <div class="selected-products" id="selectedProducts" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
         <div class="dropdown-trigger">
             <input type="text" id="productNameDisplay" placeholder="Seleccioná un producto" readonly>
             <i class="fas fa-chevron-down"></i>
