@@ -291,9 +291,23 @@ document.addEventListener("DOMContentLoaded", () => {
     loadProductsForSelect();
 
     loadProductsForDropdown();
-document.getElementById("productDropdown").addEventListener("click", (e) => {
-    if (!e.target.closest(".btn-edit-dropdown")) {
-        toggleDropdown();
+document.addEventListener("click", (e) => {
+    const dropdown = document.getElementById("productDropdown");
+    const panel = document.getElementById("productDropdownPanel");
+    const trigger = document.querySelector(".dropdown-trigger");
+
+    if (!dropdown) return;
+
+    // Si hacen clic en el trigger, abrir/cerrar
+    if (trigger.contains(e.target)) {
+        panel.classList.toggle("hidden");
+        trigger.classList.toggle("active");
+    }
+
+    // Si hacen clic fuera, cerrar
+    if (!dropdown.contains(e.target)) {
+        panel.classList.add("hidden");
+        trigger.classList.remove("active");
     }
 });
 
@@ -303,41 +317,61 @@ async function loadProductsForDropdown() {
     const token = getToken();
     const products = await apiFetch("/products", "GET", null, token);
     const panel = document.getElementById("productDropdownPanel");
-    panel.innerHTML = "";
+    const searchInput = document.getElementById("productSearchInput");
+    const listContainer = document.getElementById("productDropdownList");
 
     const availableProducts = products.filter(p => !p.sold);
 
-    availableProducts.forEach(product => {
-        const item = document.createElement("div");
-        item.className = "dropdown-item";
-        item.innerHTML = `
-            <div class="product-card-dropdown">
-                <div class="info">
-                    <div class="name">${product.name}</div>
-                    <div class="price">$${product.salePrice.toLocaleString()}</div>
+    // Render inicial
+    function renderProducts(filtered = availableProducts) {
+        listContainer.innerHTML = "";
+        if (filtered.length === 0) {
+            listContainer.innerHTML = `<div class="dropdown-item disabled">No hay productos</div>`;
+            return;
+        }
+        filtered.forEach(product => {
+            const item = document.createElement("div");
+            item.className = "dropdown-item";
+            item.innerHTML = `
+                <div class="product-card-dropdown">
+                    <div class="info">
+                        <div class="name">${product.name}</div>
+                        <div class="price">$${product.salePrice.toLocaleString()}</div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-edit-dropdown" data-id="${product._id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="actions">
-                    <button class="btn-edit-dropdown" data-id="${product._id}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                </div>
-            </div>
-        `;
+            `;
 
-        // ✅ Acá va el evento
-        item.querySelector('.btn-edit-dropdown').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const productId = e.currentTarget.dataset.id;
-            window.location.href = `productos.html?edit=${productId}`;
+            item.querySelector('.btn-edit-dropdown').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const productId = e.currentTarget.dataset.id;
+                window.location.href = `productos.html?edit=${productId}`;
+            });
+
+            item.addEventListener("click", (e) => {
+                if (e.target.closest('.btn-edit-dropdown')) return;
+                selectProduct(product);
+            });
+
+            listContainer.appendChild(item);
         });
+    }
 
-        item.addEventListener("click", (e) => {
-            if (e.target.closest('.btn-edit-dropdown')) return;
-            selectProduct(product);
-        });
-
-        panel.appendChild(item);
+    // Búsqueda en tiempo real
+    searchInput.addEventListener("input", () => {
+        const query = searchInput.value.toLowerCase();
+        const filtered = availableProducts.filter(p =>
+            p.name.toLowerCase().includes(query)
+        );
+        renderProducts(filtered);
     });
+
+    // Render inicial
+    renderProducts();
 }
 
 function selectProduct(product) {

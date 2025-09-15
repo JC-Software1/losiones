@@ -17,7 +17,7 @@ router.get("/", auth, async (req, res) => {
 // Create a new product
 router.post("/new", auth, async (req, res) => {
     try {
-        const { name, costPrice, salePrice } = req.body;
+const { name, costPrice, salePrice, category, brand, size } = req.body;
 
         // Log received data for debugging
         console.log("Datos recibidos en el servidor:", { 
@@ -30,12 +30,16 @@ router.post("/new", auth, async (req, res) => {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
 
-        const product = new Product({
-            name,
-            costPrice,
-            salePrice,
-            user: req.user.id
-        });
+
+const product = new Product({
+    name,
+    costPrice,
+    salePrice,
+    category,
+    brand,
+    size,
+    user: req.user.id
+});
 
         await product.save();
         res.status(201).json(product);
@@ -57,9 +61,12 @@ router.put("/:id", auth, async (req, res) => {
         }
 
         // Update the product data
-        product.name = name;
-        product.costPrice = costPrice;
-        product.salePrice = salePrice;
+product.name = name;
+product.costPrice = costPrice;
+product.salePrice = salePrice;
+product.category = category;
+product.brand = brand;
+product.size = size || null;
 
         await product.save();
         res.json(product);

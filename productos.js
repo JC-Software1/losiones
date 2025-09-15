@@ -15,6 +15,9 @@ const btnCancel = document.getElementById("cancelUpdate");
 const btnDelete = document.getElementById("deleteProduct");
 const productsList = document.getElementById("productsList");
 const searchInput = document.getElementById("searchInput");
+const inputCategory = document.getElementById("productCategory");
+const inputBrand = document.getElementById("productBrand");
+const inputSize = document.getElementById("productSize");
 
 // Variables globales
 let products = [];
@@ -107,6 +110,23 @@ function displayProducts(productsList) {
                     <h3>${product.name}</h3>
                     <p>Producto disponible en inventario</p>
                 </div>
+
+                <div class="product-meta">
+    <div class="meta-item">
+        <i class="fas fa-folder"></i>
+        <span>Categoría: <span class="meta-value">${product.category}</span></span>
+    </div>
+    <div class="meta-item">
+        <i class="fas fa-tag"></i>
+        <span>Marca: <span class="meta-value">${product.brand}</span></span>
+    </div>
+    ${product.size ? `
+    <div class="meta-item">
+        <i class="fas fa-ruler"></i>
+        <span>Talla: <span class="meta-value">${product.size}</span></span>
+    </div>` : ''}
+</div>
+
                 <div class="product-prices">
                     <div class="cost-price">Costo: $${product.costPrice.toLocaleString()}</div>
                     <div class="sale-price">$${product.salePrice.toLocaleString()}</div>
@@ -252,12 +272,14 @@ function showMarginPreview(margin, profit) {
 
 // Guardar producto
 async function saveProduct() {
-    const productData = {
-        name: inputName.value.trim(),
-        costPrice: parseFloat(inputCostPrice.value),
-        salePrice: parseFloat(inputSalePrice.value)
-    };
-    
+const productData = {
+    name: inputName.value.trim(),
+    costPrice: parseFloat(inputCostPrice.value),
+    salePrice: parseFloat(inputSalePrice.value),
+    category: inputCategory.value.trim(),
+    brand: inputBrand.value.trim(),
+    size: inputSize.value.trim() || null
+};
     if (!productData.name || isNaN(productData.costPrice) || isNaN(productData.salePrice)) {
         showNotification("Completa todos los campos requeridos.", "error");
         return;
@@ -295,6 +317,9 @@ window.editProduct = function(productId) {
     inputName.value = product.name;
     inputCostPrice.value = product.costPrice;
     inputSalePrice.value = product.salePrice;
+    inputCategory.value = product.category;
+inputBrand.value = product.brand;
+inputSize.value = product.size || "";
     
     formTitle.innerHTML = '<i class="fas fa-edit"></i> Editar Producto';
     btnSave.classList.add('hidden');
@@ -312,11 +337,14 @@ window.editProduct = function(productId) {
 async function updateProduct() {
     const id = inputId.value;
     
-    const productData = {
-        name: inputName.value.trim(),
-        costPrice: parseFloat(inputCostPrice.value),
-        salePrice: parseFloat(inputSalePrice.value)
-    };
+const productData = {
+    name: inputName.value.trim(),
+    costPrice: parseFloat(inputCostPrice.value),
+    salePrice: parseFloat(inputSalePrice.value),
+    category: inputCategory.value.trim(),
+    brand: inputBrand.value.trim(),
+    size: inputSize.value.trim() || null
+};
     
     if (!productData.name || isNaN(productData.costPrice) || isNaN(productData.salePrice)) {
         showNotification("Completa todos los campos requeridos.", "error");

@@ -291,6 +291,15 @@
     cursor: pointer;
 }
 
+.dropdown-search {
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    outline: none;
+    background: var(--light-gray);
+}
 
     </style>
 </head>
@@ -353,7 +362,13 @@
             <input type="text" id="productNameDisplay" placeholder="Seleccioná un producto" readonly>
             <i class="fas fa-chevron-down"></i>
         </div>
-        <div class="dropdown-panel hidden" id="productDropdownPanel"></div>
+        
+
+        <div class="dropdown-panel hidden" id="productDropdownPanel">
+    <input type="text" id="productSearchInput" placeholder="🔍 Buscar producto..." class="dropdown-search">
+    <div id="productDropdownList"></div>
+</div>
+
     </div>
     <input type="hidden" id="productName" name="productName">
 </div>

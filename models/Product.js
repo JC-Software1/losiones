@@ -30,7 +30,23 @@ const ProductSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true
-    }
+    },
+
+    category: {
+    type: String,
+    required: true,
+    trim: true
+},
+brand: {
+    type: String,
+    required: true,
+    trim: true
+},
+size: {
+    type: String,
+    default: null,
+    trim: true
+}
 }, { timestamps: true });
 
 module.exports = mongoose.model("Product", ProductSchema);
