@@ -49,6 +49,7 @@ async function loadProducts() {
         filteredProducts = availableProducts;
         displayProducts(availableProducts);
         updateStatistics(availableProducts);
+         populateFilters(allProducts);
         
     } catch (error) {
         console.error("Error al cargar productos:", error);
@@ -98,8 +99,13 @@ function displayProducts(products) {
                 </div>
                 <div class="product-status status-available">
                     <i class="fas fa-check-circle"></i> Disponible
-                </div>
+ <i class="fas fa-folder"></i> ${product.category} • 
+                <i class="fas fa-tag"></i> ${product.brand} • 
+                ${product.size ? `<i class="fas fa-ruler"></i> Talla: ${product.size}` : ''}
             </div>
+        </div>
+
+            
             
             <div class="product-prices">
                 <div class="price-item">
@@ -173,6 +179,14 @@ function setupEventListeners() {
     if (searchInput) searchInput.addEventListener("input", applyFilters);
     if (marginFilter) marginFilter.addEventListener("change", applyFilters);
     if (priceFilter) priceFilter.addEventListener("change", applyFilters);
+
+    const categoryFilter = document.getElementById('categoryFilter');
+    const brandFilter = document.getElementById('brandFilter');
+    const sizeFilter = document.getElementById('sizeFilter');
+
+    if (categoryFilter) categoryFilter.addEventListener("change", applyFilters);
+    if (brandFilter) brandFilter.addEventListener("change", applyFilters);
+    if (sizeFilter) sizeFilter.addEventListener("change", applyFilters);
 }
 
 // Aplicar filtros
@@ -180,35 +194,31 @@ function applyFilters() {
     const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : "";
     const marginFilterValue = marginFilter ? marginFilter.value : "all";
     const priceFilterValue = priceFilter ? priceFilter.value : "all";
-    
+    const categoryFilterValue = document.getElementById('categoryFilter')?.value || "all";
+    const brandFilterValue = document.getElementById('brandFilter')?.value || "all";
+    const sizeFilterValue = document.getElementById('sizeFilter')?.value || "all";
+
     filteredProducts = allProducts.filter(product => {
-        // Filtro de búsqueda por nombre
         const matchesSearch = searchTerm === "" || product.name.toLowerCase().includes(searchTerm);
-        
-        // Filtro de margen
         const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
+
         let matchesMargin = true;
-        if (marginFilterValue === "high") {
-            matchesMargin = margin >= 30;
-        } else if (marginFilterValue === "medium") {
-            matchesMargin = margin >= 20 && margin < 30;
-        } else if (marginFilterValue === "low") {
-            matchesMargin = margin < 20;
-        }
-        
-        // Filtro de precio
+        if (marginFilterValue === "high") matchesMargin = margin >= 30;
+        else if (marginFilterValue === "medium") matchesMargin = margin >= 20 && margin < 30;
+        else if (marginFilterValue === "low") matchesMargin = margin < 20;
+
         let matchesPrice = true;
-        if (priceFilterValue === "low") {
-            matchesPrice = product.salePrice <= 50000;
-        } else if (priceFilterValue === "medium") {
-            matchesPrice = product.salePrice > 50000 && product.salePrice <= 200000;
-        } else if (priceFilterValue === "high") {
-            matchesPrice = product.salePrice > 200000;
-        }
-        
-        return matchesSearch && matchesMargin && matchesPrice;
+        if (priceFilterValue === "low") matchesPrice = product.salePrice <= 50000;
+        else if (priceFilterValue === "medium") matchesPrice = product.salePrice > 50000 && product.salePrice <= 200000;
+        else if (priceFilterValue === "high") matchesPrice = product.salePrice > 200000;
+
+        const matchesCategory = categoryFilterValue === "all" || product.category === categoryFilterValue;
+        const matchesBrand = brandFilterValue === "all" || product.brand === brandFilterValue;
+        const matchesSize = sizeFilterValue === "all" || product.size === sizeFilterValue;
+
+        return matchesSearch && matchesMargin && matchesPrice && matchesCategory && matchesBrand && matchesSize;
     });
-    
+
     displayProducts(filteredProducts);
     updateStatistics(filteredProducts);
 }
@@ -561,3 +571,28 @@ function setupMenuHandlers() {
         link.style.transitionDelay = `${index * 50}ms`;
     });
 }
+
+// Llenar filtros con valores únicos
+function populateFilters(products) {
+    const categories = [...new Set(products.map(p => p.category))].sort();
+    const brands = [...new Set(products.map(p => p.brand))].sort();
+    const sizes = [...new Set(products.map(p => p.size).filter(Boolean))].sort();
+
+    populateSelect('categoryFilter', categories);
+    populateSelect('brandFilter', brands);
+    populateSelect('sizeFilter', sizes);
+}
+
+function populateSelect(selectId, values) {
+    const select = document.getElementById(selectId);
+    const currentValue = select.value;
+    select.innerHTML = `<option value="all">Todas${selectId === 'sizeFilter' ? ' las tallas' : selectId === 'categoryFilter' ? ' las categorías' : ' las marcas'}</option>`;
+    values.forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+    });
+    select.value = currentValue; // Mantener selección si aplica
+}
+
