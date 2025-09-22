@@ -13,8 +13,7 @@ async function handleRegister(event) {
         name,
         email,
         password,
-        tipo: document.getElementById("registerTipo").value
-
+        tipo: document.getElementById("registerTipo").valuexs
     });
 
     alert("Registro exitoso, de click en aceptar");
