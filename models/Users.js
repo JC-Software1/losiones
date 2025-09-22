@@ -14,6 +14,10 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: [true, "La contraseña es obligatoria"]
-    }
+       },
+   tipo: {
+       type: Number,
+       default: 1
+   }
 })
 module.exports = mongoose.model("User", userSchema);
