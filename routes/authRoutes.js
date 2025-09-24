@@ -67,16 +67,17 @@ router.post("/login-as/:userId", async (req, res) => {
 // 🟢 Registrar usuario
 router.post("/register", async (req, res) => {
     try {
-        const { name, email, password, tipo = 1 } = req.body;
+        const { name, username, password, tipo = 1 } = req.body;
 
-        if (!validator.isEmail(email)) {
-            return res.status(400).json({ error: "Email inválido" });
+ if (!username || !username.trim()) {
+           return res.status(400).json({ error: "El nombre de usuario es obligatorio" });
         }
+
         if (!validator.isLength(password, { min: 6 })) {
             return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
         }
 
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ username });
         if (existingUser) {
             return res.status(400).json({ error: "Ya existe un usuario con este correo" });
         }

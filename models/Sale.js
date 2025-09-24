@@ -29,7 +29,8 @@ const SaleSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     settled: { type: Boolean, default: false },
     settledDate: { type: Date, default: null },
-    clientAddress: { type: String, required: false, trim: true }
+    clientAddress: { type: String, required: false, trim: true },
+    paymentDays: { type: String, default: '' } // "5,10,15,20"
 }, { timestamps: true });
 
 // Método virtual para calcular el total abonado

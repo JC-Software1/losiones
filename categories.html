@@ -330,6 +330,96 @@
     background: rgba(255,255,255,0.5);
 }
 
+/* ---------- Modal calendario ---------- */
+.calendar-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:3000;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .3s ease, visibility .3s ease;
+}
+.calendar-modal.show{
+    opacity:1;
+    visibility:visible;
+}
+.calendar-content{
+    background:var(--white);
+    border-radius:var(--radius-lg);
+    width:90%;
+    max-width:420px;
+    padding:20px;
+    transform:scale(.95);
+    transition:transform .3s ease;
+}
+.calendar-modal.show .calendar-content{
+    transform:scale(1);
+}
+.calendar-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+}
+.calendar-body{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:8px;
+    margin-bottom:16px;
+}
+.day-cell{
+    aspect-ratio:1/1;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    background:var(--light-gray);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:500;
+    transition:background .2s ease, transform .2s ease;
+}
+.day-cell:hover{
+    background:var(--accent);
+    color:#fff;
+    transform:translateY(-2px);
+}
+.day-cell.selected{
+    background:var(--success);
+    color:#fff;
+    border-color:var(--success);
+}
+.days-pills{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+}
+.day-pill{
+    background:var(--accent);
+    color:#fff;
+    padding:4px 10px;
+    border-radius:20px;
+    font-size:13px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+}
+.day-pill .remove-day{
+    background:rgba(255,255,255,.3);
+    border:none;
+    color:#fff;
+    border-radius:50%;
+    width:18px;
+    height:18px;
+    font-size:12px;
+    cursor:pointer;
+}
+
     </style>
 </head>
 <body>
@@ -413,10 +503,42 @@
                         <input type="number" id="price" placeholder="0" min="0" step="1000" required>
                     </div>
 
-                    <div class="form-group">
-                        <label for="installments">Cuotas</label>
-                        <input type="text" id="installments" placeholder="Ej: 12 cuotas mensuales">
-                    </div>
+
+
+                    <!-- Dentro del .form-grid, justo DESPUÉS del campo “Cuotas” -->
+<div class="form-group full-width">
+    <label for="installments">Cuotas</label>
+    <input type="text" id="installments" placeholder="Ej: 12 cuotas mensuales">
+</div>
+
+<!-- 🔥 Nuevo campo Días de pago -->
+<div class="form-group full-width">
+    <label>Días de pago</label>
+    <button type="button" id="btnOpenCalendar" class="btn btn-secondary">
+        <i class="fas fa-calendar-alt"></i> Seleccionar días
+    </button>
+
+    <!-- Contenedor de los días ya elegidos -->
+    <div id="selectedDaysPills" class="days-pills"></div>
+</div>
+
+<!-- Calendario flotante -->
+<div id="calendarModal" class="calendar-modal">
+    <div class="calendar-content">
+        <div class="calendar-header">
+            <h3>Seleccioná los días de pago</h3>
+            <button type="button" id="closeCalendar" class="btn-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="calendarBody" class="calendar-body"></div>
+        <div class="calendar-footer">
+            <button type="button" id="confirmDays" class="btn btn-success">
+                <i class="fas fa-check"></i> Establecer días
+            </button>
+        </div>
+    </div>
+</div>
 
                     <div class="form-group full-width">
                         <label for="advancePayment">Pago Inicial</label>

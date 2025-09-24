@@ -123,7 +123,16 @@ router.get("/settled", auth, async (req, res) => {
 // Crear nueva venta
 router.post("/new", auth, async (req, res) => {
     try {
-        const { clientName, products, saleDate, price, installments, advancePayment, clientAddress } = req.body;
+        const {
+            clientName,
+            products,
+            saleDate,
+            price,
+            installments,
+            advancePayment,
+            clientAddress,
+            paymentDays   // ⬅️ nuevo campo
+        } = req.body;
 
         // Unir nombres de productos para productName
         const productName = products.map(p => p.name).join(', ');
@@ -132,13 +141,14 @@ router.post("/new", auth, async (req, res) => {
 
         const sale = new Sale({
             clientName,
-            productName, // ✅ Ahora sí existe
-            products, // Guardamos el array completo
+            productName,
+            products,
             saleDate,
             price,
             installments,
             advancePayment,
             clientAddress,
+            paymentDays,        // ⬅️ se guarda
             user: req.user.id,
             settled: initiallySettled,
             settledDate: initiallySettled ? new Date() : null,

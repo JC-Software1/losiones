@@ -171,21 +171,24 @@ async function saveSale() {
         return;
     }
 
-    const saleData = {
-        clientName: inputClient.value.trim(),
-        clientAddress: document.getElementById("clientAddress").value.trim(),
-        products: selectedProducts.map(p => ({
-            name: p.name,
-            brand: p.brand,
-            category: p.category,
-            size: p.size,
-            salePrice: p.salePrice
-        })),
-        saleDate: inputDate.value,
-        price: parseFloat(inputPrice.value),
-        installments: inputInstallments.value.trim(),
-        advancePayment: parseFloat(inputAdvance.value) || 0
-    };
+const saleData = {
+    clientName: inputClient.value.trim(),
+    clientAddress: document.getElementById("clientAddress").value.trim(),
+    products: selectedProducts.map(p => ({
+        name: p.name,
+        brand: p.brand,
+        category: p.category,
+        size: p.size,
+        salePrice: p.salePrice
+    })),
+    saleDate: inputDate.value,
+    price: parseFloat(inputPrice.value),
+    installments: inputInstallments.value.trim(),
+    advancePayment: parseFloat(inputAdvance.value) || 0,
+    paymentDays: collectPaymentDays() // <-- ¡nuevo campo!
+};
+
+    
 
     try {
         const token = getToken();
@@ -527,3 +530,70 @@ btnConf.addEventListener("click", () => {
 });
 btnCerr.addEventListener("click", () => modal.classList.remove("show"));
 btnX.addEventListener("click",   () => modal.classList.remove("show"));
+
+/* ---------- Estado ---------- */
+let selectedDays = []; // números 1-31
+
+/* ---------- Nodos ---------- */
+const btnOpen   = document.getElementById('btnOpenCalendar');
+const modalCal  = document.getElementById('calendarModal');
+const closeBtn  = document.getElementById('closeCalendar');
+const confirmBtn= document.getElementById('confirmDays');
+const pillsBox  = document.getElementById('selectedDaysPills');
+const calendar  = document.getElementById('calendarBody');
+
+/* ---------- Abrir / Cerrar ---------- */
+btnOpen.addEventListener('click', () => {
+    renderCalendar();
+    modalCal.classList.add('show');
+});
+closeBtn.addEventListener('click', () => modalCal.classList.remove('show'));
+confirmBtn.addEventListener('click', () => {
+    renderPills();
+    modalCal.classList.remove('show');
+});
+
+/* ---------- Renderizar calendario ---------- */
+function renderCalendar(){
+    calendar.innerHTML = '';
+    for(let d=1; d<=31; d++){
+        const day = document.createElement('div');
+        day.className = 'day-cell';
+        day.textContent = d;
+        if(selectedDays.includes(d)) day.classList.add('selected');
+        day.addEventListener('click', () => {
+            day.classList.toggle('selected');
+            if(day.classList.contains('selected')){
+                if(!selectedDays.includes(d)) selectedDays.push(d);
+            }else{
+                selectedDays = selectedDays.filter(n => n !== d);
+            }
+            selectedDays.sort((a,b)=>a-b);
+        });
+        calendar.appendChild(day);
+    }
+}
+
+/* ---------- Mostrar pastillas ---------- */
+function renderPills(){
+    pillsBox.innerHTML = '';
+    selectedDays.forEach(d => {
+        const pill = document.createElement('span');
+        pill.className = 'day-pill';
+        pill.innerHTML = `${d} <button class="remove-day" data-day="${d}">×</button>`;
+        pillsBox.appendChild(pill);
+    });
+    // Delegar evento para quitar
+    pillsBox.addEventListener('click', e => {
+        if(e.target.classList.contains('remove-day')){
+            const day = Number(e.target.dataset.day);
+            selectedDays = selectedDays.filter(n => n !== day);
+            renderPills();
+        }
+    });
+}
+
+/* ---------- Al guardar la venta incluir los días ---------- */
+function collectPaymentDays(){
+    return selectedDays.join(','); // "5,10,15,20"
+}
