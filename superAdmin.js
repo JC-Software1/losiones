@@ -1,287 +1,532 @@
+// superAdmin.js
 import { apiFetch } from "../utils/api.js";
 import { setToken, getToken, isAuthenticated, getUserInfo, logout } from "../utils/auth.js";
 
 let allUsers = [];
 
-// Verificar autenticación al cargar la página
-document.addEventListener("DOMContentLoaded", () => {
-    if (!isAuthenticated()) {
-        alert("Sesión expirada. Redirigiendo al login...");
-        window.location.href = "index.html";
-        return;
-    }
+/* ------------------- Sticky header & layout padding ------------------- */
+function enableStickyHeader() {
+  const header = document.querySelector(".header");
+  const container = document.querySelector(".admin-container");
+  if (!header || !container) return;
 
-    const userInfo = getUserInfo();
-    if (!userInfo || userInfo.tipo !== 3) {
-        alert("Acceso denegado. Solo super administradores pueden acceder.");
-        window.location.href = "index.html";
-        return;
-    }
+  try { if ("scrollRestoration" in history) history.scrollRestoration = "manual"; } catch (e) {}
 
-    // Mostrar información del usuario
-    document.getElementById("userInfo").textContent = 
-        `Logueado como: ${userInfo.username} (Super Admin) • ${new Date().toLocaleDateString()}`;
+  function applyHeaderStyles() {
+    header.style.transition = "none";
+    header.style.willChange = "auto";
 
-    // Configurar event listeners
-    setupEventListeners();
-    
-    // Cargar usuarios
-    loadUsers();
-});
+    const headerHeight = header.getBoundingClientRect().height;
 
-function setupEventListeners() {
-    // Botón de logout
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-        if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
-            logout();
-        }
-    });
+    header.style.position = "fixed";
+    header.style.top = "0";
+    header.style.left = "50%";
+    header.style.transform = "translateX(-50%)";
+    header.style.width = "calc(100% - 40px)";
+    header.style.maxWidth = "1600px";
+    header.style.zIndex = "2000";
 
-    // Botón agregar usuario
-    document.getElementById("addUserBtn").addEventListener("click", () => {
-        openAddModal();
-    });
+    // Guardar padding base si no existe
+    const computed = window.getComputedStyle(container);
+    const currentPaddingTop = parseFloat(computed.paddingTop) || 0;
+    if (!container.dataset.basePaddingTop) container.dataset.basePaddingTop = currentPaddingTop;
 
-    // Modales
-    document.getElementById("closeModal").addEventListener("click", closeEditModal);
-    document.getElementById("closeAddModal").addEventListener("click", closeAddModal);
-    document.getElementById("cancelEdit").addEventListener("click", closeEditModal);
-    document.getElementById("cancelAdd").addEventListener("click", closeAddModal);
+    container.style.paddingTop = `${parseFloat(container.dataset.basePaddingTop) + headerHeight + 12}px`;
 
-    // Formularios
-    document.getElementById("editForm").addEventListener("submit", handleEditUser);
-    document.getElementById("addForm").addEventListener("submit", handleAddUser);
+    setTimeout(() => { header.style.transition = ""; }, 60);
+  }
 
-    // Cerrar modales al hacer click fuera
-    window.addEventListener("click", (e) => {
-        if (e.target.classList.contains("modal")) {
-            closeEditModal();
-            closeAddModal();
-        }
-    });
+  applyHeaderStyles();
+  window.addEventListener("resize", applyHeaderStyles);
+  // Also recalc after fonts/images load
+  window.addEventListener("load", applyHeaderStyles);
+  // Ensure page starts at top
+  window.scrollTo(0, 0);
 }
 
-async function loadUsers() {
-    try {
-        console.log("Cargando usuarios...");
-        
-        const users = await apiFetch("/auth/users", "GET");
-        allUsers = users;
-        
-        renderUsers(users);
-        updateUserCount(users.length);
-    } catch (err) {
-        console.error("Error cargando usuarios:", err);
-        alert(`Error cargando usuarios: ${err.message}`);
-    }
+/* ------------------- Layout controls (Compact / Masonry / List) ------------------- */
+function injectCardLayoutStyles() {
+  const css = `
+  /* Injected layout variants */
+  #usersGrid.grid-compact {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+  #usersGrid.grid-compact .user-card{ padding:20px; min-height:140px; }
+
+  #usersGrid.grid-masonry { column-width: 360px; column-gap: 20px; }
+  #usersGrid.grid-masonry .user-card { display:inline-block; width:100%; margin:0 0 20px; break-inside: avoid; }
+
+  #usersGrid.grid-list { display:flex; flex-direction:column; gap:14px; }
+  #usersGrid.grid-list .user-card { display:grid; grid-template-columns: 84px 1fr auto; gap:16px; align-items:center; min-height:84px; padding:18px; }
+
+  .layout-toggle { display:inline-flex; gap:8px; align-items:center; border-radius:999px; padding:6px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.04); }
+  .layout-toggle button { background:transparent; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:700; color: white; opacity:0.85;}
+  .layout-toggle button[aria-pressed="true"]{ background: linear-gradient(90deg,#667eea,#764ba2); color:white; opacity:1; box-shadow:0 10px 30px rgba(118,75,162,0.12); }
+
+  @media (max-width:520px){
+    #usersGrid.grid-compact{ grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); }
+    #usersGrid.grid-masonry{ column-width: 220px; }
+    #usersGrid.grid-list .user-card{ grid-template-columns: 64px 1fr auto; }
+  }
+  `;
+  if (!document.getElementById("injected-usersgrid-styles")) {
+    const style = document.createElement("style");
+    style.id = "injected-usersgrid-styles";
+    style.appendChild(document.createTextNode(css));
+    document.head.appendChild(style);
+  }
 }
 
-function renderUsers(users) {
-    const grid = document.getElementById("usersGrid");
-    grid.innerHTML = "";
+function addLayoutControls() {
+  const headerActions = document.querySelector(".header-actions");
+  if (!headerActions || document.getElementById("layoutControls")) return;
 
-    if (users.length === 0) {
-        grid.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;">No hay usuarios registrados</div>';
-        return;
-    }
+  const wrapper = document.createElement("div");
+  wrapper.id = "layoutControls";
+  wrapper.className = "layout-toggle";
+  wrapper.style.marginRight = "8px";
 
-    users.forEach(user => {
-        const userCard = createUserCard(user);
-        grid.appendChild(userCard);
+  const btnCompact = document.createElement("button");
+  btnCompact.textContent = "Compact";
+  btnCompact.dataset.layout = "grid-compact";
+  btnCompact.setAttribute("aria-pressed", "false");
+
+  const btnMasonry = document.createElement("button");
+  btnMasonry.textContent = "Masonry";
+  btnMasonry.dataset.layout = "grid-masonry";
+  btnMasonry.setAttribute("aria-pressed", "false");
+
+  const btnList = document.createElement("button");
+  btnList.textContent = "Lista";
+  btnList.dataset.layout = "grid-list";
+  btnList.setAttribute("aria-pressed", "false");
+
+  [btnCompact, btnMasonry, btnList].forEach(b => {
+    b.addEventListener("click", (e) => {
+      const layout = e.currentTarget.dataset.layout;
+      toggleLayout(layout);
+      [btnCompact, btnMasonry, btnList].forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
     });
+    wrapper.appendChild(b);
+  });
+
+  // Insert before right-most actions
+  headerActions.insertBefore(wrapper, headerActions.firstChild);
+
+  // Apply saved layout or default compact
+  const saved = localStorage.getItem("usersGridLayout") || "grid-compact";
+  const btnToPress = wrapper.querySelector(`button[data-layout="${saved}"]`);
+  if (btnToPress) btnToPress.click();
 }
 
+function toggleLayout(layoutClass) {
+  const grid = document.getElementById("usersGrid");
+  const container = document.querySelector(".admin-container");
+  const header = document.querySelector(".header");
+  if (!grid || !container || !header) return;
+
+  grid.classList.remove("grid-compact", "grid-masonry", "grid-list");
+  grid.classList.add(layoutClass);
+  localStorage.setItem("usersGridLayout", layoutClass);
+
+  // Recalc padding to avoid overlaps
+  const headerHeight = header.getBoundingClientRect().height;
+  const base = parseFloat(container.dataset.basePaddingTop || window.getComputedStyle(container).paddingTop || 0) || 0;
+  container.style.paddingTop = `${base + headerHeight + 12}px`;
+
+  if (window.pageYOffset < 50) window.scrollTo(0, 0);
+}
+
+/* ------------------- UI helpers ------------------- */
+function showLoading() {
+  const grid = document.getElementById("usersGrid");
+  grid.innerHTML = `<div class="loading">🔄 Cargando usuarios...</div>`;
+}
+
+function renderEmpty() {
+  const grid = document.getElementById("usersGrid");
+  grid.innerHTML = `<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.85)">No hay usuarios registrados</div>`;
+}
+
+/* ------------------- Create user card ------------------- */
 function createUserCard(user) {
-    const div = document.createElement("div");
-    div.className = "user-card";
-    
-    const userTypeText = user.tipo === 3 ? 'Super Admin' : user.tipo === 2 ? 'Admin' : 'Usuario';
-    const userTypeClass = user.tipo === 3 ? 'type-superadmin' : user.tipo === 2 ? 'type-admin' : 'type-user';
-    const statusClass = user.bloqueado ? 'status-blocked' : 'status-active';
-    const statusText = user.bloqueado ? '🔒 Bloqueado' : '✅ Activo';
-    
-    const firstLetter = (user.name || user.username || 'U').charAt(0).toUpperCase();
-    
-    div.innerHTML = `
-        <div class="user-header">
-            <div class="user-avatar">${firstLetter}</div>
-            <div>
-                <div class="user-status ${statusClass}">${statusText}</div>
-                <div class="user-type ${userTypeClass}">${userTypeText}</div>
-            </div>
-        </div>
-        
-        <div class="user-info-grid">
-            <div class="user-field">
-                <div class="field-label">Nombre Completo</div>
-                <div class="field-value">${user.name || 'Sin nombre'}</div>
-            </div>
-            
-            <div class="user-field">
-                <div class="field-label">Usuario</div>
-                <div class="field-value">${user.username}</div>
-            </div>
-            
-            <div class="user-field">
-                <div class="field-label">ID de Sistema</div>
-                <div class="field-value" style="font-family: monospace; font-size: 12px;">${user._id}</div>
-            </div>
-            
-            <div class="user-field">
-                <div class="field-label">Fecha de Registro</div>
-                <div class="field-value">${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'No disponible'}</div>
-            </div>
-        </div>
-        
-        <div class="user-actions">
-            <button class="btn-sm btn-edit" onclick="editUser('${user._id}')">
-                ✏️ Editar
-            </button>
-            <button class="btn-sm ${user.bloqueado ? 'btn-unblock' : 'btn-block'}" 
-                    onclick="toggleUserBlock('${user._id}', ${user.bloqueado})"
-                    ${user.tipo === 3 ? 'disabled title="No se puede bloquear a un super admin"' : ''}>
-                ${user.bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear'}
-            </button>
-            <button class="btn-sm btn-inspect" onclick="inspectUser('${user._id}')">
-                🔍 Inspeccionar
-            </button>
-        </div>
-    `;
-    
-    return div;
+  const div = document.createElement("div");
+  div.className = "user-card";
+  div.dataset.userId = user._id;
+
+  const userTypeText = user.tipo === 3 ? 'Super Admin' : user.tipo === 2 ? 'Admin' : 'Usuario';
+  const userTypeClass = user.tipo === 3 ? 'type-superadmin' : user.tipo === 2 ? 'type-admin' : 'type-user';
+  const statusClass = user.bloqueado ? 'status-blocked' : 'status-active';
+  const statusText = user.bloqueado ? '🔒 Bloqueado' : '✅ Activo';
+  const firstLetter = (user.name || user.username || 'U').charAt(0).toUpperCase();
+
+  // Build inner markup (no inline onclicks — we'll use delegation)
+  div.innerHTML = `
+    <div class="user-header">
+      <div class="user-avatar">${firstLetter}</div>
+      <div class="user-main-info">
+        <h3>${user.name || 'Sin nombre'}</h3>
+        <div class="user-username">${user.username || ''}</div>
+      </div>
+      <div class="user-badges">
+        <div class="user-status ${statusClass}">${statusText}</div>
+        <div class="user-type ${userTypeClass}">${userTypeText}</div>
+      </div>
+    </div>
+
+    <div class="user-details">
+      <div class="detail-item">
+        <div class="detail-label">ID de Sistema</div>
+        <div class="detail-value" style="font-family:monospace;font-size:12px">${user._id}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Fecha de Registro</div>
+        <div class="detail-value">${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'No disponible'}</div>
+      </div>
+      <div style="grid-column: 1 / -1; height: 0"></div>
+    </div>
+
+    <div class="user-actions">
+      <button class="btn-sm btn-edit" data-action="edit" data-id="${user._id}">✏️ Editar</button>
+      <button class="btn-sm ${user.bloqueado ? 'btn-unblock' : 'btn-block'}" data-action="${user.bloqueado ? 'unblock' : 'block'}" data-id="${user._id}" ${user.tipo === 3 ? 'disabled title="No se puede bloquear a un super admin"' : ''}>
+        ${user.bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear'}
+      </button>
+      <button class="btn-sm btn-inspect" data-action="inspect" data-id="${user._id}">🔍 Inspeccionar</button>
+      <button class="btn-sm btn-delete" data-action="delete" data-id="${user._id}" ${user.tipo === 3 ? 'disabled title="No se puede eliminar a un super admin"' : ''}>🗑️ Eliminar</button>
+    </div>
+  `;
+
+  return div;
 }
 
-function updateUserCount(count) {
-    const activeUsers = allUsers.filter(u => !u.bloqueado).length;
-    const blockedUsers = allUsers.filter(u => u.bloqueado).length;
-    
-    document.getElementById("userCount").innerHTML = `
-        <span style="color: #2ecc71;">✅ ${activeUsers} activos</span> • 
-        <span style="color: #e74c3c;">🔒 ${blockedUsers} bloqueados</span> • 
-        <span style="color: #3498db;">📊 ${count} total</span>
-    `;
+/* ------------------- Stats update ------------------- */
+function updateStats() {
+  const total = allUsers.length;
+  const active = allUsers.filter(u => !u.bloqueado).length;
+  const blocked = allUsers.filter(u => u.bloqueado).length;
+  const admins = allUsers.filter(u => u.tipo === 2 || u.tipo === 3).length;
+
+  const elTotal = document.getElementById("totalUsers");
+  const elActive = document.getElementById("activeUsers");
+  const elBlocked = document.getElementById("blockedUsers");
+  const elAdmins = document.getElementById("adminUsers");
+
+  if (elTotal) elTotal.textContent = total;
+  if (elActive) elActive.textContent = active;
+  if (elBlocked) elBlocked.textContent = blocked;
+  if (elAdmins) elAdmins.textContent = admins;
 }
 
-// Funciones globales (llamadas desde onclick)
-window.editUser = function(userId) {
-    const user = allUsers.find(u => u._id === userId);
-    if (!user) return;
-    
-    document.getElementById("editUserId").value = user._id;
-    document.getElementById("editName").value = user.name || '';
-    document.getElementById("editUsername").value = user.username;
-    document.getElementById("editPassword").value = '';
-    document.getElementById("editTipo").value = user.tipo;
-    
-    document.getElementById("editModal").style.display = "block";
-};
-
-window.toggleUserBlock = async function(userId, isBlocked) {
-    const user = allUsers.find(u => u._id === userId);
-    if (!user) return;
-    
-    const action = isBlocked ? 'desbloquear' : 'bloquear';
-    const endpoint = isBlocked ? 'unblock' : 'block';
-    
-    if (!confirm(`¿Estás seguro de que quieres ${action} a ${user.username}?`)) return;
-    
-    try {
-        await apiFetch(`/auth/users/${userId}/${endpoint}`, "PUT");
-        alert(`Usuario ${action}do exitosamente`);
-        loadUsers(); // Recargar usuarios
-    } catch (err) {
-        console.error(`Error al ${action} usuario:`, err);
-        alert(`Error: ${err.message}`);
+/* ------------------- Load & render users ------------------- */
+async function loadUsers() {
+  const grid = document.getElementById("usersGrid");
+  showLoading();
+  try {
+    const users = await apiFetch("/auth/users", "GET");
+    // ensure array
+    allUsers = Array.isArray(users) ? users : [];
+    if (allUsers.length === 0) {
+      renderEmpty();
+    } else {
+      // render cards
+      grid.innerHTML = "";
+      // optionally sort so superadmins first
+      allUsers.sort((a, b) => (b.tipo - a.tipo));
+      allUsers.forEach(u => {
+        const card = createUserCard(u);
+        grid.appendChild(card);
+      });
     }
-};
+    updateStats();
+  } catch (err) {
+    console.error("Error cargando usuarios:", err);
+    grid.innerHTML = `<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.85)">❌ Error cargando usuarios: ${err.message || err}</div>`;
+  } finally {
+    // ensure layout class exists
+    const saved = localStorage.getItem("usersGridLayout") || "grid-compact";
+    document.getElementById("usersGrid").classList.add(saved);
+  }
+}
 
-window.inspectUser = async function(userId) {
+/* ------------------- Event delegation for user actions ------------------- */
+function attachUsersGridHandlers() {
+  const grid = document.getElementById("usersGrid");
+  if (!grid) return;
+
+  grid.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    const userId = btn.dataset.id;
     const user = allUsers.find(u => u._id === userId);
-    if (!user) return;
-    
-    if (!confirm(`¿Quieres iniciar sesión como ${user.username}?`)) return;
-    
-    try {
+
+    if (!action || !user) return;
+
+    if (action === "edit") {
+      openEditModalFor(user);
+      return;
+    }
+
+    if (action === "block" || action === "unblock") {
+      const willBlock = action === "block";
+      const confirmMsg = willBlock ? `¿Estás seguro de bloquear a ${user.username}?` : `¿Estás seguro de desbloquear a ${user.username}?`;
+      if (!confirm(confirmMsg)) return;
+      try {
+        await apiFetch(`/auth/users/${userId}/${willBlock ? 'block' : 'unblock'}`, "PUT");
+        alert(`Usuario ${willBlock ? 'bloqueado' : 'desbloqueado'} exitosamente`);
+        await loadUsers();
+      } catch (err) {
+        console.error(err);
+        alert(`Error: ${err.message || err}`);
+      }
+      return;
+    }
+
+    if (action === "inspect") {
+      if (!confirm(`¿Quieres iniciar sesión como ${user.username}?`)) return;
+      try {
         const { token } = await apiFetch(`/auth/login-as/${userId}`, "POST");
         setToken(token);
         alert("Iniciando sesión como el usuario seleccionado...");
         window.location.href = "categories.html";
-    } catch (err) {
-        console.error("Error al inspeccionar usuario:", err);
-        alert(`Error: ${err.message}`);
+      } catch (err) {
+        console.error(err);
+        alert(`Error: ${err.message || err}`);
+      }
+      return;
     }
-};
+
+    if (action === "delete") {
+      if (user.tipo === 3) {
+        alert("No se puede eliminar a un super administrador.");
+        return;
+      }
+      const confirmDelete = confirm(`⚠️ ¿Deseas ELIMINAR permanentemente a ${user.username}? Esta acción NO se puede deshacer.`);
+      if (!confirmDelete) return;
+      const finalConfirm = prompt(`Para confirmar, escribe exactamente: ${user.username}`);
+      if (finalConfirm !== user.username) {
+        alert("Eliminación cancelada. El nombre no coincide.");
+        return;
+      }
+      try {
+        await apiFetch(`/auth/users/${userId}`, "DELETE");
+        alert("Usuario eliminado exitosamente");
+        await loadUsers();
+      } catch (err) {
+        console.error(err);
+        alert(`Error: ${err.message || err}`);
+      }
+      return;
+    }
+  });
+}
+
+/* ------------------- Modal helpers ------------------- */
+function openEditModalFor(user) {
+  const modal = document.getElementById("editModal");
+  if (!modal) return;
+  document.getElementById("editUserId").value = user._id;
+  document.getElementById("editName").value = user.name || '';
+  document.getElementById("editUsername").value = user.username || '';
+  document.getElementById("editPassword").value = '';
+  document.getElementById("editTipo").value = user.tipo || 1;
+  modal.style.display = "block";
+  // ensure header padding recalculated (modal may change layout)
+  recalcPadding();
+}
 
 function openAddModal() {
-    document.getElementById("addForm").reset();
-    document.getElementById("addModal").style.display = "block";
+  const modal = document.getElementById("addModal");
+  if (!modal) return;
+  document.getElementById("addForm").reset();
+  modal.style.display = "block";
+  recalcPadding();
 }
 
 function closeEditModal() {
-    document.getElementById("editModal").style.display = "none";
+  const modal = document.getElementById("editModal");
+  if (!modal) return;
+  modal.style.display = "none";
+  recalcPadding();
 }
 
 function closeAddModal() {
-    document.getElementById("addModal").style.display = "none";
+  const modal = document.getElementById("addModal");
+  if (!modal) return;
+  modal.style.display = "none";
+  recalcPadding();
 }
 
+function recalcPadding() {
+  const header = document.querySelector(".header");
+  const container = document.querySelector(".admin-container");
+  if (!header || !container) return;
+  const headerHeight = header.getBoundingClientRect().height;
+  const base = parseFloat(container.dataset.basePaddingTop || window.getComputedStyle(container).paddingTop || 0) || 0;
+  container.style.paddingTop = `${base + headerHeight + 12}px`;
+}
+
+/* ------------------- Form handlers ------------------- */
 async function handleEditUser(event) {
-    event.preventDefault();
-    
-    const userId = document.getElementById("editUserId").value;
-    const name = document.getElementById("editName").value.trim();
-    const username = document.getElementById("editUsername").value.trim();
-    const password = document.getElementById("editPassword").value.trim();
-    const tipo = parseInt(document.getElementById("editTipo").value);
-    
-    if (!name || !username) {
-        alert("Por favor, completa todos los campos obligatorios.");
-        return;
-    }
-    
-    try {
-        const updateData = { name, username, tipo };
-        if (password) {
-            updateData.password = password;
-        }
-        
-        await apiFetch(`/auth/users/${userId}`, "PUT", updateData);
-        
-        alert("Usuario actualizado exitosamente");
-        closeEditModal();
-        loadUsers();
-    } catch (err) {
-        console.error("Error al actualizar usuario:", err);
-        alert(`Error: ${err.message}`);
-    }
+  event.preventDefault();
+  const userId = document.getElementById("editUserId").value;
+  const name = document.getElementById("editName").value.trim();
+  const username = document.getElementById("editUsername").value.trim();
+  const password = document.getElementById("editPassword").value.trim();
+  const tipo = parseInt(document.getElementById("editTipo").value, 10);
+
+  if (!name || !username) {
+    alert("Por favor completa los campos obligatorios.");
+    return;
+  }
+
+  try {
+    const body = { name, username, tipo };
+    if (password) body.password = password;
+    await apiFetch(`/auth/users/${userId}`, "PUT", body);
+    alert("Usuario actualizado exitosamente");
+    closeEditModal();
+    await loadUsers();
+  } catch (err) {
+    console.error(err);
+    alert(`Error: ${err.message || err}`);
+  }
 }
 
 async function handleAddUser(event) {
-    event.preventDefault();
-    
-    const name = document.getElementById("addName").value.trim();
-    const username = document.getElementById("addUsername").value.trim();
-    const password = document.getElementById("addPassword").value.trim();
-    const tipo = parseInt(document.getElementById("addTipo").value);
-    
-    if (!name || !username || !password) {
-        alert("Por favor, completa todos los campos.");
-        return;
-    }
-    
-    if (password.length < 6) {
-        alert("La contraseña debe tener al menos 6 caracteres.");
-        return;
-    }
-    
-    try {
-        await apiFetch("/auth/register", "POST", { name, username, password, tipo });
-        
-        alert("Usuario creado exitosamente");
-        closeAddModal();
-        loadUsers();
-    } catch (err) {
-        console.error("Error al crear usuario:", err);
-        alert(`Error: ${err.message}`);
-    }
+  event.preventDefault();
+  const name = document.getElementById("addName").value.trim();
+  const username = document.getElementById("addUsername").value.trim();
+  const password = document.getElementById("addPassword").value.trim();
+  const tipo = parseInt(document.getElementById("addTipo").value, 10);
+
+  if (!name || !username || !password) {
+    alert("Por favor, completa todos los campos.");
+    return;
+  }
+  if (password.length < 6) {
+    alert("La contraseña debe tener al menos 6 caracteres.");
+    return;
+  }
+
+  try {
+    await apiFetch("/auth/register", "POST", { name, username, password, tipo });
+    alert("Usuario creado exitosamente");
+    closeAddModal();
+    await loadUsers();
+  } catch (err) {
+    console.error(err);
+    alert(`Error: ${err.message || err}`);
+  }
 }
+
+/* ------------------- Scroll to top ------------------- */
+function setupScrollToTop() {
+  const btn = document.getElementById("scrollToTop");
+  window.addEventListener("scroll", () => {
+    if (window.pageYOffset > 300) btn.classList.add("show"); else btn.classList.remove("show");
+  });
+  btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+}
+
+/* ------------------- Setup event listeners (header buttons & modals) ------------------- */
+function setupEventListeners() {
+  // Header buttons
+  const logoutBtn = document.getElementById("logoutBtn");
+  const addUserBtn = document.getElementById("addUserBtn");
+
+  logoutBtn.addEventListener("click", () => {
+    if (!confirm("¿Estás seguro de que quieres cerrar sesión?")) return;
+    logout();
+  });
+
+  addUserBtn.addEventListener("click", () => openAddModal());
+
+  // Modal close buttons
+  document.getElementById("closeModal").addEventListener("click", closeEditModal);
+  document.getElementById("closeAddModal").addEventListener("click", closeAddModal);
+  document.getElementById("cancelEdit").addEventListener("click", closeEditModal);
+  document.getElementById("cancelAdd").addEventListener("click", closeAddModal);
+
+  // Form submissions
+  document.getElementById("editForm").addEventListener("submit", handleEditUser);
+  document.getElementById("addForm").addEventListener("submit", handleAddUser);
+
+  // Close modal when clicking outside
+  window.addEventListener("click", (e) => {
+    if (e.target.classList && e.target.classList.contains("modal")) {
+      closeEditModal();
+      closeAddModal();
+    }
+  });
+
+  // Recalculate padding whenever modals transition/visibility change
+  const modals = document.querySelectorAll(".modal");
+  modals.forEach(mod => {
+    mod.addEventListener("transitionend", recalcPadding);
+    mod.addEventListener("animationend", recalcPadding);
+  });
+
+  // Attach grid action handlers
+  attachUsersGridHandlers();
+
+  // Layout controls
+  injectCardLayoutStyles();
+  addLayoutControls();
+
+  // Scroll to top
+  setupScrollToTop();
+
+  // MutationObserver to recalc padding when grid changes (e.g., after loadUsers)
+  const grid = document.getElementById("usersGrid");
+  const container = document.querySelector(".admin-container");
+  const header = document.querySelector(".header");
+  if (grid && container && header) {
+    const mo = new MutationObserver(() => recalcPadding());
+    mo.observe(grid, { childList: true, subtree: true });
+  }
+}
+
+/* ------------------- Initial auth check & boot ------------------- */
+document.addEventListener("DOMContentLoaded", async () => {
+  enableStickyHeader();
+
+  // Auth
+  if (!isAuthenticated()) {
+    alert("Sesión expirada. Redirigiendo al login...");
+    window.location.href = "index.html";
+    return;
+  }
+
+  const userInfo = getUserInfo();
+  if (!userInfo || userInfo.tipo !== 3) {
+    alert("Acceso denegado. Solo super administradores pueden acceder.");
+    window.location.href = "index.html";
+    return;
+  }
+
+  // Show logged user info
+  const userInfoEl = document.getElementById("userInfo");
+  if (userInfoEl) {
+    userInfoEl.textContent = `Logueado como: ${userInfo.username} (Super Admin) • ${new Date().toLocaleDateString()}`;
+  }
+
+  setupEventListeners();
+  await loadUsers();
+});
+
+/* ------------------- Expose small helpers globally if needed ------------------- */
+// Not strictly necessary, but keeps parity with previous code using window.* for editUser etc.
+window.openAddModal = openAddModal;
+window.openEditModalFor = (idOrUser) => {
+  if (typeof idOrUser === "string") {
+    const u = allUsers.find(x => x._id === idOrUser);
+    if (u) openEditModalFor(u);
+  } else if (typeof idOrUser === "object" && idOrUser !== null) {
+    openEditModalFor(idOrUser);
+  }
+};

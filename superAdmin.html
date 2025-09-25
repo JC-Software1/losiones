@@ -1,9 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <title>Panel Super-Admin</title>
-  <link rel="stylesheet" href="css/styles.css"/>
   <style>
     * {
       margin: 0;
@@ -11,216 +11,379 @@
       box-sizing: border-box;
     }
 
+    :root {
+      --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+      --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      
+      --glass-bg: rgba(255, 255, 255, 0.1);
+      --glass-border: rgba(255, 255, 255, 0.2);
+      --text-primary: #2c3e50;
+      --text-secondary: #7f8c8d;
+      --shadow-light: 0 8px 32px rgba(0, 0, 0, 0.1);
+      --shadow-medium: 0 12px 40px rgba(0, 0, 0, 0.15);
+      --shadow-heavy: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
       min-height: 100vh;
-      color: #333;
+      overflow-x: hidden;
+      overflow-y: scroll;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="%23ffffff" fill-opacity="0.02"/><circle cx="75" cy="75" r="1" fill="%23ffffff" fill-opacity="0.02"/><circle cx="50" cy="10" r="0.5" fill="%23ffffff" fill-opacity="0.03"/><circle cx="10" cy="90" r="0.5" fill="%23ffffff" fill-opacity="0.03"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+      pointer-events: none;
+      z-index: 1;
     }
 
     .admin-container {
-      max-width: 1400px;
+      max-width: 1600px;
       margin: 0 auto;
       padding: 20px;
+      position: relative;
+      z-index: 2;
     }
 
+    /* Header Glassmorphism */
     .header {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: 20px;
-      padding: 25px 30px;
-      margin-bottom: 30px;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-      display: flex;
-      justify-content: space-between;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 32px 40px;
+      margin-bottom: 32px;
+      box-shadow: var(--shadow-medium);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--primary-gradient);
+    }
+
+    .header-content {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 32px;
       align-items: center;
     }
 
-    .header h1 {
-      color: #2c3e50;
-      font-size: 2.5em;
-      font-weight: 700;
-      background: linear-gradient(135deg, #667eea, #764ba2);
+    .header-info h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      background: var(--primary-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
     }
 
-    .user-info {
-      font-size: 16px;
-      color: #7f8c8d;
+    .header-subtitle {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.1rem;
       font-weight: 500;
     }
 
     .header-actions {
       display: flex;
-      gap: 15px;
+      gap: 16px;
       align-items: center;
     }
 
+    /* Buttons */
     .btn {
-      padding: 12px 24px;
+      padding: 14px 28px;
       border: none;
-      border-radius: 50px;
+      border-radius: 16px;
       font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
       font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       text-decoration: none;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-    }
-
-    .btn-logout {
-      background: linear-gradient(135deg, #e74c3c, #c0392b);
-      color: white;
-    }
-
-    .btn-logout:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(231, 76, 60, 0.3);
-    }
-
-    .btn-add {
-      background: linear-gradient(135deg, #2ecc71, #27ae60);
-      color: white;
-    }
-
-    .btn-add:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
-    }
-
-    .users-section {
-      background: rgba(255, 255, 255, 0.95);
+      position: relative;
+      overflow: hidden;
       backdrop-filter: blur(10px);
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.6s;
+    }
+
+    .btn:hover::before {
+      left: 100%;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .btn-primary {
+      background: var(--success-gradient);
+      color: white;
+    }
+
+    .btn-danger {
+      background: var(--danger-gradient);
+      color: white;
+    }
+
+    /* Dashboard Cards */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
       border-radius: 20px;
-      padding: 30px;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      padding: 28px;
+      box-shadow: var(--shadow-light);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--primary-gradient);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-medium);
+    }
+
+    .stat-value {
+      font-size: 3rem;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 8px;
+      line-height: 1;
+    }
+
+    .stat-label {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Users Section */
+    .users-section {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: var(--shadow-medium);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .users-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--secondary-gradient);
     }
 
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #ecf0f1;
+      margin-bottom: 32px;
     }
 
     .section-title {
-      font-size: 1.8em;
-      color: #2c3e50;
-      font-weight: 600;
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
+    /* Users Grid */
     .users-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      gap: 24px;
     }
 
     .user-card {
-      background: linear-gradient(145deg, #ffffff, #f8f9fa);
-      border-radius: 15px;
-      padding: 25px;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
-      border: 1px solid #e9ecef;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: var(--shadow-light);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .user-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--primary-gradient);
     }
 
     .user-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: var(--shadow-heavy);
     }
 
     .user-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 20px;
+      align-items: start;
+      margin-bottom: 24px;
     }
 
     .user-avatar {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      width: 68px;
+      height: 68px;
+      border-radius: 20px;
+      background: var(--primary-gradient);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       font-size: 24px;
-      font-weight: bold;
+      font-weight: 800;
       text-transform: uppercase;
+      box-shadow: var(--shadow-light);
     }
 
-    .user-status {
-      padding: 6px 12px;
-      border-radius: 25px;
-      font-size: 12px;
-      font-weight: 600;
+    .user-main-info h3 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .user-username {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .user-badges {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .user-status, .user-type {
+      padding: 6px 16px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     .status-active {
-      background: linear-gradient(135deg, #2ecc71, #27ae60);
+      background: var(--success-gradient);
       color: white;
     }
 
     .status-blocked {
-      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      background: var(--danger-gradient);
       color: white;
     }
 
-    .user-type {
-      padding: 4px 10px;
-      border-radius: 15px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-top: 5px;
-      display: inline-block;
-    }
-
     .type-superadmin {
-      background: linear-gradient(135deg, #9b59b6, #8e44ad);
+      background: var(--dark-gradient);
       color: white;
     }
 
     .type-admin {
-      background: linear-gradient(135deg, #f39c12, #e67e22);
+      background: var(--warning-gradient);
       color: white;
     }
 
     .type-user {
-      background: linear-gradient(135deg, #3498db, #2980b9);
+      background: var(--primary-gradient);
       color: white;
     }
 
-    .user-info-grid {
-      margin-bottom: 20px;
+    .user-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
     }
 
-    .user-field {
-      margin-bottom: 12px;
+    .detail-item {
+      background: rgba(108, 117, 125, 0.1);
+      padding: 12px 16px;
+      border-radius: 12px;
     }
 
-    .field-label {
-      font-size: 12px;
-      color: #7f8c8d;
+    .detail-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 4px;
     }
 
-    .field-value {
-      font-size: 16px;
-      color: #2c3e50;
-      font-weight: 500;
-      padding: 8px 0;
-      border-bottom: 1px solid #ecf0f1;
+    .detail-value {
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      font-weight: 600;
+      word-break: break-all;
     }
 
     .user-actions {
@@ -231,40 +394,43 @@
 
     .btn-sm {
       padding: 8px 16px;
-      font-size: 12px;
-      border-radius: 25px;
+      font-size: 11px;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s ease;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
 
-    .btn-edit {
-      background: linear-gradient(135deg, #3498db, #2980b9);
-      color: white;
+    .btn-sm::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.4s;
     }
 
-    .btn-block {
-      background: linear-gradient(135deg, #e74c3c, #c0392b);
-      color: white;
-    }
-
-    .btn-unblock {
-      background: linear-gradient(135deg, #2ecc71, #27ae60);
-      color: white;
-    }
-
-    .btn-inspect {
-      background: linear-gradient(135deg, #f39c12, #e67e22);
-      color: white;
+    .btn-sm:hover::before {
+      left: 100%;
     }
 
     .btn-sm:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
+
+    .btn-edit { background: var(--primary-gradient); color: white; }
+    .btn-block { background: var(--danger-gradient); color: white; }
+    .btn-unblock { background: var(--success-gradient); color: white; }
+    .btn-inspect { background: var(--warning-gradient); color: white; }
+    .btn-delete { background: var(--dark-gradient); color: white; }
 
     .btn-sm:disabled {
       opacity: 0.5;
@@ -272,6 +438,7 @@
       transform: none;
     }
 
+    /* Modal Styles */
     .modal {
       display: none;
       position: fixed;
@@ -279,72 +446,79 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(5px);
-      z-index: 1000;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      overflow-y: auto;
     }
 
     .modal-content {
-      position: absolute;
-      top: 50%;
+      position: relative;
+      top: 40px;
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translateX(-50%);
       background: white;
-      border-radius: 20px;
-      padding: 30px;
+      border-radius: 24px;
+      padding: 40px;
       width: 90%;
-      max-width: 500px;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+      max-width: 520px;
+      box-shadow: var(--shadow-heavy);
+      margin: 40px auto;
     }
 
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #ecf0f1;
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f8f9fa;
     }
 
     .modal-title {
-      font-size: 1.5em;
-      color: #2c3e50;
-      font-weight: 600;
+      font-size: 1.6rem;
+      color: var(--text-primary);
+      font-weight: 700;
     }
 
     .close-btn {
       background: none;
       border: none;
-      font-size: 24px;
+      font-size: 28px;
       cursor: pointer;
-      color: #7f8c8d;
-      padding: 5px;
+      color: var(--text-secondary);
+      padding: 8px;
       border-radius: 50%;
       transition: all 0.3s ease;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .close-btn:hover {
-      background: #ecf0f1;
+      background: #f8f9fa;
       color: #e74c3c;
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 24px;
     }
 
     .form-label {
       display: block;
       font-size: 14px;
       font-weight: 600;
-      color: #2c3e50;
+      color: var(--text-primary);
       margin-bottom: 8px;
     }
 
     .form-input, .form-select {
       width: 100%;
-      padding: 12px 16px;
-      border: 2px solid #ecf0f1;
-      border-radius: 10px;
+      padding: 14px 18px;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
       font-size: 16px;
       transition: all 0.3s ease;
       background: #f8f9fa;
@@ -359,66 +533,133 @@
 
     .form-actions {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       justify-content: flex-end;
-      margin-top: 25px;
+      margin-top: 32px;
     }
 
-    .btn-save {
-      background: linear-gradient(135deg, #2ecc71, #27ae60);
+    .btn-save { background: var(--success-gradient); color: white; }
+    .btn-cancel { background: var(--text-secondary); color: white; }
+
+    /* Scroll to top button */
+    .scroll-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: var(--primary-gradient);
       color: white;
+      border: none;
+      border-radius: 20px;
+      width: 64px;
+      height: 64px;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: var(--shadow-medium);
+      transition: all 0.3s ease;
+      z-index: 1000;
+      display: none;
     }
 
-    .btn-cancel {
-      background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-      color: white;
+    .scroll-to-top:hover {
+      transform: translateY(-4px) scale(1.1);
+      box-shadow: var(--shadow-heavy);
     }
 
+    .scroll-to-top.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: bounceIn 0.5s ease;
+    }
+
+    @keyframes bounceIn {
+      0% { opacity: 0; transform: scale(0.3); }
+      50% { opacity: 1; transform: scale(1.1); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Loading state */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.2rem;
+    }
+
+    /* Responsive */
     @media (max-width: 768px) {
-      .users-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .header {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-      }
-      
-      .header-actions {
-        flex-direction: column;
-        width: 100%;
-      }
+      .admin-container { padding: 16px; }
+      .users-grid { grid-template-columns: 1fr; }
+      .header-content { grid-template-columns: 1fr; text-align: center; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .user-details { grid-template-columns: 1fr; }
+      .header-info h1 { font-size: 2.2rem; }
+      .section-title { font-size: 1.8rem; }
+    }
+
+    @media (max-width: 480px) {
+      .modal-content { padding: 24px; }
+      .user-card { padding: 20px; }
     }
   </style>
 </head>
 <body>
   <div class="admin-container">
+    <!-- Header -->
     <div class="header">
-      <div>
-        <h1>🛡️ Panel Super Admin</h1>
-        <div class="user-info" id="userInfo">Cargando...</div>
-      </div>
-      <div class="header-actions">
-        <button class="btn btn-add" id="addUserBtn">
-          ➕ Nuevo Usuario
-        </button>
-        <button class="btn btn-logout" id="logoutBtn">
-          🚪 Cerrar Sesión
-        </button>
+      <div class="header-content">
+        <div class="header-info">
+          <h1>🛡️ Panel Super Admin</h1>
+          <div class="header-subtitle" id="userInfo">Cargando información...</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" id="addUserBtn">
+            ➕ Nuevo Usuario
+          </button>
+          <button class="btn btn-danger" id="logoutBtn">
+            🚪 Cerrar Sesión
+          </button>
+        </div>
       </div>
     </div>
 
+    <!-- Dashboard Stats -->
+    <div class="dashboard-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="totalUsers">0</div>
+        <div class="stat-label">Total Usuarios</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="activeUsers">0</div>
+        <div class="stat-label">Usuarios Activos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="blockedUsers">0</div>
+        <div class="stat-label">Usuarios Bloqueados</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="adminUsers">0</div>
+        <div class="stat-label">Administradores</div>
+      </div>
+    </div>
+
+    <!-- Users Section -->
     <div class="users-section">
       <div class="section-header">
         <h2 class="section-title">👥 Gestión de Usuarios</h2>
-        <div id="userCount" class="user-count">Cargando usuarios...</div>
       </div>
       <div class="users-grid" id="usersGrid">
-        <!-- Los usuarios se cargarán aquí -->
+        <div class="loading">
+          🔄 Cargando usuarios...
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- Scroll to top button -->
+  <button class="scroll-to-top" id="scrollToTop" title="Volver arriba">↑</button>
 
   <!-- Modal para editar usuario -->
   <div class="modal" id="editModal">
@@ -502,6 +743,6 @@
     </div>
   </div>
 
-  <script type="module" src="superAdmin.js"></script>
+    <script type="module" src="superAdmin.js"></script>
 </body>
 </html>
