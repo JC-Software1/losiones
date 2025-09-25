@@ -1,15 +1,12 @@
-import { getToken } from "./auth.js";
+const API_URL = "https://losiones-1.onrender.com/api"; // Agrega "/api"
 
-const API_URL = "https://losiones-1.onrender.com/api";
 
 export async function apiFetch(endpoint, method = "GET", body = null, token = null) {
     const headers = { "Content-Type": "application/json" };
 
-    // Si no se proporciona token, intentar obtenerlo del localStorage
-    const authToken = token || getToken();
-    
-    if (authToken) {
-        headers["Authorization"] = `Bearer ${authToken}`;
+    // Si viene el token, lo agregamos a los headers
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
     }
 
     try {
@@ -29,13 +26,6 @@ export async function apiFetch(endpoint, method = "GET", body = null, token = nu
         const data = await response.json();
 
         if (!response.ok) {
-            // Si es error de autenticación, redirigir al login
-            if (response.status === 401) {
-                localStorage.removeItem("authToken");
-                if (window.location.pathname !== '/index.html' && !window.location.pathname.endsWith('/')) {
-                    window.location.href = 'index.html';
-                }
-            }
             throw new Error(data.error || "Error en la solicitud");
         }
 
