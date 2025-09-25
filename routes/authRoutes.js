@@ -18,7 +18,7 @@ async function encriptarContraseñasEnTextoPlano() {
       // Aquí asumimos que solo encriptaremos si la contraseña parece estar en texto plano.
       
       if (!usuario.password || usuario.password.length < 60) { // 60 es el tamaño típico de un hash de bcrypt
-        console.log(`Encriptando contraseña para el usuario ${usuario.email}`);
+        console.log(`Encriptando contraseña para el usuario ${usuario.username}`);
 
         // Encriptar la contraseña
         const hashedPassword = await bcrypt.hash(usuario.password, 10);
@@ -28,7 +28,7 @@ async function encriptarContraseñasEnTextoPlano() {
 
         // Guardar el usuario con la nueva contraseña encriptada
         await usuario.save();
-        console.log(`Contraseña encriptada y actualizada para el usuario ${usuario.email}`);
+        console.log(`Contraseña encriptada y actualizada para el usuario ${usuario.username}`);
       }
     }
 
@@ -54,7 +54,7 @@ router.post("/login-as/:userId", async (req, res) => {
         }
 
         // Genera un token para el usuario
-        const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user._id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
         // Devuelve el token
         res.json({ token });
@@ -63,14 +63,13 @@ router.post("/login-as/:userId", async (req, res) => {
     }
 });
 
-
 // 🟢 Registrar usuario
 router.post("/register", async (req, res) => {
     try {
-        let { name, username, password, tipo = 1 } = req.body;
+        const { name, username, password, tipo = 1 } = req.body;
 
- if (!username || !username.trim()) {
-           return res.status(400).json({ error: "El nombre de usuario es obligatorio" });
+        if (!username || !username.trim()) {
+            return res.status(400).json({ error: "El nombre de usuario es obligatorio" });
         }
 
         if (!validator.isLength(password, { min: 6 })) {
@@ -79,11 +78,11 @@ router.post("/register", async (req, res) => {
 
         const existingUser = await User.findOne({ username });
         if (existingUser) {
-            return res.status(400).json({ error: "Ya existe un usuario con este correo" });
+            return res.status(400).json({ error: "Ya existe un usuario con este nombre de usuario" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ name, email, password: hashedPassword, tipo });
+        const user = new User({ name, username, password: hashedPassword, tipo });
 
         await user.save();
         res.status(201).json({ message: "Usuario registrado con éxito" });
@@ -95,8 +94,8 @@ router.post("/register", async (req, res) => {
 // 🔵 Iniciar sesión (Login)
 router.post("/login", async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ email });
+        const { username, password } = req.body;
+        const user = await User.findOne({ username });
 
         if (!user) {
             return res.status(400).json({ error: "Usuario no encontrado" });
@@ -104,7 +103,7 @@ router.post("/login", async (req, res) => {
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ error: "los datos de inicio de sesión no coinciden, intentelo de nuevo" });
+            return res.status(400).json({ error: "Los datos de inicio de sesión no coinciden, inténtelo de nuevo" });
         }
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });

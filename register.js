@@ -4,16 +4,16 @@ async function handleRegister(event) {
     event.preventDefault(); //Evitar recargar la página
 
     const name = document.getElementById("registerName").value.trim();
-    const email = document.getElementById("registerEmail").value.trim();
+    const username = document.getElementById("registerUsername").value.trim();
     const password = document.getElementById("registerPassword").value.trim();
 
   try {
     //Llamar a la API
     const response = await apiFetch("/auth/register", "POST", {
         name,
-        email,
+        username,
         password,
-        tipo: document.getElementById("registerTipo").valuexs
+        tipo: document.getElementById("registerTipo").value
     });
 
     alert("Registro exitoso, de click en aceptar");
