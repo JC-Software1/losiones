@@ -135,15 +135,13 @@ function editSale(sale) {
     renderCalendar();
 
 
-    document.getElementById("paymentSection").style.display = "block";
-    inputPaymentDate.value = new Date().toISOString().split('T')[0];
 
 btnSave.classList.add("hidden");
 btnUpdate.classList.remove("hidden");
 btnCancel.classList.remove("hidden");
-btnDelete.classList.remove("hidden");   // <- ahora sí se ve
 btnAddPayment.classList.remove("hidden");
 window.scrollTo({ top: 0, behavior: 'smooth' }); // ⬅️ lleva al usuario arriba
+
 }
 
 
