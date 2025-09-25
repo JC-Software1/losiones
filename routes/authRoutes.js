@@ -67,7 +67,7 @@ router.post("/login-as/:userId", async (req, res) => {
 // 🟢 Registrar usuario
 router.post("/register", async (req, res) => {
     try {
-        const { name, username, password, tipo = 1 } = req.body;
+        let { name, username, password, tipo = 1 } = req.body;
 
  if (!username || !username.trim()) {
            return res.status(400).json({ error: "El nombre de usuario es obligatorio" });
