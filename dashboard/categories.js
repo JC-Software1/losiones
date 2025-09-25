@@ -123,7 +123,17 @@ function editSale(sale) {
     inputInstallments.value = sale.installments;
     if (document.getElementById("clientAddress")) {
         document.getElementById("clientAddress").value = sale.clientAddress || '';
+
+         selectedDays = sale.paymentDays ? sale.paymentDays.split(',').map(Number) : [];
+    renderPills();
+    renderCalendar();
+
     }
+
+      selectedDays = sale.paymentDays ? sale.paymentDays.split(',').map(Number) : [];
+    renderPills();
+    renderCalendar();
+
 
     document.getElementById("paymentSection").style.display = "block";
     inputPaymentDate.value = new Date().toISOString().split('T')[0];
@@ -133,6 +143,7 @@ btnUpdate.classList.remove("hidden");
 btnCancel.classList.remove("hidden");
 btnDelete.classList.remove("hidden");   // <- ahora sí se ve
 btnAddPayment.classList.remove("hidden");
+window.scrollTo({ top: 0, behavior: 'smooth' }); // ⬅️ lleva al usuario arriba
 }
 
 
@@ -232,8 +243,10 @@ async function updateSale() {
         productName: inputProduct.value.trim(),
         saleDate: inputDate.value,
         price: parseFloat(inputPrice.value),
-        installments: inputInstallments.value.trim()
+        installments: inputInstallments.value.trim(),
+        paymentDays: collectPaymentDays() // ✅ Agregar esta línea
     };
+    
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "PUT", saleData, token);

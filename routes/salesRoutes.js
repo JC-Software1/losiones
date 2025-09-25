@@ -165,7 +165,7 @@ router.post("/new", auth, async (req, res) => {
 
 // Actualizar una venta
 router.put("/:id", auth, async (req, res) => {
-    const { clientName, productName, saleDate, price, installments, clientAddress } = req.body;
+    const { clientName, productName, saleDate, price, installments, clientAddress, paymentDays } = req.body;
 
     try {
         const sale = await Sale.findOne({ _id: req.params.id, user: req.user.id });
@@ -181,6 +181,11 @@ router.put("/:id", auth, async (req, res) => {
         sale.price = price;
         sale.installments = installments;
         sale.clientAddress = clientAddress;
+        
+        // ✅ Actualizar los días de pago
+        if (paymentDays !== undefined) {
+            sale.paymentDays = paymentDays;
+        }
 
         // Verificar si con el nuevo precio, la venta debería actualizarse a liquidada o no
         const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
