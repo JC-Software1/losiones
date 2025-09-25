@@ -12,7 +12,11 @@ async function handleLogin(event) {
     const response = await apiFetch("/auth/login", "POST", { username, password });
     setToken(response.token);
 
-    
+    const payload = JSON.parse(atob(response.token.split(".")[1]));
+    if (payload.tipo === 3) {
+      window.location.href = "superAdmin.html";
+      return;
+    }
     window.location.href = "categories.html";
   } catch (error) {
     alert(`Error al iniciar sesión: ${error.message}`);
