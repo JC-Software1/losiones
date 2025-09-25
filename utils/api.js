@@ -29,12 +29,9 @@ export async function apiFetch(endpoint, method = "GET", body = null, token = nu
         const data = await response.json();
 
         if (!response.ok) {
-            // Si es error de autenticación, redirigir al login
+            // Si es error de autenticación, solo limpiar el token, no redirigir automáticamente
             if (response.status === 401) {
                 localStorage.removeItem("authToken");
-                if (window.location.pathname !== '/index.html' && !window.location.pathname.endsWith('/')) {
-                    window.location.href = 'index.html';
-                }
             }
             throw new Error(data.error || "Error en la solicitud");
         }

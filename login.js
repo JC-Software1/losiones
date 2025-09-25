@@ -40,16 +40,4 @@ async function handleLogin(event) {
     }
 }
 
-// Verificar si ya está logueado al cargar la página
-document.addEventListener("DOMContentLoaded", () => {
-    const userInfo = getUserInfo();
-    if (userInfo) {
-        if (userInfo.tipo === 3) {
-            window.location.href = "superAdmin.html";
-        } else {
-            window.location.href = "categories.html";
-        }
-    }
-});
-
 document.getElementById("loginForm").addEventListener("submit", handleLogin);

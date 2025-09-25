@@ -51,3 +51,9 @@ export function getUserInfo() {
         return null;
     }
 }
+
+// Cerrar sesión (limpiar token y redirigir)
+export function logout() {
+    removeToken();
+    window.location.href = "index.html";
+}
