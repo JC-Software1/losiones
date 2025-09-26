@@ -5,6 +5,7 @@ const connectDB = require("./config/db"); // Asegúrate de que esta conexión es
 const authRoutes = require("./routes/authRoutes");
 const salesRoutes = require("./routes/salesRoutes");
 const productRoutes = require("./routes/productRoutes");
+const receiptRoutes = require('./routes/receiptRoutes');
 
 
 dotenv.config();
@@ -25,6 +26,7 @@ app.use("/api/sales", salesRoutes);
 app.use('/api/products', productRoutes);
 
 
+app.use('/api/receipts', receiptRoutes);
 
 
 const PORT = process.env.PORT || 5000;
