@@ -5,8 +5,9 @@ import "../keepAlive.js";
 async function handleLogin(event) {
     event.preventDefault();
 
-    const username = document.getElementById("loginUsername").value.trim();
-    const password = document.getElementById("loginPassword").value.trim();
+    // Corregir los IDs para que coincidan con el HTML
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
 
     if (!username || !password) {
         alert("Por favor, completa todos los campos.");
