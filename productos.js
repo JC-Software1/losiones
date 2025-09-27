@@ -27,19 +27,29 @@ let filteredProducts = [];
 
 /* 1️⃣  DECLARAR funciones que se usan después */
 function generateBarcodeImage(id, name, price) {
-  const code = `${id}|${name}|${price}`;
+  // Crear código más corto para mejor lectura
+  const shortId = id.slice(-8); // Últimos 8 caracteres del ID
+  const cleanName = name.replace(/[^\w\s]/g, '').substring(0, 15); // Sin caracteres especiales
+  const code = `${shortId}|${cleanName}|${price}`;
+  
+  console.log("Generando código personalizado:", code);
+  
   JsBarcode('#barcodeCanvas', code, {
     format: 'CODE128',
-    width: 2,
-    height: 80,
+    width: 3,           // Más ancho para mejor lectura
+    height: 100,        // Más alto
     displayValue: true,
-    fontSize: 14
+    fontSize: 16,       // Texto más grande
+    margin: 10,
+    background: '#ffffff',
+    lineColor: '#000000'
   });
+  
   // Guardamos datos en el canvas para la descarga
   const canvas = document.getElementById('barcodeCanvas');
   canvas.dataset.productId = id;
-  canvas.dataset.name      = name;
-  canvas.dataset.price     = price;
+  canvas.dataset.name = name;
+  canvas.dataset.price = price;
 }
 
 function showBarcode(id, name, price) {

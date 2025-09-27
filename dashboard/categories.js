@@ -1472,8 +1472,9 @@ window.openWhatsApp = openWhatsApp;
 window.downloadReceiptDirect = downloadReceiptDirect;
 
 /* =========================================================
-   LECTOR DE CÓDIGOS DE BARRAS
+   LECTOR DE CÓDIGOS DE BARRAS CORREGIDO
    ========================================================= */
+
 const btnCamera   = document.getElementById('btnBarcodeScanner');
 const btnStopScan = document.getElementById('btnStopScan');
 const modalScan   = document.getElementById('scannerModal');
@@ -1481,71 +1482,484 @@ const video       = document.getElementById('scannerVideo');
 
 let codeReader = null;
 let scanning   = false;
+let scanCount  = 0;
 
 // Abrir modal y arrancar cámara
 btnCamera.addEventListener('click', startScanner);
 btnStopScan.addEventListener('click', stopScanner);
 
-async function startScanner(){
+async function startScanner() {
     modalScan.classList.remove('hidden');
+    scanning = true;
+    scanCount = 0;
+    
+    // Crear lector sin configuraciones avanzadas para mejor compatibilidad
     codeReader = new ZXing.BrowserBarcodeReader();
-    scanning   = true;
 
     try {
         const devices = await codeReader.listVideoInputDevices();
-        // Preferencia: cámara trasera en móvil
-        const rearCamera = devices.find(d => d.label.toLowerCase().includes('back')) || devices[0];
-        const deviceId = rearCamera.deviceId;
+        console.log("Cámaras disponibles:", devices.map(d => d.label));
+        
+        // Buscar cámara trasera
+        const rearCamera = devices.find(d => {
+            const label = d.label.toLowerCase();
+            return label.includes('back') || 
+                   label.includes('rear') || 
+                   label.includes('environment') ||
+                   label.includes('camera2') ||
+                   (!label.includes('front') && !label.includes('user'));
+        }) || devices[0];
+        
+        if (!rearCamera) {
+            throw new Error("No se encontraron cámaras disponibles");
+        }
+        
+        console.log("Usando cámara:", rearCamera.label);
 
-        const previewElem = await codeReader.decodeFromVideoDevice(deviceId, video, (result, err) => {
-            if (result && scanning) {
-                scanning = false;
-                stopScanner();
-                handleBarcode(result.text);
+        // Usar el método más simple y compatible
+        await codeReader.decodeFromVideoDevice(rearCamera.deviceId, video, (result, err) => {
+            if (result && scanning && scanCount === 0) {
+                console.log("¡Código detectado!", result.text);
+                handleSuccessfulScan(result.text);
             }
             if (err && !(err instanceof ZXing.NotFoundException)) {
-                console.error(err);
+                console.debug("Error de escaneo:", err.message);
             }
         });
+
     } catch (e) {
+        console.error("Error al iniciar escáner:", e);
         alert('No se pudo acceder a la cámara: ' + e.message);
         stopScanner();
     }
 }
 
-function stopScanner(){
+function handleSuccessfulScan(code) {
+    if (scanCount > 0) return; // Evitar múltiples lecturas
+    scanCount++;
+    
     scanning = false;
-    if (codeReader) codeReader.reset();
+    
+    // Mostrar feedback visual inmediato
+    showScanFeedback();
+    
+    // Procesar código después de un pequeño delay
+    setTimeout(() => {
+        stopScanner();
+        handleBarcode(code);
+    }, 500);
+}
+
+function showScanFeedback() {
+    // Crear efecto visual de éxito más simple
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(39, 174, 96, 0.4);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    `;
+    overlay.innerHTML = `
+        <div style="
+            background: white;
+            border-radius: 50%;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: pulse 0.6s ease;
+        ">
+            <i class="fas fa-check" style="
+                font-size: 40px;
+                color: #27ae60;
+            "></i>
+        </div>
+    `;
+    
+    // Agregar animación CSS básica
+    if (!document.getElementById('scanFeedbackStyles')) {
+        const styles = document.createElement('style');
+        styles.id = 'scanFeedbackStyles';
+        styles.innerHTML = `
+            @keyframes pulse {
+                0% { transform: scale(0.8); opacity: 0; }
+                50% { transform: scale(1.1); opacity: 1; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+    
+    modalScan.appendChild(overlay);
+    
+    // Remover overlay
+    setTimeout(() => {
+        if (overlay.parentNode) {
+            overlay.remove();
+        }
+    }, 600);
+}
+
+function stopScanner() {
+    scanning = false;
+    scanCount = 0;
+    
+    if (codeReader) {
+        codeReader.reset();
+    }
+    
+    // Detener stream de video
+    if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => {
+            track.stop();
+        });
+        video.srcObject = null;
+    }
+    
     modalScan.classList.add('hidden');
-    video.srcObject?.getTracks().forEach(t => t.stop());
 }
 
 /* ---------------------------------------------------------
-   Procesar código leído  (formato: ID│NOMBRE│PRECIO)
+   PROCESAMIENTO DE CÓDIGOS MEJORADO
    --------------------------------------------------------- */
-async function handleBarcode(raw){
-    const parts = raw.split('|');
-    if (parts.length < 3){
-        alert('Código no válido. Formato esperado: ID|NOMBRE|PRECIO');
+async function handleBarcode(raw) {
+    console.log("Código raw recibido:", raw);
+    console.log("Longitud:", raw.length);
+    
+    const cleanCode = raw.trim();
+    
+    // PRIORIDAD 1: Código personalizado (ID|NOMBRE|PRECIO)
+    if (cleanCode.includes('|')) {
+        console.log("✅ Detectado código PERSONALIZADO");
+        await handleCustomBarcode(cleanCode);
         return;
     }
+    
+    // PRIORIDAD 2: Código estándar (EAN-13, UPC, etc.)
+    if (/^\d{8,13}$/.test(cleanCode)) {
+        console.log("⚠️ Detectado código ESTÁNDAR EAN/UPC");
+        
+        // Mostrar mensaje más claro
+        const useStandard = confirm(`CÓDIGO ESTÁNDAR DETECTADO
+                                   
+Código: ${cleanCode}
 
+❌ Este NO es un código generado por tu app.
+✅ Los códigos de tu app tienen formato: ID|NOMBRE|PRECIO
+
+¿Quieres buscar este producto en tu inventario?
+• SÍ = Buscar producto
+• NO = Cancelar`);
+        
+        if (useStandard) {
+            await handleStandardBarcode(cleanCode);
+        }
+        return;
+    }
+    
+    // CÓDIGO NO RECONOCIDO
+    alert(`❌ CÓDIGO NO VÁLIDO: "${cleanCode}"
+           
+🎯 PARA USAR CÓDIGOS PERSONALIZADOS:
+1. Ve a la sección "Productos"
+2. Busca tu producto
+3. Haz clic en "Ver código de barras"
+4. Descarga/imprime ese código
+5. Escanea el código impreso
+
+📱 CONSEJOS:
+• Buena iluminación
+• Código estable y enfocado
+• Distancia adecuada (15-20 cm)`);
+}
+
+/* ---------------------------------------------------------
+   MANEJO DE CÓDIGOS PERSONALIZADOS
+   --------------------------------------------------------- */
+async function handleCustomBarcode(code) {
+    const parts = code.split('|').map(part => part.trim());
+    
+    if (parts.length < 3) {
+        alert(`❌ Código personalizado incompleto.
+               
+Formato esperado: ID|NOMBRE|PRECIO
+Partes encontradas: ${parts.length}
+               
+Tu código: ${code}`);
+        return;
+    }
+    
     const [id, name, price] = parts;
-    // 1) Rellenar campos visuales
-    document.getElementById('productName').value        = name.trim();
-    document.getElementById('price').value              = Number(price).toFixed(0);
-    // 2) Opcional: buscar en BD y rellenar más campos
+    const numericPrice = Number(price);
+    
+    if (isNaN(numericPrice)) {
+        alert(`❌ Error: El precio "${price}" no es válido`);
+        return;
+    }
+    
+    // Rellenar campos automáticamente
+    if (document.getElementById('productName')) {
+        document.getElementById('productName').value = name;
+    }
+    if (document.getElementById('price')) {
+        document.getElementById('price').value = numericPrice.toFixed(0);
+    }
+    
+    // Buscar producto completo en BD
     try {
         const token = getToken();
         const products = await apiFetch('/products', 'GET', null, token);
-        const found = products.find(p => p._id === id.trim());
-        if (found){
-            // Si tienes más inputs (marca, talla, etc.)
-            // document.getElementById('productBrand').value = found.brand;
-            // document.getElementById('productSize').value  = found.size || '';
+        
+        // Buscar por ID completo o parcial
+        const found = products.find(p => 
+            p._id === id || 
+            p._id.includes(id) || 
+            p._id.endsWith(id)
+        );
+        
+        if (found) {
+            console.log("✅ Producto encontrado en BD:", found.name);
+            selectProductFromBarcode(found);
+        } else {
+            console.warn("⚠️ Producto no encontrado con ID:", id);
+            // Aún así mostrar éxito porque los campos se llenaron
         }
     } catch (e) {
-        console.warn('No se pudo consultar el producto:', e);
+        console.warn('Error al consultar producto:', e);
+    }
+    
+    showBarcodeSuccess(`🎉 ¡CÓDIGO LEÍDO EXITOSAMENTE!
+                       
+📦 Producto: ${name}
+💰 Precio: $${numericPrice.toLocaleString('es-CO')}
+                       
+✅ Datos cargados automáticamente`);
+}
+
+async function handleStandardBarcode(code) {
+    console.log("Procesando código estándar:", code);
+    
+    try {
+        const token = getToken();
+        const products = await apiFetch('/products', 'GET', null, token);
+        
+        // Intentar buscar por código de barras si tienes ese campo
+        let found = products.find(p => p.barcode === code);
+        
+        if (!found) {
+            // Mostrar modal de búsqueda manual
+            showProductSearchModal(code, products.filter(p => !p.sold));
+            return;
+        }
+        
+        // Si encontró el producto
+        if (document.getElementById('productName')) {
+            document.getElementById('productName').value = found.name;
+        }
+        if (document.getElementById('price')) {
+            document.getElementById('price').value = found.salePrice;
+        }
+        selectProductFromBarcode(found);
+        
+        showBarcodeSuccess(`✅ ¡Producto encontrado!
+                           ${found.name}
+                           Precio: $${found.salePrice.toLocaleString('es-CO')}`);
+        
+    } catch (error) {
+        console.error('Error al buscar producto:', error);
+        alert('Error al buscar el producto en la base de datos');
     }
 }
 
+/* ---------------------------------------------------------
+   MODAL DE BÚSQUEDA PARA CÓDIGOS ESTÁNDAR
+   --------------------------------------------------------- */
+function showProductSearchModal(scannedCode, products) {
+    const modal = document.createElement('div');
+    modal.id = 'productSearchModal';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
+        z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: white; border-radius: 15px; padding: 25px;
+            max-width: 500px; width: 90%; max-height: 80%; overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="color: #2c3e50; margin: 0;">Código: ${scannedCode}</h3>
+                <button onclick="closeProductSearchModal()" style="
+                    background: none; border: none; font-size: 24px; cursor: pointer;
+                    color: #7f8c8d; padding: 5px;
+                ">×</button>
+            </div>
+            
+            <p style="color: #7f8c8d; margin-bottom: 20px;">
+                Este código no está en tu inventario. Selecciona el producto correspondiente:
+            </p>
+            
+            <input type="text" id="productSearchInput" placeholder="Buscar producto..." style="
+                width: 100%; padding: 12px; margin-bottom: 15px; 
+                border: 1px solid #ddd; border-radius: 8px; font-size: 16px;
+            ">
+            
+            <div id="productSearchResults" style="
+                max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;
+            "></div>
+            
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                <h4 style="color: #2c3e50; margin-bottom: 15px;">O ingresar manualmente:</h4>
+                <input type="text" id="manualProductName" placeholder="Nombre del producto" style="
+                    width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px;
+                ">
+                <input type="number" id="manualProductPrice" placeholder="Precio" style="
+                    width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px;
+                ">
+                <button onclick="useManualProduct('${scannedCode}')" style="
+                    background: #3498db; color: white; border: none; border-radius: 8px;
+                    padding: 12px 20px; cursor: pointer; font-weight: 600; margin-top: 10px;
+                ">Usar estos datos</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Configurar búsqueda
+    const searchInput = document.getElementById('productSearchInput');
+    const resultsDiv = document.getElementById('productSearchResults');
+    
+    function renderSearchResults(filteredProducts) {
+        resultsDiv.innerHTML = '';
+        if (filteredProducts.length === 0) {
+            resultsDiv.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">No se encontraron productos</p>';
+            return;
+        }
+        
+        filteredProducts.slice(0, 10).forEach(product => {
+            const item = document.createElement('div');
+            item.style.cssText = `
+                padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;
+                display: flex; justify-content: space-between; align-items: center;
+                transition: background 0.2s;
+            `;
+            item.onmouseover = () => item.style.background = '#f8f9fa';
+            item.onmouseout = () => item.style.background = 'white';
+            
+            item.innerHTML = `
+                <div>
+                    <div style="font-weight: 600; color: #2c3e50;">${product.name}</div>
+                    <div style="color: #666; font-size: 14px; margin-top: 4px;">
+                        ${product.brand} - $${product.salePrice.toLocaleString()}
+                    </div>
+                </div>
+                <button onclick="selectSearchedProduct('${product._id}')" style="
+                    background: #27ae60; color: white; border: none; border-radius: 6px;
+                    padding: 8px 12px; cursor: pointer; font-size: 12px; font-weight: 600;
+                ">Seleccionar</button>
+            `;
+            resultsDiv.appendChild(item);
+        });
+    }
+    
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase();
+        const filtered = products.filter(p => 
+            p.name.toLowerCase().includes(query) ||
+            p.brand.toLowerCase().includes(query)
+        );
+        renderSearchResults(filtered);
+    });
+    
+    // Mostrar productos iniciales
+    renderSearchResults(products.slice(0, 10));
+}
+
+/* ---------------------------------------------------------
+   FUNCIONES AUXILIARES GLOBALES
+   --------------------------------------------------------- */
+window.closeProductSearchModal = function() {
+    const modal = document.getElementById('productSearchModal');
+    if (modal) modal.remove();
+};
+
+window.selectSearchedProduct = function(productId) {
+    const token = getToken();
+    apiFetch('/products', 'GET', null, token).then(products => {
+        const product = products.find(p => p._id === productId);
+        if (product) {
+            if (document.getElementById('productName')) {
+                document.getElementById('productName').value = product.name;
+            }
+            if (document.getElementById('price')) {
+                document.getElementById('price').value = product.salePrice;
+            }
+            selectProductFromBarcode(product);
+            showBarcodeSuccess(`✅ Producto seleccionado: ${product.name}`);
+        }
+    }).catch(error => {
+        console.error('Error al cargar producto:', error);
+        alert('Error al cargar el producto');
+    });
+    closeProductSearchModal();
+};
+
+window.useManualProduct = function(scannedCode) {
+    const name = document.getElementById('manualProductName').value.trim();
+    const price = parseFloat(document.getElementById('manualProductPrice').value);
+    
+    if (!name || isNaN(price)) {
+        alert('Por favor completa nombre y precio');
+        return;
+    }
+    
+    if (document.getElementById('productName')) {
+        document.getElementById('productName').value = name;
+    }
+    if (document.getElementById('price')) {
+        document.getElementById('price').value = price;
+    }
+    
+    showBarcodeSuccess(`✅ Producto agregado manualmente:
+                       ${name} - $${price.toLocaleString('es-CO')}
+                       Código original: ${scannedCode}`);
+    closeProductSearchModal();
+};
+
+function selectProductFromBarcode(product) {
+    if (typeof selectProduct === 'function') {
+        selectProduct(product);
+    }
+}
+
+function showBarcodeSuccess(message) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+        color: white; padding: 25px 30px; border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(39,174,96,0.4); z-index: 10001;
+        max-width: 400px; text-align: center; font-weight: 600;
+        font-size: 16px; line-height: 1.4;
+    `;
+    notification.innerHTML = `
+        <i class="fas fa-check-circle" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -50%) scale(0.9)';
+        notification.style.transition = 'all 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3500);
+}
