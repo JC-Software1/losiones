@@ -446,289 +446,306 @@
         </div>
     </div>
 
-    <script>
-        let currentReceipts = [];
-        let currentReceiptData = null;
+ <script>
+    let currentReceipts = [];
+    let currentReceiptData = null;
 
-        // Cargar recibos al iniciar la página
-        document.addEventListener('DOMContentLoaded', () => {
-            loadReceipts();
-            
-            // Buscar recibos
-            document.getElementById('searchInput').addEventListener('input', (e) => {
-                filterReceipts(e.target.value);
-            });
+    // ---------- Funciones auxiliares (getToken y apiFetch) ----------
+function getToken() {
+    return localStorage.getItem('token');
+}
+
+async function apiFetch(endpoint, method = 'GET', body = null, token = null) {
+    const url = `https://losiones-1.onrender.com/api${endpoint}`;
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const options = { method, headers };
+
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+
+    const res = await fetch(url, options);
+    if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error || 'Error en la petición');
+    }
+    return res.json();
+}
+
+    // Cargar recibos al iniciar la página
+    document.addEventListener('DOMContentLoaded', () => {
+        loadReceipts();
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            filterReceipts(e.target.value);
         });
+    });
 
-        // Cargar recibos desde localStorage
-        function loadReceipts() {
-            const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-            currentReceipts = receipts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // ✅ Cargar recibos desde MongoDB + localStorage
+    async function loadReceipts() {
+        try {
+            const token = getToken(); // Si usas autenticación
+            const mongoReceipts = await apiFetch("/receipts", "GET", null, token);
+            const localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+
+            const merged = [...localReceipts];
+
+            mongoReceipts.forEach(mr => {
+                if (!merged.some(r => r.id === mr.localId)) {
+                    merged.push({
+                        id: mr.localId || mr._id,
+                        receiptNumber: mr.receiptNumber,
+                        saleData: mr.saleData,
+                        createdAt: mr.createdAt,
+                        fromMongo: true,
+                        mongoId: mr._id // para eliminar desde Mongo
+                    });
+                }
+            });
+
+            currentReceipts = merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            renderReceipts(currentReceipts);
+        } catch (err) {
+            console.error("Error cargando recibos:", err);
+            const localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+            currentReceipts = localReceipts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             renderReceipts(currentReceipts);
         }
+    }
 
-        // Renderizar recibos en la grid
-        function renderReceipts(receipts) {
-            const grid = document.getElementById('receiptsGrid');
-            
-            if (receipts.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state" style="grid-column: 1 / -1;">
-                        <i class="fas fa-receipt"></i>
-                        <h3>No hay recibos generados</h3>
-                        <p>Los recibos aparecerán aquí cuando realices ventas</p>
-                    </div>
-                `;
-                return;
-            }
+    // Renderizar recibos
+    function renderReceipts(receipts) {
+        const grid = document.getElementById('receiptsGrid');
 
-            grid.innerHTML = receipts.map(receipt => `
-                <div class="receipt-card" onclick="viewReceipt('${receipt.id}')">
-                    <div class="receipt-header">
-                        <div class="receipt-number">
-                            Recibo #${receipt.receiptNumber}
-                        </div>
-                        <div class="receipt-date">
-                            ${new Date(receipt.createdAt).toLocaleDateString('es-CO')}
-                        </div>
-                    </div>
-                    
-                    <div class="client-info">
-                        <h3>${receipt.saleData.clientName}</h3>
-                        <p><i class="fas fa-box"></i> ${receipt.saleData.productName}</p>
-                        <p><i class="fas fa-map-marker-alt"></i> ${receipt.saleData.clientAddress || 'Sin dirección'}</p>
-                    </div>
-                    
-                    <div class="receipt-amount">
-                        $${receipt.saleData.price.toLocaleString('es-CO')}
-                    </div>
-                    
-                    <div class="receipt-actions" onclick="event.stopPropagation()">
-                        <button class="btn btn-primary" onclick="viewReceipt('${receipt.id}')">
-                            <i class="fas fa-eye"></i> Ver
-                        </button>
-                        <button class="btn btn-success" onclick="shareReceiptById('${receipt.id}')">
-                            <i class="fas fa-share"></i> Compartir
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteReceiptById('${receipt.id}')">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
-                    </div>
+        if (receipts.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <i class="fas fa-receipt"></i>
+                    <h3>No hay recibos generados</h3>
+                    <p>Los recibos aparecerán aquí cuando realices ventas</p>
                 </div>
-            `).join('');
+            `;
+            return;
         }
 
-        // Filtrar recibos
-        function filterReceipts(query) {
-            if (!query.trim()) {
-                renderReceipts(currentReceipts);
-                return;
-            }
+        grid.innerHTML = receipts.map(receipt => `
+            <div class="receipt-card" onclick="viewReceipt('${receipt.id}')">
+                <div class="receipt-header">
+                    <div class="receipt-number">Recibo #${receipt.receiptNumber}</div>
+                    <div class="receipt-date">${new Date(receipt.createdAt).toLocaleDateString('es-CO')}</div>
+                </div>
+                <div class="client-info">
+                    <h3>${receipt.saleData.clientName}</h3>
+                    <p><i class="fas fa-box"></i> ${receipt.saleData.productName}</p>
+                    <p><i class="fas fa-map-marker-alt"></i> ${receipt.saleData.clientAddress || 'Sin dirección'}</p>
+                </div>
+                <div class="receipt-amount">$${receipt.saleData.price.toLocaleString('es-CO')}</div>
+                <div class="receipt-actions" onclick="event.stopPropagation()">
+                    <button class="btn btn-primary" onclick="viewReceipt('${receipt.id}')"><i class="fas fa-eye"></i> Ver</button>
+                    <button class="btn btn-success" onclick="shareReceiptById('${receipt.id}')"><i class="fas fa-share"></i> Compartir</button>
+                    <button class="btn btn-danger" onclick="deleteReceiptById('${receipt.id}')"><i class="fas fa-trash"></i> Eliminar</button>
+                </div>
+            </div>
+        `).join('');
+    }
 
-            const filtered = currentReceipts.filter(receipt => 
-                receipt.saleData.clientName.toLowerCase().includes(query.toLowerCase()) ||
-                receipt.receiptNumber.toString().includes(query) ||
-                receipt.saleData.productName.toLowerCase().includes(query.toLowerCase())
-            );
-            
-            renderReceipts(filtered);
+    // Filtrar recibos
+    function filterReceipts(query) {
+        if (!query.trim()) {
+            renderReceipts(currentReceipts);
+            return;
         }
 
-        // Ver recibo
-        function viewReceipt(receiptId) {
-            const receipt = currentReceipts.find(r => r.id === receiptId);
-            if (!receipt) return;
+        const filtered = currentReceipts.filter(receipt =>
+            receipt.saleData.clientName.toLowerCase().includes(query.toLowerCase()) ||
+            receipt.receiptNumber.toString().includes(query) ||
+            receipt.saleData.productName.toLowerCase().includes(query.toLowerCase())
+        );
 
-            currentReceiptData = receipt;
-            generateReceiptCanvas(receipt);
-            document.getElementById('receiptModal').classList.add('show');
+        renderReceipts(filtered);
+    }
+
+    // Ver recibo
+    function viewReceipt(receiptId) {
+        const receipt = currentReceipts.find(r => r.id === receiptId);
+        if (!receipt) return;
+
+        currentReceiptData = receipt;
+        generateReceiptCanvas(receipt);
+        document.getElementById('receiptModal').classList.add('show');
+    }
+
+    // Generar canvas del recibo
+    function generateReceiptCanvas(receipt) {
+        const canvas = document.getElementById('receiptCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 600;
+        canvas.height = 800;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Header
+        ctx.fillStyle = '#2c3e50';
+        ctx.fillRect(0, 0, canvas.width, 120);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('RECIBO DE VENTA', canvas.width / 2, 50);
+        ctx.font = '18px Arial';
+        ctx.fillText(`Recibo #${receipt.receiptNumber}`, canvas.width / 2, 80);
+        ctx.fillText(`Fecha: ${new Date(receipt.createdAt).toLocaleDateString('es-CO')}`, canvas.width / 2, 105);
+
+        // Cliente
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('INFORMACIÓN DEL CLIENTE', 40, 170);
+        ctx.font = '18px Arial';
+        ctx.fillText(`Cliente: ${receipt.saleData.clientName}`, 40, 200);
+        ctx.fillText(`Dirección: ${receipt.saleData.clientAddress || 'No especificada'}`, 40, 225);
+
+        // Venta
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText('DETALLES DE LA VENTA', 40, 280);
+        ctx.font = '18px Arial';
+        ctx.fillText(`Producto: ${receipt.saleData.productName}`, 40, 310);
+        ctx.fillText(`Fecha de venta: ${new Date(receipt.saleData.saleDate).toLocaleDateString('es-CO')}`, 40, 335);
+        ctx.fillText(`Cuotas: ${receipt.saleData.installments}`, 40, 360);
+
+        // Pagos
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText('INFORMACIÓN DE PAGOS', 40, 420);
+        ctx.font = '18px Arial';
+        ctx.fillText(`Precio total: $${receipt.saleData.price.toLocaleString('es-CO')}`, 40, 450);
+        ctx.fillText(`Abono inicial: $${receipt.saleData.advancePayment.toLocaleString('es-CO')}`, 40, 475);
+        const remainingDebt = receipt.saleData.price - receipt.saleData.advancePayment;
+        ctx.fillText(`Saldo pendiente: $${remainingDebt.toLocaleString('es-CO')}`, 40, 500);
+
+        if (receipt.saleData.paymentDays) {
+            const days = receipt.saleData.paymentDays.split(',').map(d => d.trim()).join(', ');
+            ctx.fillText(`Días de pago: ${days}`, 40, 525);
         }
 
-        // Generar canvas del recibo
-        function generateReceiptCanvas(receipt) {
-            const canvas = document.getElementById('receiptCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Configurar canvas
-            canvas.width = 600;
-            canvas.height = 800;
-            
-            // Limpiar canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Fondo
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Header
-            ctx.fillStyle = '#2c3e50';
-            ctx.fillRect(0, 0, canvas.width, 120);
-            
-            // Título
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 32px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('RECIBO DE VENTA', canvas.width / 2, 50);
-            
-            // Número de recibo
-            ctx.font = '18px Arial';
-            ctx.fillText(`Recibo #${receipt.receiptNumber}`, canvas.width / 2, 80);
-            
-            // Fecha
-            ctx.fillText(`Fecha: ${new Date(receipt.createdAt).toLocaleDateString('es-CO')}`, canvas.width / 2, 105);
-            
-            // Información del cliente
-            ctx.fillStyle = '#2c3e50';
-            ctx.font = 'bold 24px Arial';
-            ctx.textAlign = 'left';
-            ctx.fillText('INFORMACIÓN DEL CLIENTE', 40, 170);
-            
-            ctx.font = '18px Arial';
-            ctx.fillText(`Cliente: ${receipt.saleData.clientName}`, 40, 200);
-            ctx.fillText(`Dirección: ${receipt.saleData.clientAddress || 'No especificada'}`, 40, 225);
-            
-            // Información del producto
-            ctx.font = 'bold 24px Arial';
-            ctx.fillText('DETALLES DE LA VENTA', 40, 280);
-            
-            ctx.font = '18px Arial';
-            ctx.fillText(`Producto: ${receipt.saleData.productName}`, 40, 310);
-            ctx.fillText(`Fecha de venta: ${new Date(receipt.saleData.saleDate).toLocaleDateString('es-CO')}`, 40, 335);
-            ctx.fillText(`Cuotas: ${receipt.saleData.installments}`, 40, 360);
-            
-            // Información de pagos
-            ctx.font = 'bold 24px Arial';
-            ctx.fillText('INFORMACIÓN DE PAGOS', 40, 420);
-            
-            ctx.font = '18px Arial';
-            ctx.fillText(`Precio total: $${receipt.saleData.price.toLocaleString('es-CO')}`, 40, 450);
-            ctx.fillText(`Abono inicial: $${receipt.saleData.advancePayment.toLocaleString('es-CO')}`, 40, 475);
-            
-            const remainingDebt = receipt.saleData.price - receipt.saleData.advancePayment;
-            ctx.fillText(`Saldo pendiente: $${remainingDebt.toLocaleString('es-CO')}`, 40, 500);
-            
-            // Días de pago (si existen)
-            if (receipt.saleData.paymentDays) {
-                const days = receipt.saleData.paymentDays.split(',').map(d => d.trim()).join(', ');
-                ctx.fillText(`Días de pago: ${days}`, 40, 525);
-            }
-            
-            // Footer
-            ctx.fillStyle = '#7f8c8d';
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Este recibo fue generado automáticamente por el sistema', canvas.width / 2, 720);
-            ctx.fillText(`Generado el ${new Date().toLocaleString('es-CO')}`, canvas.width / 2, 740);
-            
-            // Línea decorativa
-            ctx.strokeStyle = '#3498db';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(40, 680);
-            ctx.lineTo(canvas.width - 40, 680);
-            ctx.stroke();
-        }
+        // Footer
+        ctx.fillStyle = '#7f8c8d';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Este recibo fue generado automáticamente por el sistema', canvas.width / 2, 720);
+        ctx.fillText(`Generado el ${new Date().toLocaleString('es-CO')}`, canvas.width / 2, 740);
 
-        // Cerrar modal
-        function closeReceiptModal() {
-            document.getElementById('receiptModal').classList.remove('show');
-            currentReceiptData = null;
-        }
+        ctx.strokeStyle = '#3498db';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(40, 680);
+        ctx.lineTo(canvas.width - 40, 680);
+        ctx.stroke();
+    }
 
-        // Compartir recibo
-        function shareReceipt() {
-            if (!currentReceiptData) return;
-            shareReceiptById(currentReceiptData.id);
-        }
+    // Cerrar modal
+    function closeReceiptModal() {
+        document.getElementById('receiptModal').classList.remove('show');
+        currentReceiptData = null;
+    }
 
-        function shareReceiptById(receiptId) {
-            const receipt = currentReceipts.find(r => r.id === receiptId);
-            if (!receipt) return;
+    // Compartir recibo
+    function shareReceipt() {
+        if (!currentReceiptData) return;
+        shareReceiptById(currentReceiptData.id);
+    }
 
-            // Generar canvas temporal para compartir
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = 600;
-            tempCanvas.height = 800;
-            
-            // Redibujar el recibo en el canvas temporal
-            currentReceiptData = receipt;
-            const originalCanvas = document.getElementById('receiptCanvas');
-            tempCtx.drawImage(originalCanvas, 0, 0);
-            
-            // Convertir a blob y compartir
-            tempCanvas.toBlob(blob => {
-                const file = new File([blob], `recibo-${receipt.receiptNumber}.png`, { type: 'image/png' });
-                
-                if (navigator.share && navigator.canShare({ files: [file] })) {
-                    navigator.share({
-                        title: `Recibo #${receipt.receiptNumber}`,
-                        text: `Recibo de venta para ${receipt.saleData.clientName}`,
-                        files: [file]
-                    });
-                } else {
-                    // Fallback: descargar
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `recibo-${receipt.receiptNumber}.png`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                }
-            }, 'image/png');
-        }
+    function shareReceiptById(receiptId) {
+        const receipt = currentReceipts.find(r => r.id === receiptId);
+        if (!receipt) return;
 
-        // Descargar recibo
-        function downloadReceipt() {
-            if (!currentReceiptData) return;
-            
-            const canvas = document.getElementById('receiptCanvas');
-            canvas.toBlob(blob => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 600;
+        canvas.height = 800;
+        generateReceiptCanvas(receipt);
+        const tempCtx = canvas.getContext('2d');
+        tempCtx.drawImage(document.getElementById('receiptCanvas'), 0, 0);
+
+        canvas.toBlob(blob => {
+            const file = new File([blob], `recibo-${receipt.receiptNumber}.png`, { type: 'image/png' });
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    title: `Recibo #${receipt.receiptNumber}`,
+                    text: `Recibo de venta para ${receipt.saleData.clientName}`,
+                    files: [file]
+                });
+            } else {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `recibo-${currentReceiptData.receiptNumber}.png`;
+                a.download = `recibo-${receipt.receiptNumber}.png`;
                 a.click();
                 URL.revokeObjectURL(url);
-            }, 'image/png');
-        }
-
-        // Eliminar recibo
-        function deleteReceipt() {
-            if (!currentReceiptData) return;
-            deleteReceiptById(currentReceiptData.id);
-        }
-
-        function deleteReceiptById(receiptId) {
-            if (!confirm('¿Estás seguro de que deseas eliminar este recibo?')) return;
-            
-            let receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-            receipts = receipts.filter(r => r.id !== receiptId);
-            localStorage.setItem('salesReceipts', JSON.stringify(receipts));
-            
-            loadReceipts();
-            closeReceiptModal();
-            
-            alert('Recibo eliminado correctamente');
-        }
-
-        // Cerrar modal con Escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeReceiptModal();
             }
-        });
+        }, 'image/png');
+    }
 
-        // Cerrar modal al hacer clic fuera
-        document.getElementById('receiptModal').addEventListener('click', (e) => {
-            if (e.target.id === 'receiptModal') {
-                closeReceiptModal();
+    // Descargar recibo
+    function downloadReceipt() {
+        if (!currentReceiptData) return;
+        const canvas = document.getElementById('receiptCanvas');
+        canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `recibo-${currentReceiptData.receiptNumber}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+    }
+
+    // ✅ Eliminar recibo (local + MongoDB)
+    async function deleteReceiptById(receiptId) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este recibo?')) return;
+
+        const receipt = currentReceipts.find(r => r.id === receiptId);
+        if (!receipt) return;
+
+        // Eliminar de localStorage
+        let localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+        localReceipts = localReceipts.filter(r => r.id !== receiptId);
+        localStorage.setItem('salesReceipts', JSON.stringify(localReceipts));
+
+        // Eliminar de MongoDB si tiene mongoId
+        if (receipt.mongoId) {
+            try {
+                const token = getToken();
+                await apiFetch(`/receipts/${receipt.mongoId}`, "DELETE", null, token);
+            } catch (err) {
+                console.warn("Error eliminando recibo de MongoDB:", err);
             }
-        });
+        }
 
-         const menuToggle = document.getElementById("menuToggle");
-    const menuItems  = document.getElementById("menuItems");
-    const backdrop   = document.getElementById("backdrop");
+        alert('Recibo eliminado correctamente');
+        loadReceipts();
+        closeReceiptModal();
+    }
+
+    // Cerrar modal con Escape o clic fuera
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeReceiptModal();
+    });
+
+    document.getElementById('receiptModal').addEventListener('click', (e) => {
+        if (e.target.id === 'receiptModal') closeReceiptModal();
+    });
+
+    // Menú toggle
+    const menuToggle = document.getElementById("menuToggle");
+    const menuItems = document.getElementById("menuItems");
+    const backdrop = document.getElementById("backdrop");
     if (menuToggle && menuItems && backdrop) {
         menuToggle.addEventListener("click", () => {
             menuItems.classList.toggle("show");
@@ -739,7 +756,6 @@
             backdrop.classList.remove("show");
         });
     }
-
-    </script>
+</script>
 </body>
 </html>

@@ -1,9 +1,7 @@
-/* ---------- mÃ³dulos (sin cambios) ---------- */
+/* ---------- módulos (sin cambios) ---------- */
 import { apiFetch } from "../utils/api.js";
 import { getToken } from "../utils/auth.js";
 import "../keepAlive.js";
-
-
 
 /* ---------- referencias DOM (sin cambios) ---------- */
 
@@ -59,7 +57,7 @@ async function loadSales(query = "") {
                     <div class="sale-info">
                         <h3>${sale.clientName}</h3>
                         <p>${sale.productName}</p>
-                        <p><i class="fas fa-map-marker-alt"></i> ${sale.clientAddress || 'Sin direcciÃ³n'}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> ${sale.clientAddress || 'Sin dirección'}</p>
                     </div>
                     <div class="sale-amount">
                         <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
@@ -101,7 +99,7 @@ function viewSaleDetails(sale) {
 
 /* ---------- eliminar ---------- */
 async function deleteSale(id) {
-    if (!confirm("Â¿Eliminar esta venta?")) return;
+    if (!confirm("¿Eliminar esta venta?")) return;
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "DELETE", null, token);
@@ -124,28 +122,25 @@ function editSale(sale) {
     if (document.getElementById("clientAddress")) {
         document.getElementById("clientAddress").value = sale.clientAddress || '';
 
-         selectedDays = sale.paymentDays ? sale.paymentDays.split(',').map(Number) : [];
-    renderPills();
-    renderCalendar();
-
+        selectedDays = sale.paymentDays ? sale.paymentDays.split(',').map(Number) : [];
+        renderPills();
+        renderCalendar();
     }
 
-      selectedDays = sale.paymentDays ? sale.paymentDays.split(',').map(Number) : [];
+    selectedDays = sale.paymentDays ? sale.paymentDays.split(',').map(Number) : [];
     renderPills();
     renderCalendar();
-
 
     document.getElementById("paymentSection").style.display = "block";
     inputPaymentDate.value = new Date().toISOString().split('T')[0];
 
-btnSave.classList.add("hidden");
-btnUpdate.classList.remove("hidden");
-btnCancel.classList.remove("hidden");
-btnDelete.classList.remove("hidden");   // <- ahora sÃ­ se ve
-btnAddPayment.classList.remove("hidden");
-window.scrollTo({ top: 0, behavior: 'smooth' }); // â¬…ï¸ lleva al usuario arriba
+    btnSave.classList.add("hidden");
+    btnUpdate.classList.remove("hidden");
+    btnCancel.classList.remove("hidden");
+    btnDelete.classList.remove("hidden");   // <- ahora sí se ve
+    btnAddPayment.classList.remove("hidden");
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // ⬅️ lleva al usuario arriba
 }
-
 
 async function loadProductsForSelect() {
     try {
@@ -153,7 +148,7 @@ async function loadProductsForSelect() {
         const products = await apiFetch("/products", "GET", null, token);
         const select = document.getElementById("productName");
 
-        select.innerHTML = '<option value="">SeleccionÃ¡ un producto</option>';
+        select.innerHTML = '<option value="">Selecciona un producto</option>';
 
         products.filter(p => !p.sold).forEach(product => {
             const option = document.createElement("option");
@@ -166,17 +161,16 @@ async function loadProductsForSelect() {
     }
 }
 
-
 /* ---------- guardar nueva (CORREGIDA) ---------- */
 async function saveSale() {
-    // ðŸ”¥ ValidaciÃ³n de fecha
+    // 🔥 Validación de fecha
     if (!inputDate.value) {
         alert("Por favor selecciona una fecha de venta.");
         inputDate.focus();
         return;
     }
 
-    // ðŸ”¥ ValidaciÃ³n de productos seleccionados
+    // 🔥 Validación de productos seleccionados
     if (selectedProducts.length === 0) {
         alert("Por favor selecciona al menos un producto.");
         return;
@@ -199,7 +193,7 @@ async function saveSale() {
         paymentDays: collectPaymentDays()
     };
 
-    // ðŸŽ¯ CAPTURAR DATOS PARA EL RECIBO ANTES DE LIMPIAR
+    // 🎯 CAPTURAR DATOS PARA EL RECIBO ANTES DE LIMPIAR
     const receiptData = {
         clientName: inputClient.value.trim(),
         clientAddress: document.getElementById("clientAddress").value.trim(),
@@ -217,16 +211,16 @@ async function saveSale() {
         await apiFetch("/sales/new", "POST", saleData, token);
         alert("Venta guardada correctamente.");
 
-        // âœ… Marcar productos como vendidos con el nombre del cliente
+        // ✅ Marcar productos como vendidos con el nombre del cliente
         try {
             for (const product of selectedProducts) {
                 await apiFetch(`/products/${product._id}/sell`, "PUT", { soldTo: inputClient.value.trim() }, token);
             }
         } catch (err) {
-            console.warn("No se pudo marcar uno o mÃ¡s productos como vendidos:", err);
+            console.warn("No se pudo marcar uno o más productos como vendidos:", err);
         }
 
-        // Limpiar formulario y selecciÃ³n
+        // Limpiar formulario y selección
         form.reset();
         inputDate.value = new Date().toISOString().split('T')[0];
         selectedProducts = [];
@@ -237,7 +231,7 @@ async function saveSale() {
         await loadSales();
         await loadProductsForDropdown();
 
-        // ðŸŽ¯ MOSTRAR MODAL PARA GENERAR RECIBO CON LOS DATOS GUARDADOS
+        // 🎯 MOSTRAR MODAL PARA GENERAR RECIBO CON LOS DATOS GUARDADOS
         showReceiptModal(receiptData);
 
     } catch (error) {
@@ -245,7 +239,6 @@ async function saveSale() {
         alert("No se pudo guardar la venta: " + error.message);
     }
 }
-
 
 /* ---------- actualizar ---------- */
 async function updateSale() {
@@ -257,7 +250,7 @@ async function updateSale() {
         saleDate: inputDate.value,
         price: parseFloat(inputPrice.value),
         installments: inputInstallments.value.trim(),
-        paymentDays: collectPaymentDays() // âœ… Agregar esta lÃ­nea
+        paymentDays: collectPaymentDays() // ✅ Agregar esta línea
     };
     
     try {
@@ -278,8 +271,8 @@ async function addPayment() {
     const amount = parseFloat(document.getElementById("paymentAmount").value);
     const date = document.getElementById("paymentDate").value;
 
-    if (!id) return alert("No se seleccionÃ³ ninguna venta.");
-    if (!amount || amount <= 0) return alert("Monto invÃ¡lido");
+    if (!id) return alert("No se seleccionó ninguna venta.");
+    if (!amount || amount <= 0) return alert("Monto inválido");
 
     try {
         const token = getToken();
@@ -287,8 +280,8 @@ async function addPayment() {
         const formattedAmount = amount.toLocaleString('es-CO');
         alert(`Abono de $${formattedAmount} registrado correctamente.`);
         if (response.justSettled || response.settled) {
-            alert("Â¡Venta liquidada automÃ¡ticamente!");
-            if (confirm("Â¿Deseas ir a la secciÃ³n de ventas liquidadas?")) {
+            alert("¡Venta liquidada automáticamente!");
+            if (confirm("¿Deseas ir a la sección de ventas liquidadas?")) {
                 window.location.href = "liquidados.html";
                 return;
             }
@@ -301,20 +294,20 @@ async function addPayment() {
     }
 }
 
-/* ---------- cancelar ediciÃ³n ---------- */
+/* ---------- cancelar edición ---------- */
 function cancelUpdate() {
-btnSave.classList.remove("hidden");
-btnUpdate.classList.add("hidden");
-btnCancel.classList.add("hidden");
-btnDelete.classList.add("hidden");   // <- se oculta de nuevo
-btnAddPayment.classList.add("hidden");
+    btnSave.classList.remove("hidden");
+    btnUpdate.classList.add("hidden");
+    btnCancel.classList.add("hidden");
+    btnDelete.classList.add("hidden");   // <- se oculta de nuevo
+    btnAddPayment.classList.add("hidden");
     document.getElementById("paymentSection").style.display = "none";
     form.reset();
 }
 
-/* ---------- modal de pago (si lo usÃ¡s) ---------- */
+/* ---------- modal de pago (si lo usás) ---------- */
 function openPaymentModal(saleId) {
-    // Si usÃ¡s el modal del HTML nuevo, mostralo acÃ¡
+    // Si usás el modal del HTML nuevo, mostralo acá
     document.getElementById("paymentModal")?.classList.add("show");
     document.getElementById("paymentAmount").value = "";
     document.getElementById("paymentDate").value = new Date().toISOString().split("T")[0];
@@ -328,7 +321,7 @@ btnUpdate.addEventListener("click", updateSale);
 btnCancel.addEventListener("click", cancelUpdate);
 btnAddPayment.addEventListener("click", addPayment);
 
-// Al cargar la pÃ¡gina
+// Al cargar la página
 document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toLocaleDateString('en-CA'); // formato YYYY-MM-DD
     document.getElementById("saleDate").value = today;
@@ -336,26 +329,25 @@ document.addEventListener("DOMContentLoaded", () => {
     loadProductsForSelect();
 
     loadProductsForDropdown();
-document.addEventListener("click", (e) => {
-    const dropdown = document.getElementById("productDropdown");
-    const panel = document.getElementById("productDropdownPanel");
-    const trigger = document.querySelector(".dropdown-trigger");
+    document.addEventListener("click", (e) => {
+        const dropdown = document.getElementById("productDropdown");
+        const panel = document.getElementById("productDropdownPanel");
+        const trigger = document.querySelector(".dropdown-trigger");
 
-    if (!dropdown) return;
+        if (!dropdown) return;
 
-    // Si hacen clic en el trigger, abrir/cerrar
-    if (trigger.contains(e.target)) {
-        panel.classList.toggle("hidden");
-        trigger.classList.toggle("active");
-    }
+        // Si hacen clic en el trigger, abrir/cerrar
+        if (trigger.contains(e.target)) {
+            panel.classList.toggle("hidden");
+            trigger.classList.toggle("active");
+        }
 
-    // Si hacen clic fuera, cerrar
-    if (!dropdown.contains(e.target)) {
-        panel.classList.add("hidden");
-        trigger.classList.remove("active");
-    }
-});
-
+        // Si hacen clic fuera, cerrar
+        if (!dropdown.contains(e.target)) {
+            panel.classList.add("hidden");
+            trigger.classList.remove("active");
+        }
+    });
 });
 
 async function loadProductsForDropdown() {
@@ -377,47 +369,47 @@ async function loadProductsForDropdown() {
         filtered.forEach(product => {
             const item = document.createElement("div");
             item.className = "dropdown-item";
-item.innerHTML = `
-    <div class="product-card-dropdown" style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px;
-        border-radius: 8px;
-        background: var(--light-gray);
-        transition: background 0.2s ease;
-    " onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='var(--light-gray)'">
+            item.innerHTML = `
+                <div class="product-card-dropdown" style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px;
+                    border-radius: 8px;
+                    background: var(--light-gray);
+                    transition: background 0.2s ease;
+                " onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='var(--light-gray)'">
 
-        <div class="info" style="flex: 1;">
-            <div class="name" style="font-weight: 600; color: var(--primary); font-size: 14px;">
-                ${product.name}
-            </div>
-            <div class="price" style="font-size: 13px; color: var(--success); margin-top: 2px;">
-                $${product.salePrice.toLocaleString()}
-            </div>
-            <div style="font-size: 11px; color: var(--medium-gray); margin-top: 4px;">
-                <i class="fas fa-tag"></i> ${product.brand}
-                <i class="fas fa-folder" style="margin-left: 8px;"></i> ${product.category}
-                ${product.size ? `<i class="fas fa-ruler" style="margin-left: 8px;"></i> ${product.size}` : ''}
-            </div>
-        </div>
+                    <div class="info" style="flex: 1;">
+                        <div class="name" style="font-weight: 600; color: var(--primary); font-size: 14px;">
+                            ${product.name}
+                        </div>
+                        <div class="price" style="font-size: 13px; color: var(--success); margin-top: 2px;">
+                            $${product.salePrice.toLocaleString()}
+                        </div>
+                        <div style="font-size: 11px; color: var(--medium-gray); margin-top: 4px;">
+                            <i class="fas fa-tag"></i> ${product.brand}
+                            <i class="fas fa-folder" style="margin-left: 8px;"></i> ${product.category}
+                            ${product.size ? `<i class="fas fa-ruler" style="margin-left: 8px;"></i> ${product.size}` : ''}
+                        </div>
+                    </div>
 
-        <div class="actions">
-            <button class="btn-edit-dropdown" data-id="${product._id}" style="
-                background: var(--accent);
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 6px 8px;
-                font-size: 12px;
-                cursor: pointer;
-                transition: background 0.2s ease;
-            " onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='var(--accent)'">
-                <i class="fas fa-edit"></i>
-            </button>
-        </div>
-    </div>
-`;
+                    <div class="actions">
+                        <button class="btn-edit-dropdown" data-id="${product._id}" style="
+                            background: var(--accent);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            padding: 6px 8px;
+                            font-size: 12px;
+                            cursor: pointer;
+                            transition: background 0.2s ease;
+                        " onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='var(--accent)'">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
 
             item.querySelector('.btn-edit-dropdown').addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -434,7 +426,7 @@ item.innerHTML = `
         });
     }
 
-    // BÃºsqueda en tiempo real
+    // Búsqueda en tiempo real
     searchInput.addEventListener("input", () => {
         const query = searchInput.value.toLowerCase();
         const filtered = availableProducts.filter(p =>
@@ -466,16 +458,16 @@ function renderSelectedProducts() {
     selectedProducts.forEach((product, index) => {
         const tag = document.createElement("div");
         tag.className = "selected-product-tag";
-tag.innerHTML = `
-    ${product.name} (${product.brand}${product.size ? `, ${product.size}` : ''})
-    <button class="remove" data-index="${index}">Ã—</button>
-`;
+        tag.innerHTML = `
+            ${product.name} (${product.brand}${product.size ? `, ${product.size}` : ''})
+            <button class="remove" data-index="${index}">×</button>
+        `;
 
-// Agregar event listener
-tag.querySelector('.remove').addEventListener('click', (e) => {
-    const index = parseInt(e.target.dataset.index);
-    removeSelectedProduct(index);
-});
+        // Agregar event listener
+        tag.querySelector('.remove').addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            removeSelectedProduct(index);
+        });
         container.appendChild(tag);
     });
 }
@@ -505,29 +497,30 @@ window.editProductFromDropdown = function(productId) {
 document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("productName").addEventListener("change", (e) => {
-    const selectedProductName = e.target.value;
-    if (!selectedProductName) {
-        document.getElementById("price").value = "";
-        return;
-    }
-
-    // Buscar el producto seleccionado
-    const token = getToken();
-    apiFetch("/products", "GET", null, token).then(products => {
-        const product = products.find(p => p.name === selectedProductName);
-        if (product) {
-            document.getElementById("price").value = product.salePrice;
+        const selectedProductName = e.target.value;
+        if (!selectedProductName) {
+            document.getElementById("price").value = "";
+            return;
         }
-    }).catch(error => {
-        console.error("Error al cargar productos:", error);
+
+        // Buscar el producto seleccionado
+        const token = getToken();
+        apiFetch("/products", "GET", null, token).then(products => {
+            const product = products.find(p => p.name === selectedProductName);
+            if (product) {
+                document.getElementById("price").value = product.salePrice;
+            }
+        }).catch(error => {
+            console.error("Error al cargar productos:", error);
+        });
     });
-});
 
     loadSales();
     if (document.getElementById("paymentSection")) {
         document.getElementById("paymentSection").style.display = "none";
     }
-    // MenÃº nuevo
+
+    // Menú nuevo
     const menuToggle = document.getElementById("menuToggle");
     const menuItems  = document.getElementById("menuItems");
     const backdrop   = document.getElementById("backdrop");
@@ -542,15 +535,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+
 /* ---------- conectar modal nuevo ---------- */
 const modal   = document.getElementById("paymentModal");
 const btnConf = document.getElementById("confirmPayment");
 const btnCerr = document.getElementById("cancelPayment");
 const btnX    = document.getElementById("closePaymentModal");
 
-// abrir modal ya estÃ¡ hecho en openPaymentModal
+// abrir modal ya está hecho en openPaymentModal
 btnConf.addEventListener("click", () => {
-    // usamos la misma lÃ³gica que el Ã¡rea "Registrar Abono"
+    // usamos la misma lógica que el área "Registrar Abono"
     addPayment();
     modal.classList.remove("show");
 });
@@ -558,7 +552,7 @@ btnCerr.addEventListener("click", () => modal.classList.remove("show"));
 btnX.addEventListener("click",   () => modal.classList.remove("show"));
 
 /* ---------- Estado ---------- */
-let selectedDays = []; // nÃºmeros 1-31
+let selectedDays = []; // números 1-31
 
 /* ---------- Nodos ---------- */
 const btnOpen   = document.getElementById('btnOpenCalendar');
@@ -606,7 +600,7 @@ function renderPills(){
     selectedDays.forEach(d => {
         const pill = document.createElement('span');
         pill.className = 'day-pill';
-        pill.innerHTML = `${d} <button class="remove-day" data-day="${d}">Ã—</button>`;
+        pill.innerHTML = `${d} <button class="remove-day" data-day="${d}">×</button>`;
         pillsBox.appendChild(pill);
     });
     // Delegar evento para quitar
@@ -619,7 +613,7 @@ function renderPills(){
     });
 }
 
-/* ---------- Al guardar la venta incluir los dÃ­as ---------- */
+/* ---------- Al guardar la venta incluir los días ---------- */
 function collectPaymentDays(){
     return selectedDays.join(','); // "5,10,15,20"
 }
@@ -633,32 +627,33 @@ function collectPaymentDays(){
 // Variable global para almacenar los datos de la venta
 let currentSaleForReceipt = null;
 
-// Generar nÃºmero de recibo Ãºnico
+// Generar número de recibo único
 function generateReceiptNumber() {
-    const date = new Date();
-    const timestamp = date.getTime();
-    return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${timestamp.toString().slice(-4)}`;
+    const now = new Date();
+    const timestamp = now.getTime();
+    // Usa solo los últimos 8 dígitos del timestamp para que quepa en un Number
+    return parseInt(timestamp.toString().slice(-8));
 }
 
-// Mostrar modal de confirmaciÃ³n para generar recibo
+// Mostrar modal de confirmación para generar recibo
 function showReceiptModal(saleData) {
     console.log("Datos recibidos en showReceiptModal:", saleData); // Debug
     
     // Guardar datos globalmente
     currentSaleForReceipt = saleData;
     
-    // Crear modal dinÃ¡micamente
+    // Crear modal dinámicamente
     const modal = document.createElement('div');
     modal.id = 'receiptConfirmModal';
     modal.className = 'receipt-modal';
     modal.innerHTML = `
         <div class="receipt-modal-content">
             <div class="receipt-modal-header">
-                <h2><i class="fas fa-receipt"></i> Â¿Generar Recibo?</h2>
-                <button class="close-btn" onclick="closeReceiptConfirmModal()">Ã—</button>
+                <h2><i class="fas fa-receipt"></i> ¿Generar Recibo?</h2>
+                <button class="close-btn" onclick="closeReceiptConfirmModal()">×</button>
             </div>
             <div class="receipt-modal-body">
-                <p>Â¿Deseas generar un recibo para esta venta?</p>
+                <p>¿Deseas generar un recibo para esta venta?</p>
                 <div class="sale-summary">
                     <h3>Resumen de la venta:</h3>
                     <p><strong>Cliente:</strong> ${saleData.clientName || 'Sin nombre'}</p>
@@ -672,7 +667,7 @@ function showReceiptModal(saleData) {
                     <i class="fas fa-times"></i> No, gracias
                 </button>
                 <button class="btn btn-primary" onclick="generateReceiptFromModal()">
-                    <i class="fas fa-receipt"></i> SÃ­, generar recibo
+                    <i class="fas fa-receipt"></i> Sí, generar recibo
                 </button>
             </div>
         </div>
@@ -822,7 +817,6 @@ function showReceiptModal(saleData) {
     document.body.appendChild(modal);
 }
 
-
 function generateReceiptFromModal() {
     console.log("Datos en generateReceiptFromModal:", currentSaleForReceipt); // Debug
     
@@ -853,26 +847,24 @@ function generateReceiptFromModal() {
     generateReceipt(dataForReceipt);
 }
 
-
 function closeReceiptConfirmModal() {
     const modal = document.getElementById('receiptConfirmModal');
     if (modal) {
         modal.remove();
     }
-    // Limpiar la variable despuÃ©s de un pequeÃ±o delay para asegurar que se use la copia
+    // Limpiar la variable después de un pequeño delay para asegurar que se use la copia
     setTimeout(() => {
         currentSaleForReceipt = null;
     }, 100);
 }
 
-
 // Generar recibo con canvas
 function generateReceipt(saleData) {
     console.log("Datos en generateReceipt:", saleData); // Debug
     
-    // ValidaciÃ³n mÃ¡s robusta
+    // Validación más robusta
     if (!saleData || typeof saleData !== 'object') {
-        console.error("Error: saleData no es un objeto vÃ¡lido:", saleData);
+        console.error("Error: saleData no es un objeto válido:", saleData);
         alert("Error: No se pudieron obtener los datos de la venta");
         return;
     }
@@ -903,17 +895,17 @@ function generateReceipt(saleData) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, 120);
     
-    // TÃ­tulo principal
+    // Título principal
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('RECIBO DE VENTA', canvas.width / 2, 50);
     
-    // NÃºmero de recibo
+    // Número de recibo
     ctx.font = 'bold 20px Arial';
     ctx.fillText(`Recibo #${receiptNumber}`, canvas.width / 2, 80);
     
-    // Fecha de generaciÃ³n
+    // Fecha de generación
     ctx.font = '16px Arial';
     ctx.fillText(`Fecha: ${new Date().toLocaleDateString('es-CO', { 
         year: 'numeric', 
@@ -923,7 +915,7 @@ function generateReceipt(saleData) {
         minute: '2-digit'
     })}`, canvas.width / 2, 105);
     
-    // LÃ­nea decorativa
+    // Línea decorativa
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -931,13 +923,13 @@ function generateReceipt(saleData) {
     ctx.lineTo(canvas.width - 50, 130);
     ctx.stroke();
     
-    // SecciÃ³n cliente
+    // Sección cliente
     ctx.fillStyle = '#2c3e50';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('INFORMACIÃ“N DEL CLIENTE', 50, 170);
+    ctx.fillText('INFORMACIÓN DEL CLIENTE', 50, 170);
     
-    // LÃ­nea bajo tÃ­tulo
+    // Línea bajo título
     ctx.strokeStyle = '#3498db';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -948,10 +940,10 @@ function generateReceipt(saleData) {
     ctx.font = '18px Arial';
     ctx.fillStyle = '#34495e';
     ctx.fillText(`Nombre: ${saleData.clientName || 'No especificado'}`, 50, 210);
-    ctx.fillText(`DirecciÃ³n: ${saleData.clientAddress || 'No especificada'}`, 50, 235);
-    ctx.fillText(`TelÃ©fono: ${saleData.clientPhone || 'No especificado'}`, 50, 260);
+    ctx.fillText(`Dirección: ${saleData.clientAddress || 'No especificada'}`, 50, 235);
+    ctx.fillText(`Teléfono: ${saleData.clientPhone || 'No especificado'}`, 50, 260);
     
-    // SecciÃ³n productos
+    // Sección productos
     ctx.fillStyle = '#2c3e50';
     ctx.font = 'bold 24px Arial';
     ctx.fillText('PRODUCTOS VENDIDOS', 50, 310);
@@ -976,17 +968,17 @@ function generateReceipt(saleData) {
             yPosition += 70;
         });
     } else {
-        ctx.fillText(`â€¢ ${saleData.productName || 'Producto no especificado'}`, 50, yPosition);
+        ctx.fillText(`• ${saleData.productName || 'Producto no especificado'}`, 50, yPosition);
         yPosition += 30;
     }
     
-    // Ajustar posiciÃ³n si hay muchos productos
+    // Ajustar posición si hay muchos productos
     yPosition = Math.max(yPosition, 480);
     
-    // SecciÃ³n financiera
+    // Sección financiera
     ctx.fillStyle = '#2c3e50';
     ctx.font = 'bold 24px Arial';
-    ctx.fillText('INFORMACIÃ“N FINANCIERA', 50, yPosition);
+    ctx.fillText('INFORMACIÓN FINANCIERA', 50, yPosition);
     
     ctx.strokeStyle = '#3498db';
     ctx.lineWidth = 3;
@@ -1019,12 +1011,12 @@ function generateReceipt(saleData) {
         if (saleData.paymentDays) {
             yPosition += 30;
             const days = saleData.paymentDays.split(',').map(d => d.trim()).join(', ');
-            ctx.fillText(`DÃ­as de pago: ${days}`, 50, yPosition);
+            ctx.fillText(`Días de pago: ${days}`, 50, yPosition);
         }
     } else {
         ctx.fillStyle = '#27ae60';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('âœ“ PAGADO COMPLETAMENTE', 50, yPosition);
+        ctx.fillText('✓ PAGADO COMPLETAMENTE', 50, yPosition);
     }
     
     // Footer
@@ -1032,10 +1024,10 @@ function generateReceipt(saleData) {
     ctx.fillStyle = '#95a5a6';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('Este recibo fue generado automÃ¡ticamente', canvas.width / 2, yPosition);
+    ctx.fillText('Este recibo fue generado automáticamente', canvas.width / 2, yPosition);
     ctx.fillText(`Por el programa JC-C - ${new Date().getFullYear()}`, canvas.width / 2, yPosition + 20);
     
-    // LÃ­nea final decorativa
+    // Línea final decorativa
     ctx.strokeStyle = '#bdc3c7';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -1060,14 +1052,29 @@ function generateReceipt(saleData) {
     showReceiptOptionsModal(receiptData);
 }
 
+async function saveReceiptToMongo(receiptData) {
+    try {
+        const token = getToken();
+        await apiFetch("/receipts", "POST", {
+            receiptNumber: receiptData.receiptNumber, // ✅ ahora es número
+            saleData: receiptData.saleData,
+            localId: receiptData.id
+        }, token);
+        console.log("✅ Recibo guardado en MongoDB");
+    } catch (err) {
+        console.warn("❌ No se pudo guardar el recibo en MongoDB:", err);
+    }
+}
+
 // Resto de funciones permanecen igual...
 function saveReceipt(receiptData) {
     let receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
     receipts.push(receiptData);
     localStorage.setItem('salesReceipts', JSON.stringify(receipts));
+    saveReceiptToMongo(receiptData);
 }
 
-// REEMPLAZA la funciÃ³n showReceiptOptionsModal en tu categories.js:
+// REEMPLAZA la función showReceiptOptionsModal en tu categories.js:
 
 function showReceiptOptionsModal(receiptData) {
     const modal = document.createElement('div');
@@ -1076,22 +1083,22 @@ function showReceiptOptionsModal(receiptData) {
     modal.innerHTML = `
         <div class="receipt-modal-content" style="max-width: 700px;">
             <div class="receipt-modal-header">
-                <h2><i class="fas fa-check-circle" style="color: #27ae60;"></i> Â¡Recibo Generado!</h2>
-                <button class="close-btn" onclick="closeReceiptOptionsModal()">Ã—</button>
+                <h2><i class="fas fa-check-circle" style="color: #27ae60;"></i> ¡Recibo Generado!</h2>
+                <button class="close-btn" onclick="closeReceiptOptionsModal()">×</button>
             </div>
             <div class="receipt-modal-body">
                 <div class="receipt-preview">
                     <img src="${receiptData.canvas}" alt="Recibo" style="width: 100%; max-width: 400px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
                 </div>
                 <p style="text-align: center; color: #27ae60; font-weight: 600; margin-bottom: 15px;">
-                    <i class="fas fa-save"></i> El recibo ha sido guardado automÃ¡ticamente
+                    <i class="fas fa-save"></i> El recibo ha sido guardado automáticamente
                 </p>
                 <div style="text-align: center; margin: 20px 0;">
                     <strong>Recibo #${receiptData.receiptNumber}</strong><br>
                     <span style="color: #7f8c8d;">Cliente: ${receiptData.saleData.clientName}</span>
                 </div>
                 
-                <!-- BotÃ³n de compartir prominente -->
+                <!-- Botón de compartir prominente -->
                 <div style="text-align: center; margin: 25px 0;">
                     <button class="btn btn-share-prominent" onclick="shareReceiptFromModal('${receiptData.id}')" style="
                         background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
@@ -1150,14 +1157,14 @@ function closeReceiptOptionsModal() {
     }
 }
 
-// REEMPLAZA la funciÃ³n shareReceiptFromModal en tu categories.js:
+// REEMPLAZA la función shareReceiptFromModal en tu categories.js:
 
 function shareReceiptFromModal(receiptId) {
     const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
     const receipt = receipts.find(r => r.id === receiptId);
     
     if (!receipt) {
-        alert("Error: No se encontrÃ³ el recibo");
+        alert("Error: No se encontró el recibo");
         return;
     }
 
@@ -1175,17 +1182,17 @@ function shareReceiptFromModal(receiptId) {
             
             // Verificar si el dispositivo soporta compartir archivos
             if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                // Usar API nativa de compartir (funciona en mÃ³viles)
+                // Usar API nativa de compartir (funciona en móviles)
                 return navigator.share({
                     title: `Recibo de Venta #${receipt.receiptNumber}`,
                     text: `Recibo de venta para ${receipt.saleData.clientName} - Total: $${receipt.saleData.price.toLocaleString('es-CO')}`,
                     files: [file]
                 }).then(() => {
-                    // Ã‰xito al compartir
+                    // Éxito al compartir
                     showShareSuccess();
                 }).catch((error) => {
                     if (error.name !== 'AbortError') {
-                        // Error que no sea cancelaciÃ³n del usuario
+                        // Error que no sea cancelación del usuario
                         console.error('Error al compartir:', error);
                         fallbackShare(file, receipt);
                     }
@@ -1200,13 +1207,13 @@ function shareReceiptFromModal(receiptId) {
             alert('Error al preparar el recibo para compartir');
         })
         .finally(() => {
-            // Restaurar el botÃ³n
+            // Restaurar el botón
             shareBtn.innerHTML = originalContent;
             shareBtn.disabled = false;
         });
 }
 
-// FunciÃ³n auxiliar para mostrar Ã©xito al compartir
+// Función auxiliar para mostrar éxito al compartir
 function showShareSuccess() {
     const successMsg = document.createElement('div');
     successMsg.style.cssText = `
@@ -1227,7 +1234,7 @@ function showShareSuccess() {
     `;
     successMsg.innerHTML = `
         <i class="fas fa-check-circle"></i>
-        Â¡Recibo compartido exitosamente!
+        ¡Recibo compartido exitosamente!
     `;
     
     document.body.appendChild(successMsg);
@@ -1237,16 +1244,16 @@ function showShareSuccess() {
     }, 3000);
 }
 
-// FunciÃ³n auxiliar para compartir en dispositivos que no soportan la API nativa
+// Función auxiliar para compartir en dispositivos que no soportan la API nativa
 function fallbackShare(file, receipt) {
     // Crear URL del archivo
     const url = URL.createObjectURL(file);
     
-    // Detectar si es mÃ³vil
+    // Detectar si es móvil
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (isMobile) {
-        // En mÃ³viles, mostrar opciones de compartir
+        // En móviles, mostrar opciones de compartir
         showMobileShareOptions(url, file, receipt);
     } else {
         // En desktop, descargar directamente
@@ -1263,7 +1270,7 @@ function fallbackShare(file, receipt) {
     }
 }
 
-// Mostrar opciones de compartir en mÃ³viles
+// Mostrar opciones de compartir en móviles
 function showMobileShareOptions(url, file, receipt) {
     const modal = document.createElement('div');
     modal.style.cssText = `
@@ -1347,9 +1354,9 @@ function showMobileShareOptions(url, file, receipt) {
     document.body.appendChild(modal);
 }
 
-// FunciÃ³n para abrir WhatsApp con el texto del recibo
+// Función para abrir WhatsApp con el texto del recibo
 function openWhatsApp(receiptNumber, clientName) {
-    const text = `Â¡Hola! Te envÃ­o el recibo de tu compra.\n\nðŸ“‹ *Recibo #${receiptNumber}*\nðŸ‘¤ Cliente: ${clientName}\n\nÂ¡Gracias por tu compra!`;
+    const text = `¡Hola! Te envío el recibo de tu compra.\n\n📋 *Recibo #${receiptNumber}*\n👤 Cliente: ${clientName}\n\n¡Gracias por tu compra!`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(whatsappUrl, '_blank');
     
@@ -1357,7 +1364,7 @@ function openWhatsApp(receiptNumber, clientName) {
     document.querySelector('[style*="z-index: 10002"]')?.remove();
 }
 
-// FunciÃ³n para descargar directamente
+// Función para descargar directamente
 function downloadReceiptDirect(url, receiptNumber) {
     const a = document.createElement('a');
     a.href = url;
@@ -1387,10 +1394,10 @@ function showDesktopShareMessage() {
     `;
     msg.innerHTML = `
         <i class="fas fa-download" style="font-size: 48px; color: #3498db; margin-bottom: 20px;"></i>
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">Â¡Recibo descargado!</h3>
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">¡Recibo descargado!</h3>
         <p style="color: #7f8c8d; margin-bottom: 20px;">
-            El archivo se guardÃ³ en tu carpeta de descargas. 
-            Ahora puedes compartirlo por email, WhatsApp o cualquier aplicaciÃ³n.
+            El archivo se guardó en tu carpeta de descargas. 
+            Ahora puedes compartirlo por email, WhatsApp o cualquier aplicación.
         </p>
         <button onclick="this.parentElement.remove()" style="
             background: #3498db;
@@ -1451,7 +1458,6 @@ document.addEventListener('keydown', (e) => {
         closeReceiptOptionsModal();
     }
 });
-
 
 // Hacer las funciones globales (ACTUALIZADO)
 window.closeReceiptConfirmModal = closeReceiptConfirmModal;
