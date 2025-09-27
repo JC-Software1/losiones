@@ -138,5 +138,17 @@ router.patch("/:id/product", auth, async (req, res) => {
     }
 });
 
+// Último producto creado por el usuario
+router.get("/last", auth, async (req, res) => {
+  try {
+    const last = await Product.findOne({ user: req.user.id })
+                              .sort({ createdAt: -1 }) // el más reciente
+                              .select("_id name costPrice salePrice");
+    if (!last) return res.status(404).json({ error: "No hay productos" });
+    res.json(last);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 module.exports = router;

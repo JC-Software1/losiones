@@ -171,6 +171,9 @@ function displayProducts(productsList) {
                     <i class="fas fa-info-circle"></i> Detalles
                 </button>
             </div>
+            <button class="btn btn-info" onclick="showBarcode('${product._id}', '${product.name}', '${product.salePrice}')">
+  <i class="fas fa-barcode"></i> Ver código de barras
+</button>
         `;
 
         productsContainer.appendChild(productCard);
@@ -307,6 +310,15 @@ async function saveProduct() {
         for (let i = 0; i < quantity; i++) {
             await apiFetch("/products/new", "POST", baseProduct, token);
         }
+
+         const newProductId = (await apiFetch("/products/last", "GET", null, token))._id;
+        await generateBarcodeImage(newProductId, baseProduct.name, baseProduct.salePrice);
+        /*  ======================================  */
+
+        showNotification(`${quantity} producto(s) guardado(s) correctamente.`, "success");
+        form.reset();
+        clearMarginPreview();
+        await loadProducts();
 
         showNotification(`${quantity} producto(s) guardado(s) correctamente.`, "success");
         form.reset();
@@ -583,3 +595,8 @@ window.exportProductsData = function() {
     
     showNotification("Datos exportados correctamente", "success");
 };
+
+// Hacer disponibles las funciones que llama el HTML
+window.showBarcode        = showBarcode;
+window.closeBarcodeModal  = closeBarcodeModal;
+window.downloadBarcode    = downloadBarcode;
