@@ -1,38 +1,24 @@
-const mongoose = require("mongoose");
+// models/Receipt.js
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
-const ReceiptSchema = new mongoose.Schema({
-    receiptNumber: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    saleData: {
-        clientName: { type: String, required: true, trim: true },
-        clientAddress: { type: String, trim: true },
-        productName: { type: String, required: true, trim: true },
-        saleDate: { type: Date, required: true },
-        price: { type: Number, required: true },
-        installments: { type: String, default: "1" },
-        advancePayment: { type: Number, default: 0 },
-        paymentDays: { type: String, default: '' }
-    },
-    saleId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Sale",
-        required: false // Por si quieres asociar el recibo con una venta específica
-    },
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    }
+const SaleDataSchema = new Schema({
+  clientName: String,
+  productName: String,
+  clientAddress: String,
+  price: Number,
+  advancePayment: Number,
+  saleDate: Date,
+  installments: Number,
+  paymentDays: String
+}, { _id: false });
+
+const ReceiptSchema = new Schema({
+  receiptNumber: { type: Number, required: true },
+  saleData: { type: SaleDataSchema, required: true },
+  // Guarda el id local (si viene del frontend) para evitar duplicados
+  localId: { type: String, index: true, sparse: true },
+  createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// Índice para asegurar que los números de recibo sean únicos por usuario
-ReceiptSchema.index({ receiptNumber: 1, user: 1 }, { unique: true });
-
-module.exports = mongoose.model("Receipt", ReceiptSchema);
+module.exports = mongoose.model('Receipt', ReceiptSchema);

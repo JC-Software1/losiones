@@ -1,4 +1,4 @@
-/* ---------- módulos (sin cambios) ---------- */
+/* ---------- mÃ³dulos (sin cambios) ---------- */
 import { apiFetch } from "../utils/api.js";
 import { getToken } from "../utils/auth.js";
 import "../keepAlive.js";
@@ -59,7 +59,7 @@ async function loadSales(query = "") {
                     <div class="sale-info">
                         <h3>${sale.clientName}</h3>
                         <p>${sale.productName}</p>
-                        <p><i class="fas fa-map-marker-alt"></i> ${sale.clientAddress || 'Sin dirección'}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> ${sale.clientAddress || 'Sin direcciÃ³n'}</p>
                     </div>
                     <div class="sale-amount">
                         <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
@@ -101,7 +101,7 @@ function viewSaleDetails(sale) {
 
 /* ---------- eliminar ---------- */
 async function deleteSale(id) {
-    if (!confirm("¿Eliminar esta venta?")) return;
+    if (!confirm("Â¿Eliminar esta venta?")) return;
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "DELETE", null, token);
@@ -141,9 +141,9 @@ function editSale(sale) {
 btnSave.classList.add("hidden");
 btnUpdate.classList.remove("hidden");
 btnCancel.classList.remove("hidden");
-btnDelete.classList.remove("hidden");   // <- ahora sí se ve
+btnDelete.classList.remove("hidden");   // <- ahora sÃ­ se ve
 btnAddPayment.classList.remove("hidden");
-window.scrollTo({ top: 0, behavior: 'smooth' }); // ⬅️ lleva al usuario arriba
+window.scrollTo({ top: 0, behavior: 'smooth' }); // â¬…ï¸ lleva al usuario arriba
 }
 
 
@@ -153,7 +153,7 @@ async function loadProductsForSelect() {
         const products = await apiFetch("/products", "GET", null, token);
         const select = document.getElementById("productName");
 
-        select.innerHTML = '<option value="">Seleccioná un producto</option>';
+        select.innerHTML = '<option value="">SeleccionÃ¡ un producto</option>';
 
         products.filter(p => !p.sold).forEach(product => {
             const option = document.createElement("option");
@@ -169,14 +169,14 @@ async function loadProductsForSelect() {
 
 /* ---------- guardar nueva (CORREGIDA) ---------- */
 async function saveSale() {
-    // 🔥 Validación de fecha
+    // ðŸ”¥ ValidaciÃ³n de fecha
     if (!inputDate.value) {
         alert("Por favor selecciona una fecha de venta.");
         inputDate.focus();
         return;
     }
 
-    // 🔥 Validación de productos seleccionados
+    // ðŸ”¥ ValidaciÃ³n de productos seleccionados
     if (selectedProducts.length === 0) {
         alert("Por favor selecciona al menos un producto.");
         return;
@@ -199,7 +199,7 @@ async function saveSale() {
         paymentDays: collectPaymentDays()
     };
 
-    // 🎯 CAPTURAR DATOS PARA EL RECIBO ANTES DE LIMPIAR
+    // ðŸŽ¯ CAPTURAR DATOS PARA EL RECIBO ANTES DE LIMPIAR
     const receiptData = {
         clientName: inputClient.value.trim(),
         clientAddress: document.getElementById("clientAddress").value.trim(),
@@ -217,16 +217,16 @@ async function saveSale() {
         await apiFetch("/sales/new", "POST", saleData, token);
         alert("Venta guardada correctamente.");
 
-        // ✅ Marcar productos como vendidos con el nombre del cliente
+        // âœ… Marcar productos como vendidos con el nombre del cliente
         try {
             for (const product of selectedProducts) {
                 await apiFetch(`/products/${product._id}/sell`, "PUT", { soldTo: inputClient.value.trim() }, token);
             }
         } catch (err) {
-            console.warn("No se pudo marcar uno o más productos como vendidos:", err);
+            console.warn("No se pudo marcar uno o mÃ¡s productos como vendidos:", err);
         }
 
-        // Limpiar formulario y selección
+        // Limpiar formulario y selecciÃ³n
         form.reset();
         inputDate.value = new Date().toISOString().split('T')[0];
         selectedProducts = [];
@@ -237,7 +237,7 @@ async function saveSale() {
         await loadSales();
         await loadProductsForDropdown();
 
-        // 🎯 MOSTRAR MODAL PARA GENERAR RECIBO CON LOS DATOS GUARDADOS
+        // ðŸŽ¯ MOSTRAR MODAL PARA GENERAR RECIBO CON LOS DATOS GUARDADOS
         showReceiptModal(receiptData);
 
     } catch (error) {
@@ -257,7 +257,7 @@ async function updateSale() {
         saleDate: inputDate.value,
         price: parseFloat(inputPrice.value),
         installments: inputInstallments.value.trim(),
-        paymentDays: collectPaymentDays() // ✅ Agregar esta línea
+        paymentDays: collectPaymentDays() // âœ… Agregar esta lÃ­nea
     };
     
     try {
@@ -278,8 +278,8 @@ async function addPayment() {
     const amount = parseFloat(document.getElementById("paymentAmount").value);
     const date = document.getElementById("paymentDate").value;
 
-    if (!id) return alert("No se seleccionó ninguna venta.");
-    if (!amount || amount <= 0) return alert("Monto inválido");
+    if (!id) return alert("No se seleccionÃ³ ninguna venta.");
+    if (!amount || amount <= 0) return alert("Monto invÃ¡lido");
 
     try {
         const token = getToken();
@@ -287,8 +287,8 @@ async function addPayment() {
         const formattedAmount = amount.toLocaleString('es-CO');
         alert(`Abono de $${formattedAmount} registrado correctamente.`);
         if (response.justSettled || response.settled) {
-            alert("¡Venta liquidada automáticamente!");
-            if (confirm("¿Deseas ir a la sección de ventas liquidadas?")) {
+            alert("Â¡Venta liquidada automÃ¡ticamente!");
+            if (confirm("Â¿Deseas ir a la secciÃ³n de ventas liquidadas?")) {
                 window.location.href = "liquidados.html";
                 return;
             }
@@ -301,7 +301,7 @@ async function addPayment() {
     }
 }
 
-/* ---------- cancelar edición ---------- */
+/* ---------- cancelar ediciÃ³n ---------- */
 function cancelUpdate() {
 btnSave.classList.remove("hidden");
 btnUpdate.classList.add("hidden");
@@ -312,9 +312,9 @@ btnAddPayment.classList.add("hidden");
     form.reset();
 }
 
-/* ---------- modal de pago (si lo usás) ---------- */
+/* ---------- modal de pago (si lo usÃ¡s) ---------- */
 function openPaymentModal(saleId) {
-    // Si usás el modal del HTML nuevo, mostralo acá
+    // Si usÃ¡s el modal del HTML nuevo, mostralo acÃ¡
     document.getElementById("paymentModal")?.classList.add("show");
     document.getElementById("paymentAmount").value = "";
     document.getElementById("paymentDate").value = new Date().toISOString().split("T")[0];
@@ -328,7 +328,7 @@ btnUpdate.addEventListener("click", updateSale);
 btnCancel.addEventListener("click", cancelUpdate);
 btnAddPayment.addEventListener("click", addPayment);
 
-// Al cargar la página
+// Al cargar la pÃ¡gina
 document.addEventListener("DOMContentLoaded", () => {
     const today = new Date().toLocaleDateString('en-CA'); // formato YYYY-MM-DD
     document.getElementById("saleDate").value = today;
@@ -434,7 +434,7 @@ item.innerHTML = `
         });
     }
 
-    // Búsqueda en tiempo real
+    // BÃºsqueda en tiempo real
     searchInput.addEventListener("input", () => {
         const query = searchInput.value.toLowerCase();
         const filtered = availableProducts.filter(p =>
@@ -468,7 +468,7 @@ function renderSelectedProducts() {
         tag.className = "selected-product-tag";
 tag.innerHTML = `
     ${product.name} (${product.brand}${product.size ? `, ${product.size}` : ''})
-    <button class="remove" data-index="${index}">×</button>
+    <button class="remove" data-index="${index}">Ã—</button>
 `;
 
 // Agregar event listener
@@ -527,7 +527,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (document.getElementById("paymentSection")) {
         document.getElementById("paymentSection").style.display = "none";
     }
-    // Menú nuevo
+    // MenÃº nuevo
     const menuToggle = document.getElementById("menuToggle");
     const menuItems  = document.getElementById("menuItems");
     const backdrop   = document.getElementById("backdrop");
@@ -548,9 +548,9 @@ const btnConf = document.getElementById("confirmPayment");
 const btnCerr = document.getElementById("cancelPayment");
 const btnX    = document.getElementById("closePaymentModal");
 
-// abrir modal ya está hecho en openPaymentModal
+// abrir modal ya estÃ¡ hecho en openPaymentModal
 btnConf.addEventListener("click", () => {
-    // usamos la misma lógica que el área "Registrar Abono"
+    // usamos la misma lÃ³gica que el Ã¡rea "Registrar Abono"
     addPayment();
     modal.classList.remove("show");
 });
@@ -558,7 +558,7 @@ btnCerr.addEventListener("click", () => modal.classList.remove("show"));
 btnX.addEventListener("click",   () => modal.classList.remove("show"));
 
 /* ---------- Estado ---------- */
-let selectedDays = []; // números 1-31
+let selectedDays = []; // nÃºmeros 1-31
 
 /* ---------- Nodos ---------- */
 const btnOpen   = document.getElementById('btnOpenCalendar');
@@ -606,7 +606,7 @@ function renderPills(){
     selectedDays.forEach(d => {
         const pill = document.createElement('span');
         pill.className = 'day-pill';
-        pill.innerHTML = `${d} <button class="remove-day" data-day="${d}">×</button>`;
+        pill.innerHTML = `${d} <button class="remove-day" data-day="${d}">Ã—</button>`;
         pillsBox.appendChild(pill);
     });
     // Delegar evento para quitar
@@ -619,7 +619,7 @@ function renderPills(){
     });
 }
 
-/* ---------- Al guardar la venta incluir los días ---------- */
+/* ---------- Al guardar la venta incluir los dÃ­as ---------- */
 function collectPaymentDays(){
     return selectedDays.join(','); // "5,10,15,20"
 }
@@ -633,32 +633,32 @@ function collectPaymentDays(){
 // Variable global para almacenar los datos de la venta
 let currentSaleForReceipt = null;
 
-// Generar número de recibo único
+// Generar nÃºmero de recibo Ãºnico
 function generateReceiptNumber() {
     const date = new Date();
     const timestamp = date.getTime();
     return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${timestamp.toString().slice(-4)}`;
 }
 
-// Mostrar modal de confirmación para generar recibo
+// Mostrar modal de confirmaciÃ³n para generar recibo
 function showReceiptModal(saleData) {
     console.log("Datos recibidos en showReceiptModal:", saleData); // Debug
     
     // Guardar datos globalmente
     currentSaleForReceipt = saleData;
     
-    // Crear modal dinámicamente
+    // Crear modal dinÃ¡micamente
     const modal = document.createElement('div');
     modal.id = 'receiptConfirmModal';
     modal.className = 'receipt-modal';
     modal.innerHTML = `
         <div class="receipt-modal-content">
             <div class="receipt-modal-header">
-                <h2><i class="fas fa-receipt"></i> ¿Generar Recibo?</h2>
-                <button class="close-btn" onclick="closeReceiptConfirmModal()">×</button>
+                <h2><i class="fas fa-receipt"></i> Â¿Generar Recibo?</h2>
+                <button class="close-btn" onclick="closeReceiptConfirmModal()">Ã—</button>
             </div>
             <div class="receipt-modal-body">
-                <p>¿Deseas generar un recibo para esta venta?</p>
+                <p>Â¿Deseas generar un recibo para esta venta?</p>
                 <div class="sale-summary">
                     <h3>Resumen de la venta:</h3>
                     <p><strong>Cliente:</strong> ${saleData.clientName || 'Sin nombre'}</p>
@@ -672,7 +672,7 @@ function showReceiptModal(saleData) {
                     <i class="fas fa-times"></i> No, gracias
                 </button>
                 <button class="btn btn-primary" onclick="generateReceiptFromModal()">
-                    <i class="fas fa-receipt"></i> Sí, generar recibo
+                    <i class="fas fa-receipt"></i> SÃ­, generar recibo
                 </button>
             </div>
         </div>
@@ -859,7 +859,7 @@ function closeReceiptConfirmModal() {
     if (modal) {
         modal.remove();
     }
-    // Limpiar la variable después de un pequeño delay para asegurar que se use la copia
+    // Limpiar la variable despuÃ©s de un pequeÃ±o delay para asegurar que se use la copia
     setTimeout(() => {
         currentSaleForReceipt = null;
     }, 100);
@@ -870,9 +870,9 @@ function closeReceiptConfirmModal() {
 function generateReceipt(saleData) {
     console.log("Datos en generateReceipt:", saleData); // Debug
     
-    // Validación más robusta
+    // ValidaciÃ³n mÃ¡s robusta
     if (!saleData || typeof saleData !== 'object') {
-        console.error("Error: saleData no es un objeto válido:", saleData);
+        console.error("Error: saleData no es un objeto vÃ¡lido:", saleData);
         alert("Error: No se pudieron obtener los datos de la venta");
         return;
     }
@@ -903,17 +903,17 @@ function generateReceipt(saleData) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, 120);
     
-    // Título principal
+    // TÃ­tulo principal
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('RECIBO DE VENTA', canvas.width / 2, 50);
     
-    // Número de recibo
+    // NÃºmero de recibo
     ctx.font = 'bold 20px Arial';
     ctx.fillText(`Recibo #${receiptNumber}`, canvas.width / 2, 80);
     
-    // Fecha de generación
+    // Fecha de generaciÃ³n
     ctx.font = '16px Arial';
     ctx.fillText(`Fecha: ${new Date().toLocaleDateString('es-CO', { 
         year: 'numeric', 
@@ -923,7 +923,7 @@ function generateReceipt(saleData) {
         minute: '2-digit'
     })}`, canvas.width / 2, 105);
     
-    // Línea decorativa
+    // LÃ­nea decorativa
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -931,13 +931,13 @@ function generateReceipt(saleData) {
     ctx.lineTo(canvas.width - 50, 130);
     ctx.stroke();
     
-    // Sección cliente
+    // SecciÃ³n cliente
     ctx.fillStyle = '#2c3e50';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('INFORMACIÓN DEL CLIENTE', 50, 170);
+    ctx.fillText('INFORMACIÃ“N DEL CLIENTE', 50, 170);
     
-    // Línea bajo título
+    // LÃ­nea bajo tÃ­tulo
     ctx.strokeStyle = '#3498db';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -948,10 +948,10 @@ function generateReceipt(saleData) {
     ctx.font = '18px Arial';
     ctx.fillStyle = '#34495e';
     ctx.fillText(`Nombre: ${saleData.clientName || 'No especificado'}`, 50, 210);
-    ctx.fillText(`Dirección: ${saleData.clientAddress || 'No especificada'}`, 50, 235);
-    ctx.fillText(`Teléfono: ${saleData.clientPhone || 'No especificado'}`, 50, 260);
+    ctx.fillText(`DirecciÃ³n: ${saleData.clientAddress || 'No especificada'}`, 50, 235);
+    ctx.fillText(`TelÃ©fono: ${saleData.clientPhone || 'No especificado'}`, 50, 260);
     
-    // Sección productos
+    // SecciÃ³n productos
     ctx.fillStyle = '#2c3e50';
     ctx.font = 'bold 24px Arial';
     ctx.fillText('PRODUCTOS VENDIDOS', 50, 310);
@@ -976,17 +976,17 @@ function generateReceipt(saleData) {
             yPosition += 70;
         });
     } else {
-        ctx.fillText(`• ${saleData.productName || 'Producto no especificado'}`, 50, yPosition);
+        ctx.fillText(`â€¢ ${saleData.productName || 'Producto no especificado'}`, 50, yPosition);
         yPosition += 30;
     }
     
-    // Ajustar posición si hay muchos productos
+    // Ajustar posiciÃ³n si hay muchos productos
     yPosition = Math.max(yPosition, 480);
     
-    // Sección financiera
+    // SecciÃ³n financiera
     ctx.fillStyle = '#2c3e50';
     ctx.font = 'bold 24px Arial';
-    ctx.fillText('INFORMACIÓN FINANCIERA', 50, yPosition);
+    ctx.fillText('INFORMACIÃ“N FINANCIERA', 50, yPosition);
     
     ctx.strokeStyle = '#3498db';
     ctx.lineWidth = 3;
@@ -1019,12 +1019,12 @@ function generateReceipt(saleData) {
         if (saleData.paymentDays) {
             yPosition += 30;
             const days = saleData.paymentDays.split(',').map(d => d.trim()).join(', ');
-            ctx.fillText(`Días de pago: ${days}`, 50, yPosition);
+            ctx.fillText(`DÃ­as de pago: ${days}`, 50, yPosition);
         }
     } else {
         ctx.fillStyle = '#27ae60';
         ctx.font = 'bold 18px Arial';
-        ctx.fillText('✓ PAGADO COMPLETAMENTE', 50, yPosition);
+        ctx.fillText('âœ“ PAGADO COMPLETAMENTE', 50, yPosition);
     }
     
     // Footer
@@ -1032,10 +1032,10 @@ function generateReceipt(saleData) {
     ctx.fillStyle = '#95a5a6';
     ctx.font = '14px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('Este recibo fue generado automáticamente', canvas.width / 2, yPosition);
+    ctx.fillText('Este recibo fue generado automÃ¡ticamente', canvas.width / 2, yPosition);
     ctx.fillText(`Por el programa JC-C - ${new Date().getFullYear()}`, canvas.width / 2, yPosition + 20);
     
-    // Línea final decorativa
+    // LÃ­nea final decorativa
     ctx.strokeStyle = '#bdc3c7';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -1061,36 +1061,13 @@ function generateReceipt(saleData) {
 }
 
 // Resto de funciones permanecen igual...
-async function saveReceipt(receiptData) {
-  const token = localStorage.getItem('token');
-  const res = await fetch('/api/receipts', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-auth-token': token
-    },
-    body: JSON.stringify(receiptData)
-  });
-  if (!res.ok) throw new Error('No se pudo guardar el recibo');
-  return res.json();
+function saveReceipt(receiptData) {
+    let receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+    receipts.push(receiptData);
+    localStorage.setItem('salesReceipts', JSON.stringify(receipts));
 }
 
-// Ejemplo de uso tras crear la venta
-const receipt = await saveReceipt({
-  receiptNumber: '000123',        // único por usuario
-  saleData: {
-    clientName: 'Juan Pérez',
-    clientAddress: 'Calle 5 # 20-30',
-    productName: 'Zapatos Nike 42',
-    saleDate: new Date(),
-    price: 250000,
-    installments: '3',
-    advancePayment: 50000,
-    paymentDays: '5,15,25'
-  },
-  saleId: saleIdOpcional  // si ya tienes el _id de la venta
-});
-// REEMPLAZA la función showReceiptOptionsModal en tu categories.js:
+// REEMPLAZA la funciÃ³n showReceiptOptionsModal en tu categories.js:
 
 function showReceiptOptionsModal(receiptData) {
     const modal = document.createElement('div');
@@ -1099,22 +1076,22 @@ function showReceiptOptionsModal(receiptData) {
     modal.innerHTML = `
         <div class="receipt-modal-content" style="max-width: 700px;">
             <div class="receipt-modal-header">
-                <h2><i class="fas fa-check-circle" style="color: #27ae60;"></i> ¡Recibo Generado!</h2>
-                <button class="close-btn" onclick="closeReceiptOptionsModal()">×</button>
+                <h2><i class="fas fa-check-circle" style="color: #27ae60;"></i> Â¡Recibo Generado!</h2>
+                <button class="close-btn" onclick="closeReceiptOptionsModal()">Ã—</button>
             </div>
             <div class="receipt-modal-body">
                 <div class="receipt-preview">
                     <img src="${receiptData.canvas}" alt="Recibo" style="width: 100%; max-width: 400px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
                 </div>
                 <p style="text-align: center; color: #27ae60; font-weight: 600; margin-bottom: 15px;">
-                    <i class="fas fa-save"></i> El recibo ha sido guardado automáticamente
+                    <i class="fas fa-save"></i> El recibo ha sido guardado automÃ¡ticamente
                 </p>
                 <div style="text-align: center; margin: 20px 0;">
                     <strong>Recibo #${receiptData.receiptNumber}</strong><br>
                     <span style="color: #7f8c8d;">Cliente: ${receiptData.saleData.clientName}</span>
                 </div>
                 
-                <!-- Botón de compartir prominente -->
+                <!-- BotÃ³n de compartir prominente -->
                 <div style="text-align: center; margin: 25px 0;">
                     <button class="btn btn-share-prominent" onclick="shareReceiptFromModal('${receiptData.id}')" style="
                         background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
@@ -1173,14 +1150,14 @@ function closeReceiptOptionsModal() {
     }
 }
 
-// REEMPLAZA la función shareReceiptFromModal en tu categories.js:
+// REEMPLAZA la funciÃ³n shareReceiptFromModal en tu categories.js:
 
 function shareReceiptFromModal(receiptId) {
     const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
     const receipt = receipts.find(r => r.id === receiptId);
     
     if (!receipt) {
-        alert("Error: No se encontró el recibo");
+        alert("Error: No se encontrÃ³ el recibo");
         return;
     }
 
@@ -1198,17 +1175,17 @@ function shareReceiptFromModal(receiptId) {
             
             // Verificar si el dispositivo soporta compartir archivos
             if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                // Usar API nativa de compartir (funciona en móviles)
+                // Usar API nativa de compartir (funciona en mÃ³viles)
                 return navigator.share({
                     title: `Recibo de Venta #${receipt.receiptNumber}`,
                     text: `Recibo de venta para ${receipt.saleData.clientName} - Total: $${receipt.saleData.price.toLocaleString('es-CO')}`,
                     files: [file]
                 }).then(() => {
-                    // Éxito al compartir
+                    // Ã‰xito al compartir
                     showShareSuccess();
                 }).catch((error) => {
                     if (error.name !== 'AbortError') {
-                        // Error que no sea cancelación del usuario
+                        // Error que no sea cancelaciÃ³n del usuario
                         console.error('Error al compartir:', error);
                         fallbackShare(file, receipt);
                     }
@@ -1223,13 +1200,13 @@ function shareReceiptFromModal(receiptId) {
             alert('Error al preparar el recibo para compartir');
         })
         .finally(() => {
-            // Restaurar el botón
+            // Restaurar el botÃ³n
             shareBtn.innerHTML = originalContent;
             shareBtn.disabled = false;
         });
 }
 
-// Función auxiliar para mostrar éxito al compartir
+// FunciÃ³n auxiliar para mostrar Ã©xito al compartir
 function showShareSuccess() {
     const successMsg = document.createElement('div');
     successMsg.style.cssText = `
@@ -1250,7 +1227,7 @@ function showShareSuccess() {
     `;
     successMsg.innerHTML = `
         <i class="fas fa-check-circle"></i>
-        ¡Recibo compartido exitosamente!
+        Â¡Recibo compartido exitosamente!
     `;
     
     document.body.appendChild(successMsg);
@@ -1260,16 +1237,16 @@ function showShareSuccess() {
     }, 3000);
 }
 
-// Función auxiliar para compartir en dispositivos que no soportan la API nativa
+// FunciÃ³n auxiliar para compartir en dispositivos que no soportan la API nativa
 function fallbackShare(file, receipt) {
     // Crear URL del archivo
     const url = URL.createObjectURL(file);
     
-    // Detectar si es móvil
+    // Detectar si es mÃ³vil
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (isMobile) {
-        // En móviles, mostrar opciones de compartir
+        // En mÃ³viles, mostrar opciones de compartir
         showMobileShareOptions(url, file, receipt);
     } else {
         // En desktop, descargar directamente
@@ -1286,7 +1263,7 @@ function fallbackShare(file, receipt) {
     }
 }
 
-// Mostrar opciones de compartir en móviles
+// Mostrar opciones de compartir en mÃ³viles
 function showMobileShareOptions(url, file, receipt) {
     const modal = document.createElement('div');
     modal.style.cssText = `
@@ -1370,9 +1347,9 @@ function showMobileShareOptions(url, file, receipt) {
     document.body.appendChild(modal);
 }
 
-// Función para abrir WhatsApp con el texto del recibo
+// FunciÃ³n para abrir WhatsApp con el texto del recibo
 function openWhatsApp(receiptNumber, clientName) {
-    const text = `¡Hola! Te envío el recibo de tu compra.\n\n📋 *Recibo #${receiptNumber}*\n👤 Cliente: ${clientName}\n\n¡Gracias por tu compra!`;
+    const text = `Â¡Hola! Te envÃ­o el recibo de tu compra.\n\nðŸ“‹ *Recibo #${receiptNumber}*\nðŸ‘¤ Cliente: ${clientName}\n\nÂ¡Gracias por tu compra!`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(whatsappUrl, '_blank');
     
@@ -1380,7 +1357,7 @@ function openWhatsApp(receiptNumber, clientName) {
     document.querySelector('[style*="z-index: 10002"]')?.remove();
 }
 
-// Función para descargar directamente
+// FunciÃ³n para descargar directamente
 function downloadReceiptDirect(url, receiptNumber) {
     const a = document.createElement('a');
     a.href = url;
@@ -1410,10 +1387,10 @@ function showDesktopShareMessage() {
     `;
     msg.innerHTML = `
         <i class="fas fa-download" style="font-size: 48px; color: #3498db; margin-bottom: 20px;"></i>
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">¡Recibo descargado!</h3>
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">Â¡Recibo descargado!</h3>
         <p style="color: #7f8c8d; margin-bottom: 20px;">
-            El archivo se guardó en tu carpeta de descargas. 
-            Ahora puedes compartirlo por email, WhatsApp o cualquier aplicación.
+            El archivo se guardÃ³ en tu carpeta de descargas. 
+            Ahora puedes compartirlo por email, WhatsApp o cualquier aplicaciÃ³n.
         </p>
         <button onclick="this.parentElement.remove()" style="
             background: #3498db;
