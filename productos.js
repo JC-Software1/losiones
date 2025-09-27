@@ -24,6 +24,59 @@ const inputQuantity = document.getElementById("productQuantity");
 let products = [];
 let filteredProducts = [];
 
+
+/* 1️⃣  DECLARAR funciones que se usan después */
+function generateBarcodeImage(id, name, price) {
+  const code = `${id}|${name}|${price}`;
+  JsBarcode('#barcodeCanvas', code, {
+    format: 'CODE128',
+    width: 2,
+    height: 80,
+    displayValue: true,
+    fontSize: 14
+  });
+  // Guardamos datos en el canvas para la descarga
+  const canvas = document.getElementById('barcodeCanvas');
+  canvas.dataset.productId = id;
+  canvas.dataset.name      = name;
+  canvas.dataset.price     = price;
+}
+
+function showBarcode(id, name, price) {
+  generateBarcodeImage(id, name, price);
+  document.getElementById('barcodeTitle').textContent = name;
+  document.getElementById('barcodePrice').textContent =
+    `Precio: $${Number(price).toLocaleString()}`;
+  document.getElementById('barcodeModal').classList.add('show');
+}
+
+function closeBarcodeModal(e) {
+  if (!e || e.target.id === 'barcodeModal') {
+    document.getElementById('barcodeModal').classList.remove('show');
+  }
+}
+
+function downloadBarcode() {
+  const canvas = document.getElementById('barcodeCanvas');
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href    = url;
+    a.download = `CB_${canvas.dataset.productId}_${canvas.dataset.name.replace(/[^a-z0-9]/gi,'_')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+
+/* 2️⃣  PUBLICARLAS en window para los onclick inline */
+window.showBarcode       = showBarcode;
+window.closeBarcodeModal = closeBarcodeModal;
+window.downloadBarcode   = downloadBarcode;
+
+
+
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         const token = getToken();

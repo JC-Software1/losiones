@@ -420,6 +420,36 @@
     cursor:pointer;
 }
 
+/* ---------- Scanner ---------- */
+.scanner-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.7);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:5000;
+}
+.scanner-box{
+    background:#fff;
+    border-radius:var(--radius-lg);
+    padding:20px;
+    max-width:520px;
+    width:92%;
+    text-align:center;
+}
+.scanner-box video{
+    width:100%;
+    border-radius:var(--radius);
+    margin:15px 0;
+}
+.scanner-actions{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+}
+.hidden{display:none !important;}
+
     </style>
 </head>
 <body>
@@ -476,14 +506,45 @@
                         <input type="text" id="clientAddress" placeholder="Dirección del cliente">
                     </div>
 
+<!-- 1. Dentro de .form-group de Producto -->
 <div class="form-group">
     <label for="productName">Producto</label>
     <div class="custom-dropdown" id="productDropdown">
         <div class="selected-products" id="selectedProducts" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+        
+        <!-- Trigger -->
         <div class="dropdown-trigger">
             <input type="text" id="productNameDisplay" placeholder="Seleccioná un producto" readonly>
             <i class="fas fa-chevron-down"></i>
         </div>
+
+        <!-- Panel desplegable (ahora sí aparece debajo) -->
+        <div class="dropdown-panel hidden" id="productDropdownPanel">
+            <!-- Buscador + Cámara -->
+            <div class="dropdown-search-wrapper">
+                <input type="text" id="productSearchInput" placeholder="🔍 Buscar producto..." class="dropdown-search">
+                <button type="button" id="btnBarcodeScanner" class="btn-camera" title="Escanear código de barras">
+                    <i class="fas fa-camera"></i>
+                </button>
+            </div>
+            <div id="productDropdownList"></div>
+        </div>
+    </div>
+    <input type="hidden" id="productName" name="productName">
+</div>
+
+<!-- 2. Modal de scanner (siempre al final del body) -->
+<div id="scannerModal" class="scanner-modal hidden">
+    <div class="scanner-box">
+        <h3>Enfoca el código de barras</h3>
+        <video id="scannerVideo" playsinline></video>
+        <div class="scanner-actions">
+            <button type="button" id="btnStopScan" class="btn btn-danger">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
+    </div>
+</div>
         
 
         <div class="dropdown-panel hidden" id="productDropdownPanel">
@@ -627,6 +688,8 @@
     </div>
 
     <!-- ==========  Scripts (sin tocar)  ========== -->
+     <!-- ZXing para leer códigos de barras con cámara -->
+<script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
     <script src="loader.js"></script>
     <script src="dashboard/categories.js" type="module"></script>
     <script src="main.js" type="module"></script>

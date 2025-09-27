@@ -1470,3 +1470,82 @@ window.viewReceiptsPage = viewReceiptsPage;
 // Nuevas funciones globales para compartir
 window.openWhatsApp = openWhatsApp;
 window.downloadReceiptDirect = downloadReceiptDirect;
+
+/* =========================================================
+   LECTOR DE CÓDIGOS DE BARRAS
+   ========================================================= */
+const btnCamera   = document.getElementById('btnBarcodeScanner');
+const btnStopScan = document.getElementById('btnStopScan');
+const modalScan   = document.getElementById('scannerModal');
+const video       = document.getElementById('scannerVideo');
+
+let codeReader = null;
+let scanning   = false;
+
+// Abrir modal y arrancar cámara
+btnCamera.addEventListener('click', startScanner);
+btnStopScan.addEventListener('click', stopScanner);
+
+async function startScanner(){
+    modalScan.classList.remove('hidden');
+    codeReader = new ZXing.BrowserBarcodeReader();
+    scanning   = true;
+
+    try {
+        const devices = await codeReader.listVideoInputDevices();
+        // Preferencia: cámara trasera en móvil
+        const rearCamera = devices.find(d => d.label.toLowerCase().includes('back')) || devices[0];
+        const deviceId = rearCamera.deviceId;
+
+        const previewElem = await codeReader.decodeFromVideoDevice(deviceId, video, (result, err) => {
+            if (result && scanning) {
+                scanning = false;
+                stopScanner();
+                handleBarcode(result.text);
+            }
+            if (err && !(err instanceof ZXing.NotFoundException)) {
+                console.error(err);
+            }
+        });
+    } catch (e) {
+        alert('No se pudo acceder a la cámara: ' + e.message);
+        stopScanner();
+    }
+}
+
+function stopScanner(){
+    scanning = false;
+    if (codeReader) codeReader.reset();
+    modalScan.classList.add('hidden');
+    video.srcObject?.getTracks().forEach(t => t.stop());
+}
+
+/* ---------------------------------------------------------
+   Procesar código leído  (formato: ID│NOMBRE│PRECIO)
+   --------------------------------------------------------- */
+async function handleBarcode(raw){
+    const parts = raw.split('|');
+    if (parts.length < 3){
+        alert('Código no válido. Formato esperado: ID|NOMBRE|PRECIO');
+        return;
+    }
+
+    const [id, name, price] = parts;
+    // 1) Rellenar campos visuales
+    document.getElementById('productName').value        = name.trim();
+    document.getElementById('price').value              = Number(price).toFixed(0);
+    // 2) Opcional: buscar en BD y rellenar más campos
+    try {
+        const token = getToken();
+        const products = await apiFetch('/products', 'GET', null, token);
+        const found = products.find(p => p._id === id.trim());
+        if (found){
+            // Si tienes más inputs (marca, talla, etc.)
+            // document.getElementById('productBrand').value = found.brand;
+            // document.getElementById('productSize').value  = found.size || '';
+        }
+    } catch (e) {
+        console.warn('No se pudo consultar el producto:', e);
+    }
+}
+
