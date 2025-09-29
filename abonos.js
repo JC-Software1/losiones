@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const totalPaymentsElement = document.getElementById("totalPayments");
     const totalPaymentCountElement = document.getElementById("totalPaymentCount");
     const averagePaymentElement = document.getElementById("averagePayment");
-    const todayPaymentsElement = document.getElementById("todayPayments");
+    const initialPaymentsElement = document.getElementById("initialPayments"); // Cambiado
 
     // Variables globales
     let allSales = [];
@@ -47,10 +47,22 @@ document.addEventListener("DOMContentLoaded", async () => {
             showLoading();
             const token = getToken();
             
-            // Cargar todas las ventas (incluyendo liquidadas para historial completo)
-            allSales = await apiFetch("/sales/all", "GET", null, token);
+            // Intentar cargar todas las ventas (incluyendo liquidadas)
+            let allSales = [];
+            try {
+                allSales = await apiFetch("/sales/all", "GET", null, token);
+                console.log('✅ Ventas cargadas desde /sales/all:', allSales.length);
+            } catch (error) {
+                // Si /sales/all no existe, cargar ventas activas y liquidadas por separado
+                console.warn('⚠️ /sales/all no disponible, cargando ventas separadamente...');
+                const activeSales = await apiFetch("/sales", "GET", null, token);
+                const settledSales = await apiFetch("/sales/settled", "GET", null, token);
+                allSales = [...activeSales, ...settledSales];
+                console.log('✅ Ventas activas:', activeSales.length);
+                console.log('✅ Ventas liquidadas:', settledSales.length);
+                console.log('✅ Total ventas:', allSales.length);
+            }
             
-            // Extraer todos los pagos
             allPayments = extractAllPayments(allSales);
             filteredPayments = [...allPayments];
 
@@ -58,10 +70,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                 showEmptyState();
             } else {
                 displayPayments(filteredPayments);
-                updateStatistics(filteredPayments);
+                updateStatistics(filteredPayments, allSales);
             }
 
         } catch (error) {
+            console.error('❌ Error completo:', error);
             showError("Error al cargar los datos: " + error.message);
         }
     }
@@ -72,7 +85,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         sales.forEach(sale => {
             if (sale.payments && sale.payments.length > 0) {
                 sale.payments.forEach(payment => {
-                    // Calcular métricas del crédito
                     const totalPaid = sale.payments.reduce((sum, p) => sum + p.amount, 0);
                     const remainingAmount = Math.max(0, sale.price - totalPaid);
                     const progressPercentage = Math.min(100, (totalPaid / sale.price) * 100);
@@ -98,7 +110,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         });
         
-        // Ordenar por fecha descendente (más recientes primero)
         return payments.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
 
@@ -141,7 +152,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         const statusClass = payment.isCompleted ? "completed" : "pending";
-        const statusText = payment.isCompleted ? "Crédito completado" : "Crédito pendiente";
         
         let settlementInfo = '';
         if (payment.settlementDate) {
@@ -222,7 +232,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             <div class="credit-status">
                 <div class="status-indicator ${statusClass}"></div>
-                <span>${statusText}</span>
+                <span>${payment.isCompleted ? 'Crédito completado' : 'Crédito pendiente'}</span>
             </div>
 
             <div class="sale-actions">
@@ -232,45 +242,254 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
         `;
 
-        // Agregar evento de eliminación
         const deleteBtn = card.querySelector(".btn-delete");
         deleteBtn.addEventListener("click", () => deletePayment(payment._id, payment.saleId, card));
 
         return card;
     }
 
-    function updateStatistics(payments) {
-        const stats = calculateStatistics(payments);
+    function updateStatistics(payments, sales) {
+        const stats = calculateStatistics(payments, sales);
         
-        // Actualizar elementos del DOM
-        totalPaymentsElement.textContent = `$${stats.totalAmount.toLocaleString('es-CO')}`;
+        totalPaymentsElement.textContent = `${stats.totalAmount.toLocaleString('es-CO')}`;
         totalPaymentCountElement.textContent = stats.count;
-        averagePaymentElement.textContent = `$${stats.averageAmount.toLocaleString('es-CO')}`;
-        todayPaymentsElement.textContent = `$${stats.todayAmount.toLocaleString('es-CO')}`;
+        averagePaymentElement.textContent = `${stats.averageAmount.toLocaleString('es-CO')}`;
+        initialPaymentsElement.textContent = `${stats.totalInitialPayments.toLocaleString('es-CO')}`;
+
+        // Hacer clickeable el total abonado - CORREGIDO
+        const totalPaymentsCard = totalPaymentsElement.closest('.stat-card');
+        
+        if (totalPaymentsCard) {
+            totalPaymentsCard.style.cursor = 'pointer';
+            totalPaymentsCard.style.transition = 'transform 0.2s ease';
+            
+            // Remover eventos anteriores
+            totalPaymentsCard.replaceWith(totalPaymentsCard.cloneNode(true));
+            const newCard = document.querySelector('.stat-card.success');
+            
+            // Agregar hover effect
+            newCard.addEventListener('mouseenter', () => {
+                newCard.style.transform = 'scale(1.05)';
+            });
+            
+            newCard.addEventListener('mouseleave', () => {
+                newCard.style.transform = 'scale(1)';
+            });
+            
+            // Agregar click event
+            newCard.addEventListener('click', () => {
+                console.log('Click en Total Abonado:', stats.totalAmount);
+                showCommissionModal(stats.totalAmount);
+            });
+            
+            console.log('✅ Modal de comisión configurado correctamente');
+        } else {
+            console.error('❌ No se encontró la tarjeta de Total Abonado');
+        }
     }
 
-    function calculateStatistics(payments) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const todayPayments = payments.filter(payment => {
-            const paymentDate = new Date(payment.date);
-            paymentDate.setHours(0, 0, 0, 0);
-            return paymentDate.getTime() === today.getTime();
-        });
-
+    function calculateStatistics(payments, sales) {
         const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
-        const todayAmount = todayPayments.reduce((sum, payment) => sum + payment.amount, 0);
         const averageAmount = payments.length > 0 ? totalAmount / payments.length : 0;
+
+        // Calcular total de pagos iniciales de TODAS las ventas
+        const totalInitialPayments = sales.reduce((sum, sale) => {
+            const advancePayment = parseFloat(sale.advancePayment) || 0;
+            return sum + advancePayment;
+        }, 0);
+
+        console.log('📊 Estadísticas calculadas:');
+        console.log('   - Total abonado (payments):', totalAmount);
+        console.log('   - Número de abonos:', payments.length);
+        console.log('   - Total pagos iniciales:', totalInitialPayments);
+        console.log('   - Número de ventas:', sales.length);
+
+        // Mostrar detalle de cada venta con pago inicial
+        console.log('📋 Detalle de pagos iniciales por venta:');
+        sales.forEach((sale, index) => {
+            const advance = parseFloat(sale.advancePayment) || 0;
+            if (advance > 0) {
+                console.log(`   ${index + 1}. ${sale.clientName}: ${advance.toLocaleString('es-CO')}`);
+            }
+        });
 
         return {
             totalAmount,
             count: payments.length,
             averageAmount: Math.round(averageAmount),
-            todayAmount,
-            todayCount: todayPayments.length
+            totalInitialPayments: Math.round(totalInitialPayments)
         };
     }
+
+    function showCommissionModal(totalAbonado) {
+        // Crear modal dinámicamente
+        const modal = document.createElement('div');
+        modal.id = 'commissionModal';
+        modal.className = 'modal show';
+        modal.style.zIndex = '10000';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">
+                        <i class="fas fa-percentage"></i> Calcular Comisión del Cobrador
+                    </h3>
+                    <button class="modal-close" onclick="closeCommissionModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div style="padding: 20px 0;">
+                    <div class="form-group">
+                        <label for="commissionPercentage" style="font-size: 16px; margin-bottom: 10px; display: block;">
+                            ¿Qué porcentaje pagas al cobrador por abono?
+                        </label>
+                        <input 
+                            type="number" 
+                            id="commissionPercentage" 
+                            placeholder="Ej: 10" 
+                            min="0" 
+                            max="100" 
+                            step="0.1"
+                            style="width: 100%; padding: 12px; font-size: 18px; text-align: center; border: 2px solid var(--accent); border-radius: var(--radius);"
+                        >
+                        <small style="display: block; text-align: center; color: var(--medium-gray); margin-top: 8px;">
+                            Ingresa solo el número (sin el símbolo %)
+                        </small>
+                    </div>
+
+                    <div style="margin-top: 30px; padding: 20px; background: var(--light-gray); border-radius: var(--radius); text-align: center;">
+                        <div style="font-size: 14px; color: var(--medium-gray); margin-bottom: 8px;">
+                            Total Abonado
+                        </div>
+                        <div style="font-size: 28px; font-weight: 700; color: var(--primary); margin-bottom: 20px;">
+                            ${totalAbonado.toLocaleString('es-CO')}
+                        </div>
+
+                        <div id="commissionResult" style="display: none; margin-top: 20px; padding: 20px; background: linear-gradient(135deg, var(--success), #2ecc71); border-radius: var(--radius); color: white;">
+                            <div style="font-size: 14px; margin-bottom: 8px; opacity: 0.9;">
+                                Comisión del Cobrador
+                            </div>
+                            <div id="commissionAmount" style="font-size: 32px; font-weight: 700;">
+                                $0
+                            </div>
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.3);">
+                                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">
+                                    Tu ganancia neta
+                                </div>
+                                <div id="netAmount" style="font-size: 24px; font-weight: 600;">
+                                    $0
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group" style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="calculateCommission(${totalAbonado})">
+                        <i class="fas fa-calculator"></i> Calcular
+                    </button>
+                    <button class="btn btn-success" onclick="saveCommissionPercentage()" style="display: none;" id="saveCommissionBtn">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeCommissionModal()">
+                        <i class="fas fa-times"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        
+        // Cargar porcentaje guardado si existe
+        loadSavedCommission();
+        
+        document.getElementById('commissionPercentage').focus();
+
+        // Permitir calcular con Enter
+        document.getElementById('commissionPercentage').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                calculateCommission(totalAbonado);
+            }
+        });
+    }
+
+    window.calculateCommission = function(totalAbonado) {
+        const percentage = parseFloat(document.getElementById('commissionPercentage').value);
+        
+        if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+            alert('Por favor ingresa un porcentaje válido entre 0 y 100');
+            return;
+        }
+
+        const commissionAmount = (totalAbonado * percentage) / 100;
+        const netAmount = totalAbonado - commissionAmount;
+
+        const resultDiv = document.getElementById('commissionResult');
+        const commissionAmountDiv = document.getElementById('commissionAmount');
+        const netAmountDiv = document.getElementById('netAmount');
+
+        commissionAmountDiv.textContent = `${Math.round(commissionAmount).toLocaleString('es-CO')}`;
+        netAmountDiv.textContent = `${Math.round(netAmount).toLocaleString('es-CO')}`;
+
+        resultDiv.style.display = 'block';
+        resultDiv.style.animation = 'slideIn 0.3s ease';
+        
+        // Mostrar botón de guardar después de calcular
+        document.getElementById('saveCommissionBtn').style.display = 'inline-flex';
+    };
+
+    async function loadSavedCommission() {
+        try {
+            const token = getToken();
+            const response = await apiFetch("/commission", "GET", null, token);
+            
+            if (response && response.percentage !== undefined) {
+                document.getElementById('commissionPercentage').value = response.percentage;
+                console.log('✅ Porcentaje de comisión cargado:', response.percentage + '%');
+            }
+        } catch (error) {
+            console.log('ℹ️ No hay porcentaje de comisión guardado');
+        }
+    }
+
+    window.saveCommissionPercentage = async function() {
+        const percentage = parseFloat(document.getElementById('commissionPercentage').value);
+        
+        if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+            alert('Por favor ingresa un porcentaje válido entre 0 y 100');
+            return;
+        }
+
+        try {
+            const token = getToken();
+            await apiFetch("/commission", "POST", { percentage }, token);
+            
+            // Mostrar mensaje de éxito
+            const saveBtn = document.getElementById('saveCommissionBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-check"></i> ¡Guardado!';
+            saveBtn.style.background = '#27ae60';
+            
+            setTimeout(() => {
+                saveBtn.innerHTML = originalText;
+                saveBtn.style.background = '';
+            }, 2000);
+            
+            console.log('✅ Porcentaje de comisión guardado:', percentage + '%');
+        } catch (error) {
+            console.error('❌ Error al guardar comisión:', error);
+            alert('No se pudo guardar el porcentaje de comisión: ' + error.message);
+        }
+    };
+
+    window.closeCommissionModal = function() {
+        const modal = document.getElementById('commissionModal');
+        if (modal) {
+            modal.style.animation = 'fadeOut 0.2s ease';
+            setTimeout(() => modal.remove(), 200);
+        }
+    };
 
     async function deletePayment(paymentId, saleId, cardElement) {
         if (!confirm("¿Estás seguro de que deseas eliminar este abono? Esta acción no se puede deshacer.")) {
@@ -279,18 +498,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         try {
             const token = getToken();
-            
-            // Animación de eliminación
             cardElement.classList.add("deleting");
             
-            // Llamada a la API
             await apiFetch(`/sales/${saleId}/payment/${paymentId}`, "DELETE", null, token);
 
             setTimeout(() => {
-                // Actualizar datos locales
                 allPayments = allPayments.filter(p => p._id !== paymentId);
                 applyFilters();
-                
                 alert("Abono eliminado correctamente.");
             }, 300);
 
@@ -305,7 +519,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const searchText = searchInput.value.toLowerCase().trim();
         const dateValue = dateFilter.value;
         
-        // Mostrar/ocultar botón de limpiar filtros
         if (searchText || dateValue) {
             clearFiltersBtn.classList.remove("hidden");
         } else {
@@ -314,7 +527,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         
         filteredPayments = [...allPayments];
         
-        // Filtro por texto
         if (searchText) {
             filteredPayments = filteredPayments.filter(payment => 
                 payment.clientName.toLowerCase().includes(searchText) ||
@@ -323,7 +535,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             );
         }
         
-        // Filtro por fecha
         if (dateValue) {
             const selectedDate = new Date(dateValue);
             selectedDate.setHours(0, 0, 0, 0);
@@ -336,7 +547,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         
         displayPayments(filteredPayments);
-        updateStatistics(filteredPayments);
+        updateStatistics(filteredPayments, allSales);
     }
 
     function clearFilters() {
@@ -345,7 +556,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         clearFiltersBtn.classList.add("hidden");
         filteredPayments = [...allPayments];
         displayPayments(filteredPayments);
-        updateStatistics(filteredPayments);
+        updateStatistics(filteredPayments, allSales);
     }
 
     function setupEventListeners() {
@@ -378,8 +589,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    // ========== FUNCIONES DE UI ==========
-
     function showLoading() {
         paymentsList.innerHTML = `
             <div class="loading">
@@ -393,11 +602,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         paymentsList.innerHTML = "";
         emptyState.classList.remove("hidden");
         
-        // Resetear estadísticas
         totalPaymentsElement.textContent = "$0";
         totalPaymentCountElement.textContent = "0";
         averagePaymentElement.textContent = "$0";
-        todayPaymentsElement.textContent = "$0";
+        initialPaymentsElement.textContent = "$0";
     }
 
     function hideEmptyState() {
@@ -418,65 +626,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         emptyState.classList.add("hidden");
     }
 
-    // ========== FUNCIONES ADICIONALES DE ANÁLISIS ==========
-
-    function getTopPayingClients(payments, limit = 5) {
-        const clientTotals = {};
-        
-        payments.forEach(payment => {
-            if (!clientTotals[payment.clientName]) {
-                clientTotals[payment.clientName] = 0;
+    // Estilos para animaciones
+    if (!document.getElementById('commissionModalStyles')) {
+        const styles = document.createElement('style');
+        styles.id = 'commissionModalStyles';
+        styles.innerHTML = `
+            @keyframes slideIn {
+                from { transform: translateY(-20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
             }
-            clientTotals[payment.clientName] += payment.amount;
-        });
-
-        return Object.entries(clientTotals)
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, limit)
-            .map(([name, total]) => ({ name, total }));
-    }
-
-    function getPaymentTrendsByMonth(payments) {
-        const trends = {};
-        
-        payments.forEach(payment => {
-            const date = new Date(payment.date);
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            
-            if (!trends[monthKey]) {
-                trends[monthKey] = { total: 0, count: 0 };
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
             }
-            
-            trends[monthKey].total += payment.amount;
-            trends[monthKey].count += 1;
-        });
-
-        return trends;
+        `;
+        document.head.appendChild(styles);
     }
-
-    function getAveragePaymentsByDayOfWeek(payments) {
-        const dayTotals = Array(7).fill(0).map(() => ({ total: 0, count: 0 }));
-        const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-        
-        payments.forEach(payment => {
-            const dayOfWeek = new Date(payment.date).getDay();
-            dayTotals[dayOfWeek].total += payment.amount;
-            dayTotals[dayOfWeek].count += 1;
-        });
-
-        return dayTotals.map((day, index) => ({
-            day: dayNames[index],
-            average: day.count > 0 ? day.total / day.count : 0,
-            count: day.count
-        }));
-    }
-
-    // Exponer funciones útiles para debugging o uso externo
-    window.abonosAnalytics = {
-        getTopPayingClients: () => getTopPayingClients(filteredPayments),
-        getPaymentTrends: () => getPaymentTrendsByMonth(filteredPayments),
-        getDayOfWeekAnalysis: () => getAveragePaymentsByDayOfWeek(filteredPayments),
-        getCurrentStats: () => calculateStatistics(filteredPayments),
-        getAllPayments: () => filteredPayments
-    };
 });
