@@ -282,7 +282,150 @@
             opacity: 0;
             pointer-events: none;
         }
-    </style>
+
+        
+  /* ===== MODAL COMISIÓN VENTAS (igual al de abonos) ===== */
+  .modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.5);
+    z-index:2000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    visibility:hidden;
+    transition:all .3s ease;
+  }
+  .modal.show{
+    opacity:1;
+    visibility:visible;
+  }
+  .modal-content{
+    background:var(--white);
+    border-radius:var(--radius-lg);
+    padding:24px;
+    max-width:400px;
+    width:calc(100% - 32px);
+    max-height:80vh;
+    overflow-y:auto;
+    position:relative;
+    box-shadow:0 20px 50px rgba(0,0,0,.22);
+    border:1px solid rgba(0,0,0,.03);
+  }
+  .modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+    padding-bottom:12px;
+    border-bottom:1px solid var(--border);
+  }
+  .modal-title{
+    font-size:18px;
+    font-weight:600;
+    color:var(--primary);
+  }
+  .modal-close{
+    background:transparent;
+    border:none;
+    font-size:20px;
+    cursor:pointer;
+    color:var(--medium-gray);
+    padding:4px;
+  }
+  .modal-close:hover{
+    color:var(--danger);
+  }
+  .form-group{
+    display:flex;
+    flex-direction:column;
+    margin-bottom:16px;
+  }
+  .form-group label{
+    font-weight:500;
+    color:var(--dark);
+    margin-bottom:6px;
+    font-size:14px;
+  }
+  .form-group input{
+    padding:12px;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    background:var(--white);
+    font-size:16px;
+    transition:var(--transition);
+  }
+  .form-group input:focus{
+    outline:none;
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(52,152,219,.1);
+  }
+  .button-group{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    margin-top:20px;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:10px 16px;
+    border-radius:var(--radius);
+    border:none;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:var(--transition);
+    box-shadow:var(--shadow);
+  }
+  .btn i{
+    font-size:15px;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,var(--accent),#2980b9);
+    color:var(--white);
+  }
+  .btn-primary:hover{
+    background:linear-gradient(135deg,#2980b9,var(--accent));
+    box-shadow:var(--shadow-hover);
+    transform:translateY(-2px);
+  }
+  .btn-success{
+    background:linear-gradient(135deg,var(--success),#27ae60);
+    color:var(--white);
+  }
+  .btn-success:hover{
+    background:linear-gradient(135deg,#27ae60,var(--success));
+    box-shadow:var(--shadow-hover);
+    transform:translateY(-2px);
+  }
+  .btn-secondary{
+    background:var(--light-gray);
+    color:var(--dark);
+  }
+  .btn-secondary:hover{
+    background:#e2e6ea;
+    transform:translateY(-2px);
+  }
+  .btn:active{
+    transform:scale(.96);
+  }
+
+  /* Animaciones */
+  @keyframes slideIn{
+    from{transform:translateY(-20px);opacity:0}
+    to{transform:translateY(0);opacity:1}
+  }
+  @keyframes fadeOut{
+    from{opacity:1}
+    to{opacity:0}
+  }
+</style>
+
+
 </head>
 <body>
 
@@ -440,8 +583,6 @@
         let soldProducts = [];
         let filteredProducts = [];
 
-        import { apiFetch } from "./utils/api.js";
-import { getToken } from "./utils/auth.js";
 
 const salesSummaryCard = document.getElementById('salesSummaryCard');
 const salesTotalDisplay = document.getElementById('salesTotalDisplay');

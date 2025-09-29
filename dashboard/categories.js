@@ -24,22 +24,47 @@ const btnDelete = document.getElementById("deleteSale");
 const btnAddPayment = document.getElementById("addPayment");
 const list = document.getElementById("salesList");
 const searchInput = document.getElementById("searchInput");
-
+const dayFilterInput = document.getElementById("dayFilterInput");
 /* ---------- carga de ventas (adaptada al nuevo estilo) ---------- */
-async function loadSales(query = "") {
+async function loadSales(query = "", filterDay = "") {
     try {
         const token = getToken();
         const sales = await apiFetch("/sales", "GET", null, token);
         list.innerHTML = "";
 
         const filteredSales = sales.filter(sale => {
+            // Filtro por nombre/producto
             const clientMatch = sale.clientName.toLowerCase().includes(query.toLowerCase());
             const productMatch = sale.productName.toLowerCase().includes(query.toLowerCase());
-            return clientMatch || productMatch;
+            const searchMatch = clientMatch || productMatch;
+
+            // Filtro por día de pago
+            let dayMatch = true;
+            if (filterDay) {
+                const day = parseInt(filterDay);
+                if (sale.paymentDays) {
+                    const paymentDaysArray = sale.paymentDays.split(',').map(d => parseInt(d.trim()));
+                    dayMatch = paymentDaysArray.includes(day);
+                } else {
+                    dayMatch = false;
+                }
+            }
+
+            return searchMatch && dayMatch;
         });
 
         if (filteredSales.length === 0) {
-            list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><h3>No se encontraron ventas</h3></div>`;
+            const message = filterDay 
+                ? `<div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <h3>No hay préstamos para el día ${filterDay}</h3>
+                    <p>No se encontraron ventas con pagos programados para este día</p>
+                   </div>`
+                : `<div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h3>No se encontraron ventas</h3>
+                   </div>`;
+            list.innerHTML = message;
             return;
         }
 
@@ -52,12 +77,18 @@ async function loadSales(query = "") {
             card.className = "sale-card";
             card.setAttribute("data-sale-id", sale._id);
 
+            // Mostrar días de pago si existen
+            const paymentDaysInfo = sale.paymentDays 
+                ? `<p><i class="fas fa-calendar-check"></i> Días de pago: ${sale.paymentDays}</p>`
+                : '';
+
             card.innerHTML = `
                 <div class="sale-header">
                     <div class="sale-info">
                         <h3>${sale.clientName}</h3>
                         <p>${sale.productName}</p>
                         <p><i class="fas fa-map-marker-alt"></i> ${sale.clientAddress || 'Sin dirección'}</p>
+                        ${paymentDaysInfo}
                     </div>
                     <div class="sale-amount">
                         <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
@@ -77,7 +108,6 @@ async function loadSales(query = "") {
                 </div>
             `;
 
-            // Eventos
             card.querySelector(".btn-info").onclick   = () => viewSaleDetails(sale);
             card.querySelector(".btn-edit").onclick   = () => editSale(sale);
             card.querySelector(".btn-pay").onclick    = () => openPaymentModal(sale._id);
@@ -90,6 +120,7 @@ async function loadSales(query = "") {
         list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar ventas</h3><p>${error.message}</p></div>`;
     }
 }
+
 
 /* ---------- detalles ---------- */
 function viewSaleDetails(sale) {
@@ -434,6 +465,28 @@ async function loadProductsForDropdown() {
         );
         renderProducts(filtered);
     });
+
+    searchInput.addEventListener("input", () => {
+    const query = searchInput.value.trim();
+    const day = dayFilterInput.value;
+    loadSales(query, day);
+});
+
+dayFilterInput.addEventListener("change", () => {
+    const query = searchInput.value.trim();
+    const day = dayFilterInput.value;
+    loadSales(query, day);
+});
+
+// Función para limpiar el filtro de día
+function clearDayFilter() {
+    dayFilterInput.value = "";
+    const query = searchInput.value.trim();
+    loadSales(query, "");
+}
+
+// Hacer la función global
+window.clearDayFilter = clearDayFilter;
 
     // Render inicial
     renderProducts();
