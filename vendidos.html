@@ -315,11 +315,11 @@
         </div>
 
         <!-- ---------- RESUMEN TOTAL ---------- -->
-        <div class="total-summary">
-            <h2 id="totalRevenue">$0</h2>
-            <p>Ingresos totales por ventas</p>
-        </div>
-
+<!-- Reemplaza el bloque .total-summary completo por: -->
+<div class="total-summary" id="salesSummaryCard" style="cursor:pointer;transition:transform .2s">
+    <h2 id="totalRevenue">$0</h2>
+    <p>Ingresos totales por ventas</p>
+</div>
         <!-- ---------- ESTADÍSTICAS ---------- -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -377,13 +377,138 @@
         </div>
     </div>
 
+    <!-- Modal comisión ventas -->
+<div id="salesCommissionModal" class="modal">
+  <div class="modal-content" style="max-width:450px">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-percentage"></i> Calcular Comisión del Vendedor</h3>
+      <button class="modal-close" onclick="closeSalesCommissionModal()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div style="padding:20px 0">
+      <div class="form-group">
+        <label style="font-size:16px;margin-bottom:10px;display:block">
+          ¿Qué porcentaje pagas al vendedor por venta?
+        </label>
+        <input type="number" id="salesCommissionPercentage" placeholder="Ej: 10" min="0" max="100" step="0.1"
+               style="width:100%;padding:12px;font-size:18px;text-align:center;border:2px solid var(--accent);border-radius:var(--radius)">
+        <small style="display:block;text-align:center;color:var(--medium-gray);margin-top:8px">Ingresa solo el número (sin %)</small>
+      </div>
+
+      <div style="margin-top:30px;padding:20px;background:var(--light-gray);border-radius:var(--radius);text-align:center">
+        <div style="font-size:14px;color:var(--medium-gray);margin-bottom:8px">Ingresos totales</div>
+        <div id="salesTotalDisplay" style="font-size:28px;font-weight:700;color:var(--primary);margin-bottom:20px">$0</div>
+
+        <div id="salesCommissionResult" style="display:none;margin-top:20px;padding:20px;background:linear-gradient(135deg,var(--success),#2ecc71);border-radius:var(--radius);color:white">
+          <div style="font-size:14px;margin-bottom:8px;opacity:.9">Comisión del Vendedor</div>
+          <div id="salesCommissionAmount" style="font-size:32px;font-weight:700">$0</div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.3)">
+            <div style="font-size:14px;opacity:.9;margin-bottom:4px">Tu ganancia neta</div>
+            <div id="salesNetAmount" style="font-size:24px;font-weight:600">$0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="button-group" style="margin-top:20px">
+      <button class="btn btn-primary" onclick="calculateSalesCommission()">
+        <i class="fas fa-calculator"></i> Calcular
+      </button>
+      <button class="btn btn-success" onclick="saveSalesCommissionPercentage()" style="display:none" id="saveSalesCommissionBtn">
+        <i class="fas fa-save"></i> Guardar
+      </button>
+      <button class="btn btn-secondary" onclick="closeSalesCommissionModal()">
+        <i class="fas fa-times"></i> Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Animaciones -->
+<style>
+@keyframes slideIn{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+</style>
+
     <!-- ---------- SCRIPTS ---------- -->
     <script type="module">
+
+
         import { apiFetch } from "./utils/api.js";
         import { getToken } from "./utils/auth.js";
 
         let soldProducts = [];
         let filteredProducts = [];
+
+        import { apiFetch } from "./utils/api.js";
+import { getToken } from "./utils/auth.js";
+
+const salesSummaryCard = document.getElementById('salesSummaryCard');
+const salesTotalDisplay = document.getElementById('salesTotalDisplay');
+
+// Abrir modal y cargar % guardado
+salesSummaryCard.addEventListener('click', () => {
+    const total = parseInt(document.getElementById('totalRevenue').textContent.replace(/[^\d]/g,'')) || 0;
+    salesTotalDisplay.textContent = '$' + total.toLocaleString('es-CO');
+    document.getElementById('salesCommissionModal').classList.add('show');
+    loadSavedSalesCommission();
+    document.getElementById('salesCommissionPercentage').focus();
+});
+
+// Cerrar modal
+window.closeSalesCommissionModal = () => {
+    const m = document.getElementById('salesCommissionModal');
+    m.style.animation = 'fadeOut .2s ease';
+    setTimeout(() => m.classList.remove('show'), 200);
+};
+
+// Calcular
+window.calculateSalesCommission = () => {
+    const pct = parseFloat(document.getElementById('salesCommissionPercentage').value);
+    if (isNaN(pct) || pct < 0 || pct > 100) { alert('Porcentaje inválido'); return; }
+    const total = parseInt(salesTotalDisplay.textContent.replace(/[^\d]/g,'')) || 0;
+    const commission = Math.round(total * pct / 100);
+    const net = total - commission;
+    document.getElementById('salesCommissionAmount').textContent = '$' + commission.toLocaleString('es-CO');
+    document.getElementById('salesNetAmount').textContent = '$' + net.toLocaleString('es-CO');
+    const res = document.getElementById('salesCommissionResult');
+    res.style.display = 'block';
+    res.style.animation = 'slideIn .3s ease';
+    document.getElementById('saveSalesCommissionBtn').style.display = 'inline-flex';
+};
+
+// Guardar %
+window.saveSalesCommissionPercentage = async () => {
+    const pct = parseFloat(document.getElementById('salesCommissionPercentage').value);
+    if (isNaN(pct) || pct < 0 || pct > 100) { alert('Porcentaje inválido'); return; }
+    try {
+        const token = getToken();
+        await apiFetch('/sales-commission', 'POST', { percentage: pct }, token);
+        const btn = document.getElementById('saveSalesCommissionBtn');
+        const old = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> ¡Guardado!';
+        btn.style.background = '#27ae60';
+        setTimeout(() => { btn.innerHTML = old; btn.style.background = ''; }, 2000);
+    } catch (e) {
+        alert('No se pudo guardar: ' + e.message);
+    }
+};
+
+// Cargar % guardado
+async function loadSavedSalesCommission() {
+    try {
+        const token = getToken();
+        const res = await apiFetch('/sales-commission', 'GET', null, token);
+        if (res && res.percentage != null)
+            document.getElementById('salesCommissionPercentage').value = res.percentage;
+    } catch (e) { /* no hay guardado */ }
+}
+
+// Permitir calcular con Enter
+document.getElementById('salesCommissionPercentage').addEventListener('keypress', e => {
+    if (e.key === 'Enter') calculateSalesCommission();
+});
+
 
         document.addEventListener("DOMContentLoaded", async () => {
             const productsList = document.getElementById("productsList");
