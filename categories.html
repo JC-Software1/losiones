@@ -262,6 +262,26 @@
         .scanner-box{background:#fff;border-radius:var(--radius-lg);padding:20px;max-width:520px;width:92%;text-align:center}
         .scanner-box video{width:100%;border-radius:var(--radius);margin:15px 0}
         .scanner-actions{display:flex;gap:12px;justify-content:center}
+
+        .btn-go-liquidation {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 4px 15px rgba(22, 160, 133, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-go-liquidation:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(22, 160, 133, 0.4);
+}
+
     </style>
 </head>
 <body>
@@ -283,6 +303,11 @@
             <a href="inventario.html" class="menu-link"><i class="fas fa-warehouse"></i><span>Inventario</span></a>
             <a href="vendidos.html" class="menu-link"><i class="fas fa-tags"></i><span>Productos vendidos</span></a>
             <a href="recibos.html" class="menu-link"><i class="fas fa-file-alt"></i><span>Recibos</span></a>
+            <!-- 🔗 Botón Ir a Liquidación -->
+<a href="liquidacion.html" class="btn-go-liquidation">
+  <i class="fas fa-cash-register"></i>
+  Ir a Liquidación
+</a>
         </div>
     </nav>
 

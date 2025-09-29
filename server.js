@@ -8,6 +8,8 @@ const productRoutes = require("./routes/productRoutes");
 const receiptRoutes = require('./routes/receiptRoutes');
 const commissionRoutes = require('./routes/commissionRoutes');
 const salesCommissionRoutes = require("./routes/salesCommissionRoutes");
+const liquidationRoutes = require("./routes/liquidationRoutes");
+
 
 
 
@@ -30,6 +32,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/commission', commissionRoutes);
 app.use("/api/sales-commission", salesCommissionRoutes);
+app.use("/api/liquidation", liquidationRoutes);
 
 
 const PORT = process.env.PORT || 5000;
