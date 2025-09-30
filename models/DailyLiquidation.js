@@ -22,12 +22,13 @@ const DailyLiquidationSchema = new mongoose.Schema({
         required: true
     },
     // Ingresos
-    payments: {
-        count: { type: Number, default: 0 },
-        total: { type: Number, default: 0 },
-        afterCommission: { type: Number, default: 0 },
-        commissionPercentage: { type: Number, default: 0 }
-    },
+payments: {
+    count: { type: Number, default: 0 },
+    total: { type: Number, default: 0 },
+    totalInitialPayments: { type: Number, default: 0 },  // ✅ NUEVO CAMPO
+    afterCommission: { type: Number, default: 0 },
+    commissionPercentage: { type: Number, default: 0 }
+},
     sales: {
         count: { type: Number, default: 0 },
         total: { type: Number, default: 0 },
