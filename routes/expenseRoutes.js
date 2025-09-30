@@ -1,56 +1,146 @@
 const express = require("express");
-const Expense = require("../models/Expense");
 const auth = require("../middleware/auth");
+const Expense = require("../models/Expense");
 const router = express.Router();
 
-router.post("/new", auth, async (req, res) => {
-    try {
-        const { title, amount, date, category } = req.body;
-        if(!title || !amount || !category) {
-            return res.status(400).json({error: "Todos los campos son obligatorios"})
-        }
-        const expense = new Expense({
-            title,
-            amount,
-            date: date || Date.now(),
-            category,
-            user: req.user.id
-        })
-        await expense.save();
-        res.status(201).json(expense);
-    } catch (error) {
-        res.status(400).json({error: error.message})
-    }
-})
-
-//Listar los gastos
+// Obtener todos los gastos del usuario
 router.get("/", auth, async (req, res) => {
-  try {
-      // Buscar gastos y hacer populate de la categoría
-      const expenses = await Expense.find({ user: req.user.id })
-          .populate('category', 'name') // Esto es crucial - populate la referencia a categoría
-          .sort({ date: -1 }); // Ordenar por fecha descendente
-      
-      res.json(expenses);
-  } catch (error) {
-      console.error("Error al obtener gastos:", error);
-      res.status(500).json({ error: "Error al obtener los gastos" });
-  }
+    try {
+        const expenses = await Expense.find({ 
+            user: req.user.id,
+            liquidatedDay: false 
+        }).sort({ date: -1 });
+        
+        res.json(expenses);
+    } catch (error) {
+        console.error("Error al obtener gastos:", error);
+        res.status(500).json({ error: "Error al obtener gastos" });
+    }
 });
 
-//Actualizar un gasto
-//Eliminar un gasto
+// Obtener gastos por fecha
+router.get("/by-date/:date", auth, async (req, res) => {
+    try {
+        const dateParam = new Date(req.params.date);
+        const startOfDay = new Date(dateParam.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(dateParam.setHours(23, 59, 59, 999));
 
+        const expenses = await Expense.find({
+            user: req.user.id,
+            date: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        });
+
+        res.json(expenses);
+    } catch (error) {
+        console.error("Error al filtrar gastos por fecha:", error);
+        res.status(500).json({ error: "Error al obtener gastos por fecha" });
+    }
+});
+
+// Crear nuevo gasto
+router.post("/", auth, async (req, res) => {
+    try {
+        const { date, items } = req.body;
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ error: "Debe agregar al menos un gasto" });
+        }
+
+        // Validar que todos los items tengan descripción y monto
+        for (const item of items) {
+            if (!item.description || !item.description.trim()) {
+                return res.status(400).json({ error: "Todas las descripciones son obligatorias" });
+            }
+            if (!item.amount || item.amount <= 0) {
+                return res.status(400).json({ error: "Todos los montos deben ser mayores a cero" });
+            }
+        }
+
+        const expense = new Expense({
+            user: req.user.id,
+            date: date || new Date(),
+            items
+        });
+
+        await expense.save();
+        res.status(201).json(expense);
+
+    } catch (error) {
+        console.error("Error al crear gasto:", error);
+        res.status(500).json({ error: "Error al crear gasto: " + error.message });
+    }
+});
+
+// Actualizar gasto
+router.put("/:id", auth, async (req, res) => {
+    try {
+        const { date, items } = req.body;
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ error: "Debe agregar al menos un gasto" });
+        }
+
+        const expense = await Expense.findOne({ 
+            _id: req.params.id, 
+            user: req.user.id 
+        });
+
+        if (!expense) {
+            return res.status(404).json({ error: "Gasto no encontrado" });
+        }
+
+        expense.date = date || expense.date;
+        expense.items = items;
+
+        await expense.save();
+        res.json(expense);
+
+    } catch (error) {
+        console.error("Error al actualizar gasto:", error);
+        res.status(500).json({ error: "Error al actualizar gasto" });
+    }
+});
+
+// Eliminar gasto
 router.delete("/:id", auth, async (req, res) => {
-  try {
-      const expense = await Expense.findOneAndDelete({ _id: req.params.id, user: req.user.id });
-      if (!expense) {
-          return res.status(404).json({ error: "Gasto no encontrado" });
-      }
-      res.status(200).json({ message: "Gasto eliminado correctamente" });
-  } catch (error) {
-      res.status(400).json({ error: error.message });
-  }
+    try {
+        const expense = await Expense.findOneAndDelete({ 
+            _id: req.params.id, 
+            user: req.user.id 
+        });
+
+        if (!expense) {
+            return res.status(404).json({ error: "Gasto no encontrado" });
+        }
+
+        res.json({ message: "Gasto eliminado correctamente" });
+    } catch (error) {
+        console.error("Error al eliminar gasto:", error);
+        res.status(500).json({ error: "Error al eliminar gasto" });
+    }
+});
+
+// Obtener total de gastos no liquidados
+router.get("/total", auth, async (req, res) => {
+    try {
+        const expenses = await Expense.find({ 
+            user: req.user.id,
+            liquidatedDay: false 
+        });
+
+        const total = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
+        
+        res.json({ 
+            total,
+            count: expenses.length 
+        });
+    } catch (error) {
+        console.error("Error al calcular total:", error);
+        res.status(500).json({ error: "Error al calcular total de gastos" });
+    }
 });
 
 module.exports = router;
