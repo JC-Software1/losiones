@@ -139,31 +139,34 @@ function displayPendingData() {
 }
 
 // Actualizar resumen
+// Actualizar resumen
 function updateSummary() {
     if (!pendingData) return;
 
     const initialCash = parseFloat(document.getElementById("initialCash").value) || 0;
     const paymentsCommission = parseFloat(document.getElementById("paymentsCommission").value) || 0;
-    const salesCommission = parseFloat(document.getElementById("salesCommission").value) || 0;
+    // ✅ Ya no necesitamos salesCommission para cálculos
 
     const { sales, payments, inventory } = pendingData;
 
-    // Calcular ingresos después de comisión
+    // ✅ CAMBIO: Solo calcular comisión para abonos
     const paymentsAfterComm = payments.total - (payments.total * (paymentsCommission / 100));
     const paymentsCommAmount = payments.total - paymentsAfterComm;
 
-    const salesAfterComm = sales.total - (sales.total * (salesCommission / 100));
-    const salesCommAmount = sales.total - salesAfterComm;
+    // Las ventas ya NO generan comisión ni ingresos
+    const salesAfterComm = 0;  // ← Ya no aplica
+    const salesCommAmount = 0;  // ← Ya no aplica
 
     // Actualizar campos de comisión
     document.getElementById("paymentsAfterCommission").textContent = `$${paymentsAfterComm.toLocaleString('es-CO')}`;
     document.getElementById("paymentsCommissionAmount").textContent = `Comisión: $${paymentsCommAmount.toLocaleString('es-CO')}`;
 
-    document.getElementById("salesAfterCommission").textContent = `$${salesAfterComm.toLocaleString('es-CO')}`;
-    document.getElementById("salesCommissionAmount").textContent = `Comisión: $${salesCommAmount.toLocaleString('es-CO')}`;
+    // ✅ Mostrar ventas SIN comisión (solo informativo)
+    document.getElementById("salesAfterCommission").textContent = `$${sales.total.toLocaleString('es-CO')}`;
+    document.getElementById("salesCommissionAmount").textContent = `Sin comisión (solo informativo)`;
 
-    // Calcular totales
-    const totalIncome = paymentsAfterComm + salesAfterComm;
+    // ✅ CAMBIO: Calcular totales - Las ventas NO cuentan como ingreso
+    const totalIncome = paymentsAfterComm;  // ← SOLO ABONOS
     const totalExpenses = inventory.totalCost;
     const finalCash = initialCash + totalIncome - totalExpenses;
 

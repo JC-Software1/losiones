@@ -99,7 +99,6 @@ router.get("/pending", auth, async (req, res) => {
 });
 
 // Crear liquidación del día
-// Crear liquidación del día
 router.post("/create", auth, async (req, res) => {
     try {
         const {
@@ -115,11 +114,10 @@ router.post("/create", auth, async (req, res) => {
             liquidatedDay: false 
         });
 
-        // ✅ Productos no liquidados Y NO VENDIDOS
         const products = await Product.find({ 
             user: req.user.id, 
             liquidatedDay: false,
-            sold: false  // ← AGREGAR ESTA LÍNEA
+            sold: false
         });
 
         const allSales = await Sale.find({ user: req.user.id });
@@ -142,7 +140,93 @@ router.post("/create", auth, async (req, res) => {
             });
         });
 
-        // ... resto del código igual
+        // Calcular totales
+        const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
+        const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
+        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
+
+        // ✅ CAMBIO: Solo los abonos cuentan como ingreso, las ventas NO
+        const paymentsAfterCommission = totalPayments - (totalPayments * (paymentsCommission / 100));
+        
+        // Las ventas ya NO generan ingreso adicional
+        const totalIncome = paymentsAfterCommission;  // ← SOLO ABONOS
+        const totalExpenses = totalInventoryCost;
+        const finalCash = initialCash + totalIncome - totalExpenses;
+
+        // Crear registro de liquidación
+        const liquidation = new DailyLiquidation({
+            user: req.user.id,
+            initialCash,
+            finalCash,
+            payments: {
+                count: paymentsData.length,
+                total: totalPayments,
+                afterCommission: paymentsAfterCommission,
+                commissionPercentage: paymentsCommission
+            },
+            sales: {
+                count: sales.length,
+                total: totalSales,
+                afterCommission: 0,  // ← Ya no aplica comisión a ventas
+                commissionPercentage: 0  // ← Ya no aplica
+            },
+            totalIncome,
+            inventory: {
+                totalCost: totalInventoryCost,
+                productCount: products.length
+            },
+            totalExpenses,
+            liquidatedSales: sales.map(s => ({
+                saleId: s._id,
+                clientName: s.clientName,
+                amount: s.price
+            })),
+            liquidatedPayments: paymentsData,
+            liquidatedProducts: products.map(p => ({
+                productId: p._id,
+                name: p.name,
+                costPrice: p.costPrice
+            })),
+            notes: notes || ""
+        });
+
+        await liquidation.save();
+
+        // Marcar ventas como liquidadas
+        await Sale.updateMany(
+            { 
+                _id: { $in: sales.map(s => s._id) },
+                user: req.user.id 
+            },
+            { $set: { liquidatedDay: true } }
+        );
+
+        // Marcar productos como liquidados
+        await Product.updateMany(
+            { 
+                _id: { $in: products.map(p => p._id) },
+                user: req.user.id 
+            },
+            { $set: { liquidatedDay: true } }
+        );
+
+        // Marcar abonos como liquidados
+        for (const update of paymentUpdates) {
+            await Sale.updateOne(
+                {
+                    _id: update.saleId,
+                    'payments._id': update.paymentId
+                },
+                {
+                    $set: { 'payments.$.liquidatedDay': true }
+                }
+            );
+        }
+
+        res.json({
+            message: "Liquidación creada exitosamente",
+            liquidation
+        });
     } catch (error) {
         console.error("Error al crear liquidación:", error);
         res.status(500).json({ error: "Error al crear liquidación: " + error.message });
