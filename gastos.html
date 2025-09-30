@@ -322,10 +322,11 @@
             <p>Total de gastos pendientes de liquidar</p>
         </div>
 
-        <div class="form-container">
-            <h2 class="form-title">Registrar Nuevo Gasto</h2>
-            
-            <div class="form-group">
+<div class="form-container">
+    <h2 class="form-title">Registrar Nuevo Gasto</h2>
+    <input type="hidden" id="expenseId" value="">
+    
+    <div class="form-group">
                 <label for="expenseDate">
                     <i class="fas fa-calendar"></i> Fecha del Gasto
                 </label>
@@ -341,14 +342,17 @@
 
             <div id="expenseItemsContainer" class="expense-items-container hidden"></div>
 
-            <div class="button-group">
-                <button type="button" class="btn btn-success" id="saveExpense">
-                    <i class="fas fa-save"></i> Guardar Gastos
-                </button>
-                <button type="button" class="btn btn-secondary" id="cancelExpense">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-            </div>
+<div class="button-group">
+    <button type="button" class="btn btn-success" id="saveExpense">
+        <i class="fas fa-save"></i> Guardar Gastos
+    </button>
+    <button type="button" class="btn btn-primary hidden" id="updateExpense">
+        <i class="fas fa-edit"></i> Actualizar Gastos
+    </button>
+    <button type="button" class="btn btn-secondary" id="cancelExpense">
+        <i class="fas fa-times"></i> Cancelar
+    </button>
+</div>
         </div>
 
         <div class="expenses-grid" id="expensesList">

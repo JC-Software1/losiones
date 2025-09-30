@@ -3,14 +3,15 @@ import { getToken } from "./utils/auth.js";
 import "./keepAlive.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const expenseCountInput = document.getElementById("expenseCount");
-    const expenseItemsContainer = document.getElementById("expenseItemsContainer");
-    const saveExpenseBtn = document.getElementById("saveExpense");
-    const cancelExpenseBtn = document.getElementById("cancelExpense");
-    const expenseDateInput = document.getElementById("expenseDate");
-    const expensesList = document.getElementById("expensesList");
-    const emptyState = document.getElementById("emptyState");
-    const totalExpensesElement = document.getElementById("totalExpenses");
+const expenseCountInput = document.getElementById("expenseCount");
+const expenseItemsContainer = document.getElementById("expenseItemsContainer");
+const saveExpenseBtn = document.getElementById("saveExpense");
+const updateExpenseBtn = document.getElementById("updateExpense");  // ✅ AGREGAR AQUÍ
+const cancelExpenseBtn = document.getElementById("cancelExpense");
+const expenseDateInput = document.getElementById("expenseDate");
+const expensesList = document.getElementById("expensesList");
+const emptyState = document.getElementById("emptyState");
+const totalExpensesElement = document.getElementById("totalExpenses");
 
     // Establecer fecha de hoy por defecto
     const today = new Date().toISOString().split('T')[0];
@@ -26,10 +27,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         await loadExpenses();
 
         // Event listeners
-        expenseCountInput.addEventListener("input", generateExpenseFields);
-        saveExpenseBtn.addEventListener("click", saveExpense);
-        cancelExpenseBtn.addEventListener("click", resetForm);
-
+// Event listeners
+expenseCountInput.addEventListener("input", generateExpenseFields);
+saveExpenseBtn.addEventListener("click", saveExpense);
+updateExpenseBtn.addEventListener("click", updateExpense);  // ✅ AGREGAR AQUÍ
+cancelExpenseBtn.addEventListener("click", () => {
+    if (document.getElementById("expenseId").value) {
+        if (confirm("¿Seguro que deseas cancelar la edición?")) {
+            resetForm();
+        }
+    } else {
+        resetForm();
+    }
+});
     } catch (error) {
         console.error("Error al inicializar:", error);
         showError("Error al cargar la página");
@@ -111,12 +121,120 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    function resetForm() {
-        expenseCountInput.value = "";
-        expenseDateInput.value = today;
-        expenseItemsContainer.innerHTML = "";
-        expenseItemsContainer.classList.add("hidden");
+    async function updateExpense() {
+    const id = document.getElementById("expenseId").value;
+    const date = expenseDateInput.value;
+    const descriptions = document.querySelectorAll(".expense-description");
+    const amounts = document.querySelectorAll(".expense-amount");
+
+    if (!id) {
+        alert("Error: No se encontró el ID del gasto");
+        return;
     }
+
+    if (!date) {
+        alert("Por favor selecciona una fecha");
+        return;
+    }
+
+    if (descriptions.length === 0) {
+        alert("Por favor especifica cuántos gastos deseas registrar");
+        return;
+    }
+
+    const items = [];
+    for (let i = 0; i < descriptions.length; i++) {
+        const description = descriptions[i].value.trim();
+        const amount = parseFloat(amounts[i].value);
+
+        if (!description) {
+            alert(`Por favor completa la descripción del gasto ${i + 1}`);
+            return;
+        }
+
+        if (!amount || amount <= 0) {
+            alert(`Por favor ingresa un monto válido para el gasto ${i + 1}`);
+            return;
+        }
+
+        items.push({ description, amount });
+    }
+
+    try {
+        const token = getToken();
+        await apiFetch(`/expenses/${id}`, "PUT", { date, items }, token);
+        
+        alert("¡Gasto actualizado exitosamente!");
+        resetFormAfterEdit();
+        await loadExpenses();
+
+    } catch (error) {
+        console.error("Error al actualizar gasto:", error);
+        alert("Error al actualizar gasto: " + error.message);
+    }
+}
+
+function resetForm() {
+    document.getElementById("expenseId").value = "";
+    expenseCountInput.value = "";
+    expenseDateInput.value = today;
+    expenseItemsContainer.innerHTML = "";
+    expenseItemsContainer.classList.add("hidden");
+    
+    // Restaurar botones
+    saveExpenseBtn.classList.remove("hidden");
+    updateExpenseBtn.classList.add("hidden");
+}
+
+function resetFormAfterEdit() {
+    resetForm();
+}
+    window.editExpense = async function(id) {
+    try {
+        const token = getToken();
+        const expenses = await apiFetch("/expenses", "GET", null, token);
+        const expense = expenses.find(e => e._id === id);
+        
+        if (!expense) {
+            alert("Gasto no encontrado");
+            return;
+        }
+
+        // Llenar el formulario con los datos existentes
+        document.getElementById("expenseId").value = expense._id;
+        
+        const expenseDate = new Date(expense.date);
+        const localDate = new Date(expenseDate.getTime() + expenseDate.getTimezoneOffset() * 60000);
+        expenseDateInput.value = localDate.toISOString().split('T')[0];
+        
+        expenseCountInput.value = expense.items.length;
+        
+        // Generar campos
+        generateExpenseFields();
+        
+        // Llenar los campos con los valores existentes
+        setTimeout(() => {
+            const descriptions = document.querySelectorAll(".expense-description");
+            const amounts = document.querySelectorAll(".expense-amount");
+            
+            expense.items.forEach((item, index) => {
+                if (descriptions[index]) descriptions[index].value = item.description;
+                if (amounts[index]) amounts[index].value = item.amount;
+            });
+        }, 100);
+
+        // Cambiar botones
+        saveExpenseBtn.classList.add("hidden");
+        updateExpenseBtn.classList.remove("hidden");
+        
+        // Scroll al formulario
+        document.querySelector(".form-container").scrollIntoView({ behavior: 'smooth' });
+
+    } catch (error) {
+        console.error("Error al cargar gasto:", error);
+        alert("Error al cargar el gasto para editar");
+    }
+};
 
     async function loadExpenses() {
         try {
@@ -174,11 +292,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                         `).join('')}
                     </div>
 
-                    <div class="expense-actions">
-                        <button class="btn btn-danger" onclick="deleteExpense('${expense._id}')">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
-                    </div>
+ <div class="expense-actions">
+    <button class="btn btn-primary" onclick="editExpense('${expense._id}')">
+        <i class="fas fa-edit"></i> Editar
+    </button>
+    <button class="btn btn-danger" onclick="deleteExpense('${expense._id}')">
+        <i class="fas fa-trash"></i> Eliminar
+    </button>
+</div>
                 </div>
             `;
         }).join('');
