@@ -510,13 +510,43 @@
                 </div>
 
                 <!-- Seguimiento de Clientes -->
-                <div class="section-card">
-                    <div class="section-header">
-                        <div class="section-icon icon-tracking">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <h3>Seguimiento de Clientes</h3>
-                    </div>
+<!-- Seguimiento de Clientes -->
+<div class="section-card">
+    <div class="section-header">
+        <div class="section-icon icon-tracking">
+            <i class="fas fa-users"></i>
+        </div>
+        <h3>Seguimiento de Clientes</h3>
+    </div>
+
+    <div class="data-field">
+        <div class="data-label">Total Clientes Activos</div>
+        <div class="data-value" id="totalActiveClients">0</div>
+        <div class="sub-data">Con deudas pendientes</div>
+    </div>
+
+    <div class="data-field">
+        <div class="data-label">Pagaron Hoy</div>
+        <div class="data-value success" id="clientsPaidToday">0</div>
+    </div>
+
+    <div class="data-field">
+        <div class="data-label">No Pagaron Hoy</div>
+        <div class="data-value danger" id="clientsDidNotPay">0</div>
+    </div>
+
+    <div class="data-field">
+        <div class="data-label">Efectividad de Cobro</div>
+        <div class="data-value warning" id="effectivenessPercentage">0%</div>
+        <div class="sub-data">Porcentaje de clientes que pagaron</div>
+    </div>
+
+    <div class="data-field">
+        <div class="data-label">Total Recaudado Hoy</div>
+        <div class="data-value success" id="totalCustomerIncome">$0</div>
+        <div class="sub-data">Suma de todos los abonos</div>
+    </div>
+</div>
 
                     <div class="data-field">
                         <div class="data-label">Total Ingresos</div>

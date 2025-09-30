@@ -7,7 +7,6 @@ const DailyLiquidation = require("../models/DailyLiquidation");
 const router = express.Router();
 
 // Obtener datos pendientes de liquidación
-// Obtener datos pendientes de liquidación
 router.get("/pending", auth, async (req, res) => {
     try {
         // Ventas no liquidadas
@@ -16,11 +15,11 @@ router.get("/pending", auth, async (req, res) => {
             liquidatedDay: false 
         });
 
-        // ✅ Productos no liquidados Y NO VENDIDOS
+        // Productos no liquidados Y NO VENDIDOS
         const products = await Product.find({ 
             user: req.user.id, 
             liquidatedDay: false,
-            sold: false  // ← AGREGAR ESTA LÍNEA
+            sold: false
         });
 
         // Abonos no liquidados (dentro de todas las ventas)
@@ -39,6 +38,29 @@ router.get("/pending", auth, async (req, res) => {
                 });
             });
         });
+
+        // ✅ NUEVO: Calcular estadísticas de seguimiento de clientes
+        const allActiveSales = await Sale.find({ 
+            user: req.user.id, 
+            settled: false  // Solo ventas no liquidadas completamente
+        });
+
+        const totalActiveClients = allActiveSales.length;
+        
+        // Clientes que han pagado algo (tienen al menos un abono no liquidado hoy)
+        const clientsWhoPaidToday = new Set();
+        paymentsData.forEach(p => {
+            clientsWhoPaidToday.add(p.clientName);
+        });
+        const paidTodayCount = clientsWhoPaidToday.size;
+        
+        // Clientes que no pagaron hoy
+        const clientsWhoDidntPayToday = totalActiveClients - paidTodayCount;
+        
+        // Porcentaje de efectividad
+        const effectivenessPercentage = totalActiveClients > 0 
+            ? ((paidTodayCount / totalActiveClients) * 100).toFixed(1)
+            : 0;
 
         // Calcular totales
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
@@ -60,6 +82,14 @@ router.get("/pending", auth, async (req, res) => {
                 count: products.length,
                 totalCost: totalInventoryCost,
                 data: products
+            },
+            // ✅ NUEVO: Estadísticas de seguimiento
+            clientTracking: {
+                totalActiveClients,
+                paidToday: paidTodayCount,
+                didNotPayToday: clientsWhoDidntPayToday,
+                effectivenessPercentage: parseFloat(effectivenessPercentage),
+                totalIncome: totalPayments
             }
         });
     } catch (error) {

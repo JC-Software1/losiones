@@ -83,10 +83,11 @@ async function loadSavedCommissions() {
 }
 
 // Mostrar datos pendientes
+// Mostrar datos pendientes
 function displayPendingData() {
     if (!pendingData) return;
 
-    const { sales, payments, inventory } = pendingData;
+    const { sales, payments, inventory, clientTracking } = pendingData;
 
     // Abonos
     document.getElementById("paymentsCount").textContent = payments.count;
@@ -114,8 +115,14 @@ function displayPendingData() {
     `).join('');
     document.getElementById("salesDetails").innerHTML = salesDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay ventas pendientes</p>';
 
-    // Seguimiento de clientes (total de abonos)
-    document.getElementById("totalCustomerIncome").textContent = `$${payments.total.toLocaleString('es-CO')}`;
+    // ✅ NUEVO: Seguimiento de clientes mejorado
+    if (clientTracking) {
+        document.getElementById("totalActiveClients").textContent = clientTracking.totalActiveClients;
+        document.getElementById("clientsPaidToday").textContent = clientTracking.paidToday;
+        document.getElementById("clientsDidNotPay").textContent = clientTracking.didNotPayToday;
+        document.getElementById("effectivenessPercentage").textContent = `${clientTracking.effectivenessPercentage}%`;
+        document.getElementById("totalCustomerIncome").textContent = `$${clientTracking.totalIncome.toLocaleString('es-CO')}`;
+    }
 
     // Inventario
     document.getElementById("inventoryCount").textContent = inventory.count;
