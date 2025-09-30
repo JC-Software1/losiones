@@ -66,7 +66,17 @@ router.get("/pending", auth, async (req, res) => {
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
         const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
 
-        const totalInitialPayments = sales.reduce((sum, s) => sum + (s.advancePayment || 0), 0);
+        // ✅ NUEVO: Calcular total de señas desde los pagos
+let totalInitialPayments = 0;
+allSales.forEach(sale => {
+    if (sale.payments && sale.payments.length > 0 && sale.advancePayment > 0) {
+        const firstPayment = sale.payments[0];
+        // Solo contar si el primer pago coincide con advancePayment Y no está liquidado
+        if (firstPayment.amount === sale.advancePayment && !firstPayment.liquidatedDay) {
+            totalInitialPayments += firstPayment.amount;
+        }
+    }
+});
 
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
 
@@ -148,7 +158,20 @@ router.post("/create", auth, async (req, res) => {
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
         const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
 
-        const totalInitialPayments = sales.reduce((sum, s) => sum + (s.advancePayment || 0), 0);
+        // ✅ NUEVO: Calcular total de señas desde pagos no liquidados
+let totalInitialPayments = 0;
+allSales.forEach(sale => {
+    if (sale.payments && sale.payments.length > 0 && sale.advancePayment > 0) {
+        const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
+        if (unliquidatedPayments.length > 0) {
+            const firstUnliquidated = unliquidatedPayments[0];
+            // Solo contar si coincide con advancePayment
+            if (firstUnliquidated.amount === sale.advancePayment) {
+                totalInitialPayments += firstUnliquidated.amount;
+            }
+        }
+    }
+});
 
 
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
@@ -156,7 +179,8 @@ router.post("/create", auth, async (req, res) => {
         // ✅ CAMBIO: Solo los abonos cuentan como ingreso, las ventas NO
 // ✅ CAMBIO: Calcular ingreso con señas incluidas
 const paymentsAfterCommission = totalPayments - (totalPayments * (paymentsCommission / 100));
-const totalIncome = paymentsAfterCommission + totalInitialPayments;  // ← ABONOS + SEÑAS
+// Las señas NO se suman porque ya están incluidas en paymentsAfterCommission
+const totalIncome = paymentsAfterCommission;  // ← Solo abonos (que incluyen señas)
         const totalExpenses = totalInventoryCost;
         const finalCash = initialCash + totalIncome - totalExpenses;
 

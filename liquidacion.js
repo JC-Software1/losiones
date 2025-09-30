@@ -23,7 +23,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadPendingData();
 
     // Event listeners
-    document.getElementById("initialCash").addEventListener("input", updateSummary);
+    // Event listeners (updateSummary se llamará después de cargar la caja inicial)
+const initialCashInput = document.getElementById("initialCash");
+initialCashInput.addEventListener("input", updateSummary);
+
+// ✅ Llamar updateSummary después de prellenar
+setTimeout(() => updateSummary(), 100);
     document.getElementById("paymentsCommission").addEventListener("input", updateSummary);
     document.getElementById("salesCommission").addEventListener("input", updateSummary);
 });
@@ -36,8 +41,13 @@ async function loadPendingData() {
         
         pendingData = response;
 
-        // Mostrar datos
-        displayPendingData();
+        // ✅ NUEVO: Cargar última liquidación para obtener caja final
+await loadLastLiquidation();
+
+// Mostrar datos
+displayPendingData();
+
+
         updateSummary();
 
         // Ocultar loading y mostrar contenido
@@ -253,3 +263,25 @@ window.liquidateDay = async function() {
     }
 };
 
+
+// Cargar última liquidación para prellenar caja inicial
+async function loadLastLiquidation() {
+    try {
+        const token = getToken();
+        const liquidations = await apiFetch("/liquidation/history", "GET", null, token);
+        
+        if (liquidations && liquidations.length > 0) {
+            // La primera es la más reciente (están ordenadas por fecha descendente)
+            const lastLiquidation = liquidations[0];
+            document.getElementById("initialCash").value = lastLiquidation.finalCash;
+            
+            console.log('✅ Caja inicial prellenada con caja final anterior:', lastLiquidation.finalCash);
+        } else {
+            console.log('ℹ️ No hay liquidaciones previas, caja inicial en 0');
+            document.getElementById("initialCash").value = 0;
+        }
+    } catch (error) {
+        console.log('ℹ️ No se pudo cargar liquidación anterior:', error.message);
+        document.getElementById("initialCash").value = 0;
+    }
+}
