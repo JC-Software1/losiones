@@ -141,22 +141,31 @@ function createPaymentCard(payment) {
     card.classList.add("sale-card");
     card.setAttribute("data-payment-id", payment._id);
 
-    const paymentDate = new Date(payment.date).toLocaleDateString('es-CO', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-    
-    const paymentTime = new Date(payment.date).toLocaleTimeString('es-CO', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+// 🔥 Ajustar fecha para zona horaria local
+const paymentDateObj = new Date(payment.date);
+// Compensar diferencia de zona horaria
+const localPaymentDate = new Date(paymentDateObj.getTime() + paymentDateObj.getTimezoneOffset() * 60000);
 
-    const saleDate = new Date(payment.saleDate).toLocaleDateString('es-CO', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+const paymentDate = localPaymentDate.toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+});
+
+const paymentTime = localPaymentDate.toLocaleTimeString('es-CO', {
+    hour: '2-digit',
+    minute: '2-digit'
+});
+
+// 🔥 Ajustar fecha de venta para zona horaria local
+const saleDateObj = new Date(payment.saleDate);
+const localSaleDate = new Date(saleDateObj.getTime() + saleDateObj.getTimezoneOffset() * 60000);
+
+const saleDate = localSaleDate.toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+});
 
     const statusClass = payment.isCompleted ? "completed" : "pending";
     
@@ -512,23 +521,48 @@ function applyFilters() {
   }
 
   if (dateValue) {
-    const selectedDate = new Date(dateValue);
-    selectedDate.setHours(0, 0, 0, 0);
+    // 🔥 Parsear la fecha seleccionada correctamente
+    const [year, month, day] = dateValue.split('-').map(Number);
+    const selectedDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
     filteredPayments = filteredPayments.filter(payment => {
-      const paymentDate = new Date(payment.date);
-      paymentDate.setHours(0, 0, 0, 0);
-      return paymentDate.getTime() === selectedDate.getTime();
+      // 🔥 Usar parseDateLocal para interpretar correctamente la fecha del pago
+      const paymentDateObj = parseDateLocal(payment.date);
+      const paymentYear = paymentDateObj.getFullYear();
+      const paymentMonth = paymentDateObj.getMonth() + 1;
+      const paymentDay = paymentDateObj.getDate();
+      const paymentDateStr = `${paymentYear}-${String(paymentMonth).padStart(2, '0')}-${String(paymentDay).padStart(2, '0')}`;
+      
+      return paymentDateStr === selectedDateStr;
     });
   }
 
-  // 🔥 Actualizar lista y estadísticas con los filtros aplicados
+  // Actualizar lista y estadísticas con los filtros aplicados
   displayPayments(filteredPayments);
 
-  // 🔥 Recalcular estadísticas SOLO con las ventas que tienen pagos en el rango filtrado
+  // Recalcular estadísticas SOLO con las ventas que tienen pagos en el rango filtrado
   updateStatistics(filteredPayments, extractSalesFromPayments(filteredPayments));
 }
 
+// 🔥 Agregar esta función helper si no existe
+function parseDateLocal(dateString) {
+    if (!dateString) return new Date(NaN);
+    
+    // Si es formato solo fecha "YYYY-MM-DD"
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [y, m, d] = dateString.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    }
+    
+    // Si tiene timezone (ISO con Z o offset)
+    const date = new Date(dateString);
+    if (!isNaN(date)) {
+        // Ajustar a zona local
+        return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    }
+    
+    return new Date(dateString);
+}
 function extractSalesFromPayments(payments) {
   if (!payments || payments.length === 0) return [];
 

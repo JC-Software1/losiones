@@ -786,52 +786,57 @@ function renderPaymentCalendar(sale) {
             <div class="breakdown-item"><div class="breakdown-value">${Math.max(0,installments-paidCount)}</div><div class="breakdown-label">Pendientes</div></div>
         </div>`;
 }
-        function renderPaymentsHistory(sale) {
-            const container = document.getElementById('paymentsTableContainer');
-            
-            if (!sale.payments || sale.payments.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-receipt"></i>
-                        <h3>No hay abonos registrados</h3>
-                        <p>Aún no se han registrado pagos para esta venta.</p>
-                    </div>
-                `;
-                return;
-            }
+function renderPaymentsHistory(sale) {
+    const container = document.getElementById('paymentsTableContainer');
+    
+    if (!sale.payments || sale.payments.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-receipt"></i>
+                <h3>No hay abonos registrados</h3>
+                <p>Aún no se han registrado pagos para esta venta.</p>
+            </div>
+        `;
+        return;
+    }
 
-            const formatCurrency = (value) => {
-                return new Intl.NumberFormat('es-CO', {
-                    style: 'currency',
-                    currency: 'COP',
-                    minimumFractionDigits: 0
-                }).format(value);
-            };
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('es-CO', {
+            style: 'currency',
+            currency: 'COP',
+            minimumFractionDigits: 0
+        }).format(value);
+    };
 
-            const sortedPayments = [...sale.payments].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sortedPayments = [...sale.payments].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            container.innerHTML = `
-                <table class="payments-table">
-                    <thead>
+    container.innerHTML = `
+        <table class="payments-table">
+            <thead>
+                <tr>
+                    <th>Fecha de Abono</th>
+                    <th>Monto</th>
+                    <th>Día del Mes</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${sortedPayments.map(payment => {
+                    // 🔥 Usar parseDateLocal para obtener el día correcto
+                    const localDate = parseDateLocal(payment.date);
+                    const dayOfMonth = localDate.getDate();
+                    
+                    return `
                         <tr>
-                            <th>Fecha de Abono</th>
-                            <th>Monto</th>
-                            <th>Día del Mes</th>
+                            <td>${formatDate(payment.date)}</td>
+                            <td class="payment-amount">${formatCurrency(payment.amount)}</td>
+                            <td><span style="background: var(--primary); color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem;">${dayOfMonth}</span></td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${sortedPayments.map(payment => `
-                            <tr>
-                                <td>${formatDate(payment.date)}</td>
-                                <td class="payment-amount">${formatCurrency(payment.amount)}</td>
-                                <td><span style="background: var(--primary); color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem;">${new Date(payment.date).getDate()}</span></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-        }
-
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
 function formatDate(dateString) {
     if (!dateString) return 'Fecha inválida';
     

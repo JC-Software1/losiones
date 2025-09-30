@@ -92,14 +92,24 @@ function displayPendingData() {
     // Abonos
     document.getElementById("paymentsCount").textContent = payments.count;
     document.getElementById("paymentsTotal").textContent = `$${payments.total.toLocaleString('es-CO')}`;
+    // ✅ NUEVO: Mostrar total de señas
+document.getElementById("initialPaymentsTotal").textContent = `$${(payments.totalInitialPayments || 0).toLocaleString('es-CO')}`;
     
     // Detalles de abonos
-    const paymentsDetailsHTML = payments.data.map(p => `
+const paymentsDetailsHTML = payments.data.map(p => {
+    const isInitial = sales.data.some(s => 
+        s.clientName === p.clientName && 
+        s.advancePayment === p.amount
+    );
+    const badge = isInitial ? '<span style="background: #9b59b6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Seña</span>' : '';
+    
+    return `
         <div class="detail-item">
-            <span>${p.clientName}</span>
+            <span>${p.clientName}${badge}</span>
             <strong>$${p.amount.toLocaleString('es-CO')}</strong>
         </div>
-    `).join('');
+    `;
+}).join('');
     document.getElementById("paymentsDetails").innerHTML = paymentsDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay abonos pendientes</p>';
 
     // Ventas
@@ -154,6 +164,8 @@ function updateSummary() {
     const paymentsAfterComm = payments.total - (payments.total * (paymentsCommission / 100));
     const paymentsCommAmount = payments.total - paymentsAfterComm;
 
+    const initialPayments = payments.totalInitialPayments || 0;
+
     // ✅ Calcular comisión para ventas (SOLO INFORMATIVO, no se suma a ingresos)
     const salesCommission = parseFloat(document.getElementById("salesCommission").value) || 0;
     const salesAfterComm = sales.total - (sales.total * (salesCommission / 100));
@@ -167,8 +179,8 @@ function updateSummary() {
     document.getElementById("salesAfterCommission").textContent = `$${salesAfterComm.toLocaleString('es-CO')}`;
     document.getElementById("salesCommissionAmount").textContent = `Comisión: $${salesCommAmount.toLocaleString('es-CO')} (no se suma a ingresos)`;
 
-    // ✅ Calcular totales - Las ventas NO cuentan como ingreso
-    const totalIncome = paymentsAfterComm;  // ← SOLO ABONOS
+// ✅ Calcular totales - Abonos después de comisión + Señas
+const totalIncome = paymentsAfterComm + initialPayments;  // ← ABONOS + SEÑAS
     const totalExpenses = inventory.totalCost;
     const finalCash = initialCash + totalIncome - totalExpenses;
 

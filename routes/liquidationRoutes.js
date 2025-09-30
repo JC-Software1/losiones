@@ -65,6 +65,9 @@ router.get("/pending", auth, async (req, res) => {
         // Calcular totales
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
         const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
+
+        const totalInitialPayments = sales.reduce((sum, s) => sum + (s.advancePayment || 0), 0);
+
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
 
         res.json({
@@ -73,11 +76,12 @@ router.get("/pending", auth, async (req, res) => {
                 total: totalSales,
                 data: sales
             },
-            payments: {
-                count: paymentsData.length,
-                total: totalPayments,
-                data: paymentsData
-            },
+payments: {
+    count: paymentsData.length,
+    total: totalPayments,
+    totalInitialPayments: totalInitialPayments,  // ✅ NUEVO
+    data: paymentsData
+},
             inventory: {
                 count: products.length,
                 totalCost: totalInventoryCost,
@@ -143,13 +147,16 @@ router.post("/create", auth, async (req, res) => {
         // Calcular totales
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
         const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
+
+        const totalInitialPayments = sales.reduce((sum, s) => sum + (s.advancePayment || 0), 0);
+
+
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
 
         // ✅ CAMBIO: Solo los abonos cuentan como ingreso, las ventas NO
-        const paymentsAfterCommission = totalPayments - (totalPayments * (paymentsCommission / 100));
-        
-        // Las ventas ya NO generan ingreso adicional
-        const totalIncome = paymentsAfterCommission;  // ← SOLO ABONOS
+// ✅ CAMBIO: Calcular ingreso con señas incluidas
+const paymentsAfterCommission = totalPayments - (totalPayments * (paymentsCommission / 100));
+const totalIncome = paymentsAfterCommission + totalInitialPayments;  // ← ABONOS + SEÑAS
         const totalExpenses = totalInventoryCost;
         const finalCash = initialCash + totalIncome - totalExpenses;
 
@@ -158,12 +165,13 @@ router.post("/create", auth, async (req, res) => {
             user: req.user.id,
             initialCash,
             finalCash,
-            payments: {
-                count: paymentsData.length,
-                total: totalPayments,
-                afterCommission: paymentsAfterCommission,
-                commissionPercentage: paymentsCommission
-            },
+payments: {
+    count: paymentsData.length,
+    total: totalPayments,
+    totalInitialPayments: totalInitialPayments,  // ✅ NUEVO
+    afterCommission: paymentsAfterCommission,
+    commissionPercentage: paymentsCommission
+},
             sales: {
                 count: sales.length,
                 total: totalSales,
