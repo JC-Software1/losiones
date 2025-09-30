@@ -29,6 +29,7 @@
       coinLoader.appendChild(coin);
     }
     
+    
     // Texto de carga
     const loadingText = document.createElement('div');
     loadingText.className = 'loading-text';
