@@ -171,29 +171,29 @@ function updateSummary() {
 
     // ✅ CAMBIO: Solo calcular comisión para abonos
 // Calcular comisión para abonos
-    const paymentsAfterComm = payments.total - (payments.total * (paymentsCommission / 100));
-    const paymentsCommAmount = payments.total - paymentsAfterComm;
+// ✅ CAMBIO: Solo calcular comisión para abonos (REDONDEADO)
+const paymentsAfterComm = Math.round(payments.total - (payments.total * (paymentsCommission / 100)));
+const paymentsCommAmount = payments.total - paymentsAfterComm;
 
-    const initialPayments = payments.totalInitialPayments || 0;
+const initialPayments = payments.totalInitialPayments || 0;
 
-    // ✅ Calcular comisión para ventas (SOLO INFORMATIVO, no se suma a ingresos)
-    const salesCommission = parseFloat(document.getElementById("salesCommission").value) || 0;
-    const salesAfterComm = sales.total - (sales.total * (salesCommission / 100));
-    const salesCommAmount = sales.total - salesAfterComm;
+// ✅ Calcular comisión para ventas (SOLO INFORMATIVO, no se suma a ingresos)
+const salesCommission = parseFloat(document.getElementById("salesCommission").value) || 0;
+const salesAfterComm = Math.round(sales.total - (sales.total * (salesCommission / 100)));
+const salesCommAmount = sales.total - salesAfterComm;
 
-    // Actualizar campos de comisión de abonos
-    document.getElementById("paymentsAfterCommission").textContent = `$${paymentsAfterComm.toLocaleString('es-CO')}`;
-    document.getElementById("paymentsCommissionAmount").textContent = `Comisión: $${paymentsCommAmount.toLocaleString('es-CO')}`;
+// Actualizar campos de comisión de abonos
+document.getElementById("paymentsAfterCommission").textContent = `$${paymentsAfterComm.toLocaleString('es-CO')}`;
+document.getElementById("paymentsCommissionAmount").textContent = `Comisión: $${paymentsCommAmount.toLocaleString('es-CO')}`;
 
-    // ✅ Actualizar campos de comisión de ventas (INFORMATIVO)
-    document.getElementById("salesAfterCommission").textContent = `$${salesAfterComm.toLocaleString('es-CO')}`;
-    document.getElementById("salesCommissionAmount").textContent = `Comisión: $${salesCommAmount.toLocaleString('es-CO')} (no se suma a ingresos)`;
+// ✅ Actualizar campos de comisión de ventas (INFORMATIVO)
+document.getElementById("salesAfterCommission").textContent = `$${salesAfterComm.toLocaleString('es-CO')}`;
+document.getElementById("salesCommissionAmount").textContent = `Comisión: $${salesCommAmount.toLocaleString('es-CO')} (no se suma a ingresos)`;
 
-// ✅ Calcular totales - Abonos después de comisión + Señas
-const totalIncome = paymentsAfterComm + initialPayments;  // ← ABONOS + SEÑAS
-    const totalExpenses = inventory.totalCost;
-    const finalCash = initialCash + totalIncome - totalExpenses;
-
+// ✅ Calcular totales - REDONDEADO
+const totalIncome = Math.round(paymentsAfterComm + initialPayments);
+const totalExpenses = Math.round(inventory.totalCost);
+const finalCash = Math.round(initialCash + totalIncome - totalExpenses);
     // Actualizar resumen
     document.getElementById("summaryInitial").textContent = `$${initialCash.toLocaleString('es-CO')}`;
     document.getElementById("summaryIncome").textContent = `$${totalIncome.toLocaleString('es-CO')}`;

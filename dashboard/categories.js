@@ -1121,12 +1121,10 @@ async function saveReceiptToMongo(receiptData) {
 
 // Resto de funciones permanecen igual...
 function saveReceipt(receiptData) {
-    let receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-    receipts.push(receiptData);
-    localStorage.setItem('salesReceipts', JSON.stringify(receipts));
+    // Solo guardar en MongoDB, no usar localStorage
     saveReceiptToMongo(receiptData);
+    console.log('✅ Recibo guardado en MongoDB');
 }
-
 // REEMPLAZA la función showReceiptOptionsModal en tu categories.js:
 
 function showReceiptOptionsModal(receiptData) {

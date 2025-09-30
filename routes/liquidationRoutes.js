@@ -316,4 +316,55 @@ router.delete("/:id", auth, async (req, res) => {
     }
 });
 
+// Corregir cálculo de liquidaciones existentes
+router.post("/fix-calculations", auth, async (req, res) => {
+    try {
+        const liquidations = await DailyLiquidation.find({ user: req.user.id });
+        
+        let fixed = 0;
+        const results = [];
+
+        for (const liq of liquidations) {
+            // Recalcular correctamente
+            const paymentsAfterComm = Math.round(
+                liq.payments.total - (liq.payments.total * (liq.payments.commissionPercentage / 100))
+            );
+            
+            const initialPayments = liq.payments.totalInitialPayments || 0;
+            const totalIncome = Math.round(paymentsAfterComm + initialPayments);
+            const totalExpenses = Math.round(liq.inventory.totalCost);
+            const correctFinalCash = Math.round(liq.initialCash + totalIncome - totalExpenses);
+
+            // Solo actualizar si el valor es diferente
+            if (liq.finalCash !== correctFinalCash) {
+                results.push({
+                    id: liq._id,
+                    date: liq.liquidationDate,
+                    oldFinalCash: liq.finalCash,
+                    newFinalCash: correctFinalCash,
+                    difference: correctFinalCash - liq.finalCash
+                });
+
+                liq.finalCash = correctFinalCash;
+                liq.totalIncome = totalIncome;
+                liq.totalExpenses = totalExpenses;
+                liq.payments.afterCommission = paymentsAfterComm;
+                
+                await liq.save();
+                fixed++;
+            }
+        }
+
+        res.json({
+            message: `${fixed} liquidaciones corregidas`,
+            totalLiquidations: liquidations.length,
+            corrections: results
+        });
+
+    } catch (error) {
+        console.error("Error al corregir liquidaciones:", error);
+        res.status(500).json({ error: "Error al corregir liquidaciones: " + error.message });
+    }
+});
+
 module.exports = router;
