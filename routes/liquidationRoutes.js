@@ -336,23 +336,45 @@ router.post("/fix-calculations", auth, async (req, res) => {
             const correctFinalCash = Math.round(liq.initialCash + totalIncome - totalExpenses);
 
             // Solo actualizar si el valor es diferente
-            if (liq.finalCash !== correctFinalCash) {
-                results.push({
-                    id: liq._id,
-                    date: liq.liquidationDate,
-                    oldFinalCash: liq.finalCash,
-                    newFinalCash: correctFinalCash,
-                    difference: correctFinalCash - liq.finalCash
-                });
+for (const liq of liquidations) {
+    // Recalcular correctamente
+    const paymentsAfterComm = Math.round(
+        liq.payments.total - (liq.payments.total * (liq.payments.commissionPercentage / 100))
+    );
+    
+    const initialPayments = liq.payments.totalInitialPayments || 0;
+    const totalIncome = Math.round(paymentsAfterComm + initialPayments);
+    const totalExpenses = Math.round(liq.inventory.totalCost);
+    const correctFinalCash = Math.round(liq.initialCash + totalIncome - totalExpenses);
 
-                liq.finalCash = correctFinalCash;
-                liq.totalIncome = totalIncome;
-                liq.totalExpenses = totalExpenses;
-                liq.payments.afterCommission = paymentsAfterComm;
-                
-                await liq.save();
-                fixed++;
-            }
+    // ✅ Actualizar si falta totalInitialPayments O si la caja final es diferente
+    const needsUpdate = 
+        !liq.payments.totalInitialPayments || 
+        liq.finalCash !== correctFinalCash ||
+        liq.totalIncome !== totalIncome;
+
+    if (needsUpdate) {
+        results.push({
+            id: liq._id,
+            date: liq.liquidationDate,
+            oldFinalCash: liq.finalCash,
+            newFinalCash: correctFinalCash,
+            oldTotalIncome: liq.totalIncome,
+            newTotalIncome: totalIncome,
+            initialPayments: initialPayments,
+            difference: correctFinalCash - liq.finalCash
+        });
+
+        liq.finalCash = correctFinalCash;
+        liq.totalIncome = totalIncome;
+        liq.totalExpenses = totalExpenses;
+        liq.payments.afterCommission = paymentsAfterComm;
+        liq.payments.totalInitialPayments = initialPayments;  // ✅ CRÍTICO
+        
+        await liq.save();
+        fixed++;
+    }
+}
         }
 
         res.json({
