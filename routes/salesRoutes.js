@@ -120,6 +120,7 @@ router.get("/settled", auth, async (req, res) => {
 
 
 
+
 // Crear nueva venta
 router.post("/new", auth, async (req, res) => {
     try {
@@ -131,34 +132,33 @@ router.post("/new", auth, async (req, res) => {
             installments,
             advancePayment,
             clientAddress,
-            paymentDays   // ⬅️ nuevo campo
+            paymentDays
         } = req.body;
 
-        // Unir nombres de productos para productName
         const productName = products.map(p => p.name).join(', ');
-
         const initiallySettled = advancePayment >= price;
 
-const sale = new Sale({
-    clientName,
-    productName,
-    products,
-    saleDate,
-    price,
-    installments,
-    advancePayment,
-    clientAddress,
-    paymentDays,
-    user: req.user.id,
-    settled: initiallySettled,
-    settledDate: initiallySettled ? new Date() : null,
-    liquidatedDay: false,  // ← AGREGAR ESTA LÍNEA
-    payments: advancePayment > 0 ? [{ 
-    amount: advancePayment, 
-    date: new Date(),
-    liquidatedDay: false  // ← AGREGAR ESTA LÍNEA
-}] : []
-});
+        const sale = new Sale({
+            clientName,
+            productName,
+            products,
+            saleDate,
+            price,
+            installments,
+            advancePayment,
+            clientAddress,
+            paymentDays,
+            user: req.user.id,
+            settled: initiallySettled,
+            settledDate: initiallySettled ? new Date() : null,
+            liquidatedDay: false,
+            // 🔥 CAMBIO AQUÍ: Usar saleDate en vez de new Date()
+            payments: advancePayment > 0 ? [{ 
+                amount: advancePayment, 
+                date: saleDate,  // ✅ Ahora usa la fecha de la venta
+                liquidatedDay: false
+            }] : []
+        });
 
         await sale.save();
         res.status(201).json(sale);
@@ -167,7 +167,6 @@ const sale = new Sale({
         res.status(500).json({ error: error.message });
     }
 });
-
 // Actualizar una venta
 router.put("/:id", auth, async (req, res) => {
     const { clientName, productName, saleDate, price, installments, clientAddress, paymentDays } = req.body;
