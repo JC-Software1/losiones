@@ -139,21 +139,26 @@ router.post("/new", auth, async (req, res) => {
 
         const initiallySettled = advancePayment >= price;
 
-        const sale = new Sale({
-            clientName,
-            productName,
-            products,
-            saleDate,
-            price,
-            installments,
-            advancePayment,
-            clientAddress,
-            paymentDays,        // ⬅️ se guarda
-            user: req.user.id,
-            settled: initiallySettled,
-            settledDate: initiallySettled ? new Date() : null,
-            payments: advancePayment > 0 ? [{ amount: advancePayment, date: new Date() }] : []
-        });
+const sale = new Sale({
+    clientName,
+    productName,
+    products,
+    saleDate,
+    price,
+    installments,
+    advancePayment,
+    clientAddress,
+    paymentDays,
+    user: req.user.id,
+    settled: initiallySettled,
+    settledDate: initiallySettled ? new Date() : null,
+    liquidatedDay: false,  // ← AGREGAR ESTA LÍNEA
+    payments: advancePayment > 0 ? [{ 
+    amount: advancePayment, 
+    date: new Date(),
+    liquidatedDay: false  // ← AGREGAR ESTA LÍNEA
+}] : []
+});
 
         await sale.save();
         res.status(201).json(sale);
@@ -229,10 +234,11 @@ router.post("/:id/payment", auth, async (req, res) => {
         }
 
         // Agregar el nuevo abono
-        sale.payments.push({
-            amount,
-            date: date || new Date()
-        });
+sale.payments.push({
+    amount,
+    date: date || new Date(),
+    liquidatedDay: false  // ← AGREGAR ESTA LÍNEA
+});
 
         // 💥 Aquí recalculamos bien el total pagado
         const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
@@ -276,6 +282,35 @@ router.delete("/:id", auth, async (req, res) => {
         res.json({ message: "Venta eliminada correctamente" });
     } catch (error) {
         res.status(500).json({ error: "Error al eliminar la venta" });
+    }
+});
+
+// En salesRoutes.js (temporal, eliminar después de usar)
+router.post("/migrate-liquidation-flags", auth, async (req, res) => {
+    try {
+        // Actualizar ventas
+        await Sale.updateMany(
+            { user: req.user.id, liquidatedDay: { $exists: false } },
+            { $set: { liquidatedDay: false } }
+        );
+
+        // Actualizar pagos
+        const sales = await Sale.find({ user: req.user.id });
+        for (const sale of sales) {
+            let updated = false;
+            sale.payments = sale.payments.map(p => {
+                if (p.liquidatedDay === undefined) {
+                    p.liquidatedDay = false;
+                    updated = true;
+                }
+                return p;
+            });
+            if (updated) await sale.save();
+        }
+
+        res.json({ message: "Migración completada" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

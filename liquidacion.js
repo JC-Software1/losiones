@@ -5,8 +5,8 @@ import { getToken } from "./utils/auth.js";
 let pendingData = null;
 
 // Inicialización
+// En liquidacion.js, modifica la función DOMContentLoaded:
 document.addEventListener("DOMContentLoaded", async () => {
-    // Mostrar fecha actual
     const dateElement = document.getElementById("currentDate");
     const today = new Date();
     dateElement.textContent = today.toLocaleDateString('es-CO', { 
@@ -16,13 +16,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         day: 'numeric' 
     });
 
-    // Cargar datos pendientes
+    // ✅ Cargar comisiones PRIMERO
+    await loadSavedCommissions();
+    
+    // ✅ Luego cargar datos pendientes (que también llama updateSummary)
     await loadPendingData();
 
-    // Cargar porcentajes guardados
-    await loadSavedCommissions();
-
-    // Event listeners para recalcular
+    // Event listeners
     document.getElementById("initialCash").addEventListener("input", updateSummary);
     document.getElementById("paymentsCommission").addEventListener("input", updateSummary);
     document.getElementById("salesCommission").addEventListener("input", updateSummary);
