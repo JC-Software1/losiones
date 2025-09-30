@@ -25,7 +25,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Event listeners
     // Event listeners (updateSummary se llamará después de cargar la caja inicial)
 const initialCashInput = document.getElementById("initialCash");
-initialCashInput.addEventListener("input", updateSummary);
 
 // ✅ Llamar updateSummary después de prellenar
 setTimeout(() => updateSummary(), 100);
@@ -244,11 +243,18 @@ window.liquidateDay = async function() {
     const notes = document.getElementById("notes").value.trim();
 
     // Validaciones
-    if (isNaN(initialCash) || initialCash < 0) {
-        alert("Por favor ingresa un valor válido para la caja inicial");
-        document.getElementById("initialCash").focus();
+// Validaciones
+if (isNaN(initialCash)) {
+    alert("Error: La caja inicial no tiene un valor válido");
+    return;
+}
+
+// Permitir caja inicial negativa pero advertir al usuario
+if (initialCash < 0) {
+    if (!confirm(`La caja inicial es negativa ($${initialCash.toLocaleString('es-CO')}). ¿Deseas continuar con la liquidación?`)) {
         return;
     }
+}
 
     if (!pendingData || (pendingData.payments.count === 0 && pendingData.sales.count === 0)) {
         if (!confirm("No hay abonos ni ventas pendientes. ¿Deseas continuar con la liquidación?")) {

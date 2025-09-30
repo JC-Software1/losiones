@@ -8,87 +8,103 @@ const Expense = require("../models/Expense");
 const router = express.Router();
 
 // Obtener datos pendientes de liquidación
+// Obtener datos pendientes de liquidación
 router.get("/pending", auth, async (req, res) => {
     try {
-        // Ventas no liquidadas
+        // Usar lean() para obtener objetos planos sin métodos de Mongoose (mucho más rápido)
         const sales = await Sale.find({ 
             user: req.user.id, 
             liquidatedDay: false 
-        });
+        }).lean().select('_id clientName price advancePayment payments');
 
-        // Productos no liquidados Y NO VENDIDOS
         const products = await Product.find({ 
             user: req.user.id, 
             liquidatedDay: false,
             sold: false
-        });
+        }).lean().select('_id name brand costPrice');
 
-        // Gastos no liquidados
         const expenses = await Expense.find({ 
             user: req.user.id, 
             liquidatedDay: false 
-        });
+        }).lean().select('_id date totalAmount items');
 
-        // Abonos no liquidados (dentro de todas las ventas)
-        const allSales = await Sale.find({ user: req.user.id });
-        
+        // Solo obtener ventas activas (no liquidadas completamente) para seguimiento
+        const allActiveSales = await Sale.find({ 
+            user: req.user.id, 
+            settled: false
+        }).lean().select('_id clientName payments advancePayment');
+
+        // Calcular abonos pendientes de forma más eficiente
         let paymentsData = [];
-        allSales.forEach(sale => {
+        let totalPayments = 0;
+        let totalInitialPayments = 0;
+        const clientsWhoPaidToday = new Set();
+
+        allActiveSales.forEach(sale => {
+            if (!sale.payments) return;
+            
             const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
-            unliquidatedPayments.forEach(payment => {
+            
+            unliquidatedPayments.forEach((payment, index) => {
+                const isFirstPayment = index === 0 && sale.advancePayment > 0 && payment.amount === sale.advancePayment;
+                
+                if (isFirstPayment) {
+                    totalInitialPayments += payment.amount;
+                }
+                
+                totalPayments += payment.amount;
+                clientsWhoPaidToday.add(sale.clientName);
+                
                 paymentsData.push({
                     saleId: sale._id,
                     clientName: sale.clientName,
                     amount: payment.amount,
                     date: payment.date,
-                    paymentId: payment._id
+                    paymentId: payment._id,
+                    isInitialPayment: isFirstPayment
                 });
             });
         });
 
-        // Calcular estadísticas de seguimiento de clientes
-        const allActiveSales = await Sale.find({ 
-            user: req.user.id, 
-            settled: false
-        });
+        // Calcular totales de forma directa
+        const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
+        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
+        const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
 
+        // Estadísticas de seguimiento
         const totalActiveClients = allActiveSales.length;
-        
-        const clientsWhoPaidToday = new Set();
-        paymentsData.forEach(p => {
-            clientsWhoPaidToday.add(p.clientName);
-        });
         const paidTodayCount = clientsWhoPaidToday.size;
-        
         const clientsWhoDidntPayToday = totalActiveClients - paidTodayCount;
-        
         const effectivenessPercentage = totalActiveClients > 0 
             ? ((paidTodayCount / totalActiveClients) * 100).toFixed(1)
             : 0;
 
-        // Calcular totales
-        const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
-        const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
-        const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
+        // Preparar datos simplificados para el frontend
+        const salesData = sales.map(s => ({
+            _id: s._id,
+            clientName: s.clientName,
+            price: s.price
+        }));
 
-        // Calcular total de señas desde los pagos
-        let totalInitialPayments = 0;
-        allSales.forEach(sale => {
-            if (sale.payments && sale.payments.length > 0 && sale.advancePayment > 0) {
-                const firstPayment = sale.payments[0];
-                if (firstPayment.amount === sale.advancePayment && !firstPayment.liquidatedDay) {
-                    totalInitialPayments += firstPayment.amount;
-                }
-            }
-        });
+        const productsData = products.map(p => ({
+            _id: p._id,
+            name: p.name,
+            brand: p.brand,
+            costPrice: p.costPrice
+        }));
 
-        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
+        const expensesData = expenses.map(e => ({
+            _id: e._id,
+            date: e.date,
+            totalAmount: e.totalAmount,
+            items: e.items
+        }));
 
         res.json({
             sales: {
                 count: sales.length,
                 total: totalSales,
-                data: sales
+                data: salesData
             },
             payments: {
                 count: paymentsData.length,
@@ -99,12 +115,12 @@ router.get("/pending", auth, async (req, res) => {
             inventory: {
                 count: products.length,
                 totalCost: totalInventoryCost,
-                data: products
+                data: productsData
             },
             expenses: {
                 count: expenses.length,
                 total: totalExpensesAmount,
-                data: expenses
+                data: expensesData
             },
             clientTracking: {
                 totalActiveClients,
