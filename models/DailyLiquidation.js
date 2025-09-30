@@ -48,6 +48,12 @@ payments: {
         type: Number,
         default: 0
     },
+
+    expenses: {
+    totalAmount: { type: Number, default: 0 },
+    count: { type: Number, default: 0 }
+},
+
     // Detalles de las ventas y abonos liquidados
     liquidatedSales: [{
         saleId: mongoose.Schema.Types.ObjectId,
@@ -64,6 +70,17 @@ payments: {
         name: String,
         costPrice: Number
     }],
+
+    liquidatedExpenses: [{
+    expenseId: mongoose.Schema.Types.ObjectId,
+    date: Date,
+    totalAmount: Number,
+    items: [{
+        description: String,
+        amount: Number
+    }]
+}],
+
     notes: {
         type: String,
         default: ""

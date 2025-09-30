@@ -41,12 +41,11 @@ async function loadPendingData() {
         
         pendingData = response;
 
-        // ✅ NUEVO: Cargar última liquidación para obtener caja final
-await loadLastLiquidation();
+        // Cargar última liquidación para obtener caja final
+        await loadLastLiquidation();
 
-// Mostrar datos
-displayPendingData();
-
+        // Mostrar datos
+        displayPendingData();
 
         updateSummary();
 
@@ -156,6 +155,27 @@ const paymentsDetailsHTML = payments.data.map(p => {
         </div>
     `).join('');
     document.getElementById("inventoryDetails").innerHTML = inventoryDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay productos pendientes</p>';
+
+    // Gastos
+document.getElementById("expensesCount").textContent = pendingData.expenses?.count || 0;
+document.getElementById("expensesTotal").textContent = `$${(pendingData.expenses?.total || 0).toLocaleString('es-CO')}`;
+
+// Detalles de gastos
+const expensesDetailsHTML = (pendingData.expenses?.data || []).map(expense => {
+    const expenseDate = new Date(expense.date);
+    const localDate = new Date(expenseDate.getTime() + expenseDate.getTimezoneOffset() * 60000);
+    const formattedDate = localDate.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
+    
+    return expense.items.map(item => `
+        <div class="detail-item">
+            <span>${item.description} <small style="color: var(--medium-gray);">(${formattedDate})</small></span>
+            <strong>$${item.amount.toLocaleString('es-CO')}</strong>
+        </div>
+    `).join('');
+}).join('');
+
+document.getElementById("expensesDetails").innerHTML = expensesDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay gastos pendientes</p>';
+
 }
 
 // Actualizar resumen
@@ -192,7 +212,8 @@ document.getElementById("salesCommissionAmount").textContent = `Comisión: $${sa
 
 // ✅ Calcular totales - REDONDEADO
 const totalIncome = Math.round(paymentsAfterComm + initialPayments);
-const totalExpenses = Math.round(inventory.totalCost);
+const expensesTotal = pendingData.expenses?.total || 0;
+const totalExpenses = Math.round(inventory.totalCost + expensesTotal);
 const finalCash = Math.round(initialCash + totalIncome - totalExpenses);
     // Actualizar resumen
     document.getElementById("summaryInitial").textContent = `$${initialCash.toLocaleString('es-CO')}`;

@@ -4,6 +4,7 @@ const auth = require("../middleware/auth");
 const Sale = require("../models/Sale");
 const Product = require("../models/Product");
 const DailyLiquidation = require("../models/DailyLiquidation");
+const Expense = require("../models/Expense");
 const router = express.Router();
 
 // Obtener datos pendientes de liquidación
@@ -20,6 +21,12 @@ router.get("/pending", auth, async (req, res) => {
             user: req.user.id, 
             liquidatedDay: false,
             sold: false
+        });
+
+        // Gastos no liquidados
+        const expenses = await Expense.find({ 
+            user: req.user.id, 
+            liquidatedDay: false 
         });
 
         // Abonos no liquidados (dentro de todas las ventas)
@@ -39,25 +46,22 @@ router.get("/pending", auth, async (req, res) => {
             });
         });
 
-        // ✅ NUEVO: Calcular estadísticas de seguimiento de clientes
+        // Calcular estadísticas de seguimiento de clientes
         const allActiveSales = await Sale.find({ 
             user: req.user.id, 
-            settled: false  // Solo ventas no liquidadas completamente
+            settled: false
         });
 
         const totalActiveClients = allActiveSales.length;
         
-        // Clientes que han pagado algo (tienen al menos un abono no liquidado hoy)
         const clientsWhoPaidToday = new Set();
         paymentsData.forEach(p => {
             clientsWhoPaidToday.add(p.clientName);
         });
         const paidTodayCount = clientsWhoPaidToday.size;
         
-        // Clientes que no pagaron hoy
         const clientsWhoDidntPayToday = totalActiveClients - paidTodayCount;
         
-        // Porcentaje de efectividad
         const effectivenessPercentage = totalActiveClients > 0 
             ? ((paidTodayCount / totalActiveClients) * 100).toFixed(1)
             : 0;
@@ -65,18 +69,18 @@ router.get("/pending", auth, async (req, res) => {
         // Calcular totales
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
         const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
+        const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
 
-        // ✅ NUEVO: Calcular total de señas desde los pagos
-let totalInitialPayments = 0;
-allSales.forEach(sale => {
-    if (sale.payments && sale.payments.length > 0 && sale.advancePayment > 0) {
-        const firstPayment = sale.payments[0];
-        // Solo contar si el primer pago coincide con advancePayment Y no está liquidado
-        if (firstPayment.amount === sale.advancePayment && !firstPayment.liquidatedDay) {
-            totalInitialPayments += firstPayment.amount;
-        }
-    }
-});
+        // Calcular total de señas desde los pagos
+        let totalInitialPayments = 0;
+        allSales.forEach(sale => {
+            if (sale.payments && sale.payments.length > 0 && sale.advancePayment > 0) {
+                const firstPayment = sale.payments[0];
+                if (firstPayment.amount === sale.advancePayment && !firstPayment.liquidatedDay) {
+                    totalInitialPayments += firstPayment.amount;
+                }
+            }
+        });
 
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
 
@@ -86,18 +90,22 @@ allSales.forEach(sale => {
                 total: totalSales,
                 data: sales
             },
-payments: {
-    count: paymentsData.length,
-    total: totalPayments,
-    totalInitialPayments: totalInitialPayments,  // ✅ NUEVO
-    data: paymentsData
-},
+            payments: {
+                count: paymentsData.length,
+                total: totalPayments,
+                totalInitialPayments: totalInitialPayments,
+                data: paymentsData
+            },
             inventory: {
                 count: products.length,
                 totalCost: totalInventoryCost,
                 data: products
             },
-            // ✅ NUEVO: Estadísticas de seguimiento
+            expenses: {
+                count: expenses.length,
+                total: totalExpensesAmount,
+                data: expenses
+            },
             clientTracking: {
                 totalActiveClients,
                 paidToday: paidTodayCount,
@@ -134,6 +142,12 @@ router.post("/create", auth, async (req, res) => {
             sold: false
         });
 
+        // Gastos no liquidados
+        const expenses = await Expense.find({ 
+            user: req.user.id, 
+            liquidatedDay: false 
+        });
+
         const allSales = await Sale.find({ user: req.user.id });
         
         let paymentsData = [];
@@ -157,32 +171,28 @@ router.post("/create", auth, async (req, res) => {
         // Calcular totales
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
         const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
+        const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
 
-        // ✅ NUEVO: Calcular total de señas desde pagos no liquidados
-let totalInitialPayments = 0;
-allSales.forEach(sale => {
-    if (sale.payments && sale.payments.length > 0 && sale.advancePayment > 0) {
-        const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
-        if (unliquidatedPayments.length > 0) {
-            const firstUnliquidated = unliquidatedPayments[0];
-            // Solo contar si coincide con advancePayment
-            if (firstUnliquidated.amount === sale.advancePayment) {
-                totalInitialPayments += firstUnliquidated.amount;
+        // Calcular total de señas desde pagos no liquidados
+        let totalInitialPayments = 0;
+        allSales.forEach(sale => {
+            if (sale.payments && sale.payments.length > 0 && sale.advancePayment > 0) {
+                const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
+                if (unliquidatedPayments.length > 0) {
+                    const firstUnliquidated = unliquidatedPayments[0];
+                    if (firstUnliquidated.amount === sale.advancePayment) {
+                        totalInitialPayments += firstUnliquidated.amount;
+                    }
+                }
             }
-        }
-    }
-});
-
+        });
 
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
 
-        // ✅ CAMBIO: Solo los abonos cuentan como ingreso, las ventas NO
-// ✅ CAMBIO: Calcular ingreso con señas incluidas
-// ✅ CAMBIO: Calcular ingreso correctamente
-const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
-// Las señas se suman DESPUÉS de aplicar comisión a los abonos
-const totalIncome = Math.round(paymentsAfterCommission + totalInitialPayments);
-        const totalExpenses = totalInventoryCost;
+        // Calcular ingreso correctamente
+        const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
+        const totalIncome = Math.round(paymentsAfterCommission + totalInitialPayments);
+        const totalExpenses = totalInventoryCost + totalExpensesAmount;
         const finalCash = initialCash + totalIncome - totalExpenses;
 
         // Crear registro de liquidación
@@ -190,23 +200,27 @@ const totalIncome = Math.round(paymentsAfterCommission + totalInitialPayments);
             user: req.user.id,
             initialCash,
             finalCash,
-payments: {
-    count: paymentsData.length,
-    total: totalPayments,
-    totalInitialPayments: totalInitialPayments,  // ✅ NUEVO
-    afterCommission: paymentsAfterCommission,
-    commissionPercentage: paymentsCommission
-},
+            payments: {
+                count: paymentsData.length,
+                total: totalPayments,
+                totalInitialPayments: totalInitialPayments,
+                afterCommission: paymentsAfterCommission,
+                commissionPercentage: paymentsCommission
+            },
             sales: {
                 count: sales.length,
                 total: totalSales,
-                afterCommission: 0,  // ← Ya no aplica comisión a ventas
-                commissionPercentage: 0  // ← Ya no aplica
+                afterCommission: 0,
+                commissionPercentage: 0
             },
             totalIncome,
             inventory: {
                 totalCost: totalInventoryCost,
                 productCount: products.length
+            },
+            expenses: {
+                totalAmount: totalExpensesAmount,
+                count: expenses.length
             },
             totalExpenses,
             liquidatedSales: sales.map(s => ({
@@ -219,6 +233,12 @@ payments: {
                 productId: p._id,
                 name: p.name,
                 costPrice: p.costPrice
+            })),
+            liquidatedExpenses: expenses.map(e => ({
+                expenseId: e._id,
+                date: e.date,
+                totalAmount: e.totalAmount,
+                items: e.items
             })),
             notes: notes || ""
         });
@@ -238,6 +258,15 @@ payments: {
         await Product.updateMany(
             { 
                 _id: { $in: products.map(p => p._id) },
+                user: req.user.id 
+            },
+            { $set: { liquidatedDay: true } }
+        );
+
+        // Marcar gastos como liquidados
+        await Expense.updateMany(
+            { 
+                _id: { $in: expenses.map(e => e._id) },
                 user: req.user.id 
             },
             { $set: { liquidatedDay: true } }
@@ -326,56 +355,46 @@ router.post("/fix-calculations", auth, async (req, res) => {
         const results = [];
 
         for (const liq of liquidations) {
-            // Recalcular correctamente
             const paymentsAfterComm = Math.round(
                 liq.payments.total - (liq.payments.total * (liq.payments.commissionPercentage / 100))
             );
             
             const initialPayments = liq.payments.totalInitialPayments || 0;
             const totalIncome = Math.round(paymentsAfterComm + initialPayments);
-            const totalExpenses = Math.round(liq.inventory.totalCost);
+            const expensesAmount = liq.expenses?.totalAmount || 0;
+            const totalExpenses = Math.round(liq.inventory.totalCost + expensesAmount);
             const correctFinalCash = Math.round(liq.initialCash + totalIncome - totalExpenses);
 
-            // Solo actualizar si el valor es diferente
-for (const liq of liquidations) {
-    // Recalcular correctamente
-    const paymentsAfterComm = Math.round(
-        liq.payments.total - (liq.payments.total * (liq.payments.commissionPercentage / 100))
-    );
-    
-    const initialPayments = liq.payments.totalInitialPayments || 0;
-    const totalIncome = Math.round(paymentsAfterComm + initialPayments);
-    const totalExpenses = Math.round(liq.inventory.totalCost);
-    const correctFinalCash = Math.round(liq.initialCash + totalIncome - totalExpenses);
+            const needsUpdate = 
+                !liq.payments.totalInitialPayments || 
+                liq.finalCash !== correctFinalCash ||
+                liq.totalIncome !== totalIncome ||
+                liq.totalExpenses !== totalExpenses;
 
-    // ✅ Actualizar si falta totalInitialPayments O si la caja final es diferente
-    const needsUpdate = 
-        !liq.payments.totalInitialPayments || 
-        liq.finalCash !== correctFinalCash ||
-        liq.totalIncome !== totalIncome;
+            if (needsUpdate) {
+                results.push({
+                    id: liq._id,
+                    date: liq.liquidationDate,
+                    oldFinalCash: liq.finalCash,
+                    newFinalCash: correctFinalCash,
+                    oldTotalIncome: liq.totalIncome,
+                    newTotalIncome: totalIncome,
+                    oldTotalExpenses: liq.totalExpenses,
+                    newTotalExpenses: totalExpenses,
+                    initialPayments: initialPayments,
+                    expensesAmount: expensesAmount,
+                    difference: correctFinalCash - liq.finalCash
+                });
 
-    if (needsUpdate) {
-        results.push({
-            id: liq._id,
-            date: liq.liquidationDate,
-            oldFinalCash: liq.finalCash,
-            newFinalCash: correctFinalCash,
-            oldTotalIncome: liq.totalIncome,
-            newTotalIncome: totalIncome,
-            initialPayments: initialPayments,
-            difference: correctFinalCash - liq.finalCash
-        });
-
-        liq.finalCash = correctFinalCash;
-        liq.totalIncome = totalIncome;
-        liq.totalExpenses = totalExpenses;
-        liq.payments.afterCommission = paymentsAfterComm;
-        liq.payments.totalInitialPayments = initialPayments;  // ✅ CRÍTICO
-        
-        await liq.save();
-        fixed++;
-    }
-}
+                liq.finalCash = correctFinalCash;
+                liq.totalIncome = totalIncome;
+                liq.totalExpenses = totalExpenses;
+                liq.payments.afterCommission = paymentsAfterComm;
+                liq.payments.totalInitialPayments = initialPayments;
+                
+                await liq.save();
+                fixed++;
+            }
         }
 
         res.json({
