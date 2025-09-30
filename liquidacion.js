@@ -150,22 +150,24 @@ function updateSummary() {
     const { sales, payments, inventory } = pendingData;
 
     // ✅ CAMBIO: Solo calcular comisión para abonos
+// Calcular comisión para abonos
     const paymentsAfterComm = payments.total - (payments.total * (paymentsCommission / 100));
     const paymentsCommAmount = payments.total - paymentsAfterComm;
 
-    // Las ventas ya NO generan comisión ni ingresos
-    const salesAfterComm = 0;  // ← Ya no aplica
-    const salesCommAmount = 0;  // ← Ya no aplica
+    // ✅ Calcular comisión para ventas (SOLO INFORMATIVO, no se suma a ingresos)
+    const salesCommission = parseFloat(document.getElementById("salesCommission").value) || 0;
+    const salesAfterComm = sales.total - (sales.total * (salesCommission / 100));
+    const salesCommAmount = sales.total - salesAfterComm;
 
-    // Actualizar campos de comisión
+    // Actualizar campos de comisión de abonos
     document.getElementById("paymentsAfterCommission").textContent = `$${paymentsAfterComm.toLocaleString('es-CO')}`;
     document.getElementById("paymentsCommissionAmount").textContent = `Comisión: $${paymentsCommAmount.toLocaleString('es-CO')}`;
 
-    // ✅ Mostrar ventas SIN comisión (solo informativo)
-    document.getElementById("salesAfterCommission").textContent = `$${sales.total.toLocaleString('es-CO')}`;
-    document.getElementById("salesCommissionAmount").textContent = `Sin comisión (solo informativo)`;
+    // ✅ Actualizar campos de comisión de ventas (INFORMATIVO)
+    document.getElementById("salesAfterCommission").textContent = `$${salesAfterComm.toLocaleString('es-CO')}`;
+    document.getElementById("salesCommissionAmount").textContent = `Comisión: $${salesCommAmount.toLocaleString('es-CO')} (no se suma a ingresos)`;
 
-    // ✅ CAMBIO: Calcular totales - Las ventas NO cuentan como ingreso
+    // ✅ Calcular totales - Las ventas NO cuentan como ingreso
     const totalIncome = paymentsAfterComm;  // ← SOLO ABONOS
     const totalExpenses = inventory.totalCost;
     const finalCash = initialCash + totalIncome - totalExpenses;
@@ -238,3 +240,4 @@ window.liquidateDay = async function() {
         alert("Error al procesar la liquidación: " + error.message);
     }
 };
+

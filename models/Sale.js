@@ -26,6 +26,9 @@ const SaleSchema = new mongoose.Schema({
         size: String,
         salePrice: Number
     }],
+
+     advancePayment: { type: Number, default: 0 }, // <-- NUEVO
+  payments: [PaymentSchema],
     saleDate: { type: Date, required: true },
     price: { type: Number, required: true },
     installments: { type: String, default: "1" },

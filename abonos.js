@@ -293,10 +293,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const averageAmount = payments.length > 0 ? totalAmount / payments.length : 0;
 
         // Calcular total de pagos iniciales de TODAS las ventas
-        const totalInitialPayments = sales.reduce((sum, sale) => {
-            const advancePayment = parseFloat(sale.advancePayment) || 0;
-            return sum + advancePayment;
-        }, 0);
+const totalInitialPayments = sales.reduce((sum, sale) => {
+  const advance = sale.advancePayment || 0; // <-- ahora existe
+  return sum + advance;
+}, 0);
 
         console.log('📊 Estadísticas calculadas:');
         console.log('   - Total abonado (payments):', totalAmount);
