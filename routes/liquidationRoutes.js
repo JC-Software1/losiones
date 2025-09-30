@@ -178,9 +178,10 @@ allSales.forEach(sale => {
 
         // ✅ CAMBIO: Solo los abonos cuentan como ingreso, las ventas NO
 // ✅ CAMBIO: Calcular ingreso con señas incluidas
-const paymentsAfterCommission = totalPayments - (totalPayments * (paymentsCommission / 100));
-// Las señas NO se suman porque ya están incluidas en paymentsAfterCommission
-const totalIncome = paymentsAfterCommission;  // ← Solo abonos (que incluyen señas)
+// ✅ CAMBIO: Calcular ingreso correctamente
+const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
+// Las señas se suman DESPUÉS de aplicar comisión a los abonos
+const totalIncome = Math.round(paymentsAfterCommission + totalInitialPayments);
         const totalExpenses = totalInventoryCost;
         const finalCash = initialCash + totalIncome - totalExpenses;
 
