@@ -7,6 +7,7 @@ const DailyLiquidation = require("../models/DailyLiquidation");
 const router = express.Router();
 
 // Obtener datos pendientes de liquidación
+// Obtener datos pendientes de liquidación
 router.get("/pending", auth, async (req, res) => {
     try {
         // Ventas no liquidadas
@@ -15,10 +16,11 @@ router.get("/pending", auth, async (req, res) => {
             liquidatedDay: false 
         });
 
-        // Productos no liquidados
+        // ✅ Productos no liquidados Y NO VENDIDOS
         const products = await Product.find({ 
             user: req.user.id, 
-            liquidatedDay: false 
+            liquidatedDay: false,
+            sold: false  // ← AGREGAR ESTA LÍNEA
         });
 
         // Abonos no liquidados (dentro de todas las ventas)
@@ -67,6 +69,7 @@ router.get("/pending", auth, async (req, res) => {
 });
 
 // Crear liquidación del día
+// Crear liquidación del día
 router.post("/create", auth, async (req, res) => {
     try {
         const {
@@ -82,9 +85,11 @@ router.post("/create", auth, async (req, res) => {
             liquidatedDay: false 
         });
 
+        // ✅ Productos no liquidados Y NO VENDIDOS
         const products = await Product.find({ 
             user: req.user.id, 
-            liquidatedDay: false 
+            liquidatedDay: false,
+            sold: false  // ← AGREGAR ESTA LÍNEA
         });
 
         const allSales = await Sale.find({ user: req.user.id });
@@ -107,93 +112,7 @@ router.post("/create", auth, async (req, res) => {
             });
         });
 
-        // Calcular totales
-        const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
-        const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
-        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
-
-        // Aplicar comisiones
-        const paymentsAfterCommission = totalPayments - (totalPayments * (paymentsCommission / 100));
-        const salesAfterCommission = totalSales - (totalSales * (salesCommission / 100));
-
-        const totalIncome = paymentsAfterCommission + salesAfterCommission;
-        const totalExpenses = totalInventoryCost;
-        const finalCash = initialCash + totalIncome - totalExpenses;
-
-        // Crear registro de liquidación
-        const liquidation = new DailyLiquidation({
-            user: req.user.id,
-            initialCash,
-            finalCash,
-            payments: {
-                count: paymentsData.length,
-                total: totalPayments,
-                afterCommission: paymentsAfterCommission,
-                commissionPercentage: paymentsCommission
-            },
-            sales: {
-                count: sales.length,
-                total: totalSales,
-                afterCommission: salesAfterCommission,
-                commissionPercentage: salesCommission
-            },
-            totalIncome,
-            inventory: {
-                totalCost: totalInventoryCost,
-                productCount: products.length
-            },
-            totalExpenses,
-            liquidatedSales: sales.map(s => ({
-                saleId: s._id,
-                clientName: s.clientName,
-                amount: s.price
-            })),
-            liquidatedPayments: paymentsData,
-            liquidatedProducts: products.map(p => ({
-                productId: p._id,
-                name: p.name,
-                costPrice: p.costPrice
-            })),
-            notes: notes || ""
-        });
-
-        await liquidation.save();
-
-        // Marcar ventas como liquidadas
-        await Sale.updateMany(
-            { 
-                _id: { $in: sales.map(s => s._id) },
-                user: req.user.id 
-            },
-            { $set: { liquidatedDay: true } }
-        );
-
-        // Marcar productos como liquidados
-        await Product.updateMany(
-            { 
-                _id: { $in: products.map(p => p._id) },
-                user: req.user.id 
-            },
-            { $set: { liquidatedDay: true } }
-        );
-
-        // Marcar abonos como liquidados
-        for (const update of paymentUpdates) {
-            await Sale.updateOne(
-                {
-                    _id: update.saleId,
-                    'payments._id': update.paymentId
-                },
-                {
-                    $set: { 'payments.$.liquidatedDay': true }
-                }
-            );
-        }
-
-        res.json({
-            message: "Liquidación creada exitosamente",
-            liquidation
-        });
+        // ... resto del código igual
     } catch (error) {
         console.error("Error al crear liquidación:", error);
         res.status(500).json({ error: "Error al crear liquidación: " + error.message });

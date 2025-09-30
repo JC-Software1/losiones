@@ -285,33 +285,7 @@ router.delete("/:id", auth, async (req, res) => {
     }
 });
 
-// En salesRoutes.js (temporal, eliminar después de usar)
-router.post("/migrate-liquidation-flags", auth, async (req, res) => {
-    try {
-        // Actualizar ventas
-        await Sale.updateMany(
-            { user: req.user.id, liquidatedDay: { $exists: false } },
-            { $set: { liquidatedDay: false } }
-        );
 
-        // Actualizar pagos
-        const sales = await Sale.find({ user: req.user.id });
-        for (const sale of sales) {
-            let updated = false;
-            sale.payments = sale.payments.map(p => {
-                if (p.liquidatedDay === undefined) {
-                    p.liquidatedDay = false;
-                    updated = true;
-                }
-                return p;
-            });
-            if (updated) await sale.save();
-        }
 
-        res.json({ message: "Migración completada" });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 module.exports = router;
