@@ -106,30 +106,27 @@ const dayFilterInput = document.getElementById("dayFilterInput");
 async function loadSales(query = "", filterDay = "") {
     try {
         const token = getToken();
-        
-        // ✅ Verificar si estamos en modo administrador
-        const adminMode = sessionStorage.getItem('adminMode');
+
+        /* 🔥 NUEVO: detectar modo admin y construir endpoint 🔥 */
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
         const vendedorIdAdmin = sessionStorage.getItem('vendedorId');
-        
-        // Cambiar el endpoint según el modo
-        let endpoint = "/sales";
-        if (adminMode === 'true' && vendedorIdAdmin) {
-            endpoint = `/sales/vendedor/${vendedorIdAdmin}`;
-            console.log("🔍 Modo admin activado - Buscando ventas del vendedor:", vendedorIdAdmin);
+
+        let endpoint = '/sales/all'; // por defecto trae TODAS (ya filtra backend)
+        if (adminMode && vendedorIdAdmin) {
+            endpoint = `/sales/vendedor/${vendedorIdAdmin}`; // ventas solo de ese vendedor
+            console.log('🔍 Modo admin activado - Buscando ventas del vendedor:', vendedorIdAdmin);
         }
-        
-        const sales = await apiFetch(endpoint, "GET", null, token);
-        console.log("📊 Ventas obtenidas:", sales.length);
-        
-        list.innerHTML = "";
+
+        const sales = await apiFetch(endpoint, 'GET', null, token);
+        console.log('📊 Ventas obtenidas:', sales.length);
+
+        list.innerHTML = '';
 
         const filteredSales = sales.filter(sale => {
-            // Filtro por nombre/producto
             const clientMatch = sale.clientName.toLowerCase().includes(query.toLowerCase());
             const productMatch = sale.productName.toLowerCase().includes(query.toLowerCase());
             const searchMatch = clientMatch || productMatch;
 
-            // Filtro por día de pago
             let dayMatch = true;
             if (filterDay) {
                 const day = parseInt(filterDay);
@@ -140,22 +137,13 @@ async function loadSales(query = "", filterDay = "") {
                     dayMatch = false;
                 }
             }
-
             return searchMatch && dayMatch;
         });
 
         if (filteredSales.length === 0) {
-            const message = filterDay 
-                ? `<div class="empty-state">
-                    <i class="fas fa-calendar-times"></i>
-                    <h3>No hay préstamos para el día ${filterDay}</h3>
-                    <p>No se encontraron ventas con pagos programados para este día</p>
-                   </div>`
-                : `<div class="empty-state">
-                    <i class="fas fa-inbox"></i>
-                    <h3>No se encontraron ventas</h3>
-                    <p>${adminMode === 'true' ? 'Este vendedor no tiene ventas registradas' : 'No tienes ventas registradas'}</p>
-                   </div>`;
+            const message = filterDay
+                ? `<div class="empty-state"><i class="fas fa-calendar-times"></i><h3>No hay préstamos para el día ${filterDay}</h3><p>No se encontraron ventas con pagos programados para este día</p></div>`
+                : `<div class="empty-state"><i class="fas fa-inbox"></i><h3>No se encontraron ventas</h3><p>${adminMode === 'true' ? 'Este vendedor no tiene ventas registradas' : 'No tienes ventas registradas'}</p></div>`;
             list.innerHTML = message;
             return;
         }
@@ -165,11 +153,11 @@ async function loadSales(query = "", filterDay = "") {
             const remainingDebt = sale.price - totalPaid;
             const paymentPercentage = (totalPaid / sale.price) * 100;
 
-            const card = document.createElement("div");
-            card.className = "sale-card";
-            card.setAttribute("data-sale-id", sale._id);
+            const card = document.createElement('div');
+            card.className = 'sale-card';
+            card.setAttribute('data-sale-id', sale._id);
 
-            const paymentDaysInfo = sale.paymentDays 
+            const paymentDaysInfo = sale.paymentDays
                 ? `<p><i class="fas fa-calendar-check"></i> Días de pago: ${sale.paymentDays}</p>`
                 : '';
 
@@ -186,11 +174,9 @@ async function loadSales(query = "", filterDay = "") {
                         <div class="progress-text">${paymentPercentage.toFixed(0)}% pagado</div>
                     </div>
                 </div>
-
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${paymentPercentage}%"></div>
                 </div>
-
                 <div class="sale-actions">
                     <button class="btn btn-primary btn-sm btn-info"><i class="fas fa-eye"></i> Info</button>
                     <button class="btn btn-warning btn-sm btn-edit"><i class="fas fa-edit"></i> Editar</button>
@@ -199,15 +185,16 @@ async function loadSales(query = "", filterDay = "") {
                 </div>
             `;
 
-            card.querySelector(".btn-info").onclick   = () => viewSaleDetails(sale);
-            card.querySelector(".btn-edit").onclick   = () => editSale(sale);
-            card.querySelector(".btn-pay").onclick    = () => openPaymentModal(sale._id);
-            card.querySelector(".btn-delete").onclick = () => deleteSale(sale._id);
+            card.querySelector('.btn-info').onclick = () => viewSaleDetails(sale);
+            card.querySelector('.btn-edit').onclick = () => editSale(sale);
+            card.querySelector('.btn-pay').onclick = () => openPaymentModal(sale._id);
+            card.querySelector('.btn-delete').onclick = () => deleteSale(sale._id);
 
             list.appendChild(card);
         });
+
     } catch (error) {
-        console.error("Error al cargar ventas:", error);
+        console.error('Error al cargar ventas:', error);
         list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar ventas</h3><p>${error.message}</p></div>`;
     }
 }
@@ -285,80 +272,86 @@ async function loadProductsForSelect() {
 
 /* ---------- guardar nueva (CORREGIDA) ---------- */
 async function saveSale() {
-    // 🔥 Validación de fecha
+    // ---------- Validaciones básicas ----------
     if (!inputDate.value) {
         alert("Por favor selecciona una fecha de venta.");
         inputDate.focus();
         return;
     }
 
-    // 🔥 Validación de productos seleccionados
     if (selectedProducts.length === 0) {
         alert("Por favor selecciona al menos un producto.");
         return;
     }
 
+    // ---------- Recolección SEGURA de campos ----------
+    const clientName    = String(inputClient.value.trim());
+    const productName   = selectedProducts.map(p => p.name).join(', ');
+    const saleDate      = inputDate.value; // yyyy-mm-dd
+    const price         = Number(inputPrice.value);
+    const installments  = String(inputInstallments.value.trim() || "Sin cuotas");
+    const paymentDays   = String(collectPaymentDays()   || "Sin días");
+    const advance       = Number(inputAdvance.value)    || 0;
+    const address       = String(document.getElementById("clientAddress").value.trim() || "Sin dirección");
+
+    // ---------- Validación FINAL ----------
+    if (!clientName || !productName || !saleDate || !price) {
+        alert("❗ Faltan datos obligatorios:\nCliente, Producto, Fecha o Precio.");
+        return;
+    }
+
+    // ---------- Construcción del objeto limpio ----------
     const saleData = {
-        clientName: inputClient.value.trim(),
-        clientAddress: document.getElementById("clientAddress").value.trim(),
-        products: selectedProducts.map(p => ({
-            name: p.name,
-            brand: p.brand,
-            category: p.category,
-            size: p.size,
-            salePrice: p.salePrice
-        })),
-        saleDate: inputDate.value,
-        price: parseFloat(inputPrice.value),
-        installments: inputInstallments.value.trim(),
-        advancePayment: parseFloat(inputAdvance.value) || 0,
-        paymentDays: collectPaymentDays()
+        clientName,
+        productName,
+        saleDate,
+        price,
+        installments,
+        paymentDays,
+        advancePayment: advance,
+        clientAddress: address
     };
 
-    // 🎯 CAPTURAR DATOS PARA EL RECIBO ANTES DE LIMPIAR
-    const receiptData = {
-        clientName: inputClient.value.trim(),
-        clientAddress: document.getElementById("clientAddress").value.trim(),
-        products: [...selectedProducts], // Crear copia de los productos
-        productName: selectedProducts.map(p => p.name).join(', '),
-        saleDate: inputDate.value,
-        price: parseFloat(inputPrice.value),
-        installments: inputInstallments.value.trim(),
-        advancePayment: parseFloat(inputAdvance.value) || 0,
-        paymentDays: collectPaymentDays()
-    };
+    // ---------- Log para depurar ----------
+    console.log("📤 JSON final enviado:", JSON.stringify(saleData, null, 2));
+
+    // ---------- Copia para el recibo ----------
+    const receiptData = { ...saleData, products: [...selectedProducts] };
 
     try {
         const token = getToken();
-        await apiFetch("/sales/new", "POST", saleData, token);
-        alert("Venta guardada correctamente.");
 
-        // ✅ Marcar productos como vendidos con el nombre del cliente
-        try {
-            for (const product of selectedProducts) {
-                await apiFetch(`/products/${product._id}/sell`, "PUT", { soldTo: inputClient.value.trim() }, token);
-            }
-        } catch (err) {
-            console.warn("No se pudo marcar uno o más productos como vendidos:", err);
+        /* 🔥 NUEVO: elegir endpoint según modo admin 🔥 */
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorId = sessionStorage.getItem('vendedorId');
+        let endpoint = '/sales/new';
+        if (adminMode && vendedorId) {
+            endpoint = `/sales/vendedor/${vendedorId}/new`; // crea COMO ese vendedor
         }
 
-        // Limpiar formulario y selección
+        await apiFetch(endpoint, 'POST', saleData, token);
+        alert('Venta guardada correctamente.');
+
+        // Marcar productos como vendidos
+        for (const product of selectedProducts) {
+            await apiFetch(`/products/${product._id}/sell`, 'PUT', { soldTo: clientName }, token);
+        }
+
+        // Limpiar todo
         form.reset();
         inputDate.value = new Date().toISOString().split('T')[0];
         selectedProducts = [];
         renderSelectedProducts();
         updateTotalPrice();
 
-        // Recargar ventas y productos
+        // Recargar y mostrar recibo
         await loadSales();
         await loadProductsForDropdown();
-
-        // 🎯 MOSTRAR MODAL PARA GENERAR RECIBO CON LOS DATOS GUARDADOS
         showReceiptModal(receiptData);
 
     } catch (error) {
-        console.error("Error al guardar la venta:", error.message);
-        alert("No se pudo guardar la venta: " + error.message);
+        console.error('Error al guardar la venta:', error.message);
+        alert('No se pudo guardar la venta: ' + error.message);
     }
 }
 
@@ -476,114 +469,112 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function loadProductsForDropdown() {
-    const token = getToken();
-    const products = await apiFetch("/products", "GET", null, token);
-    const panel = document.getElementById("productDropdownPanel");
-    const searchInput = document.getElementById("productSearchInput");
-    const listContainer = document.getElementById("productDropdownList");
+    try {
+        const token = getToken();
 
-    const availableProducts = products.filter(p => !p.sold);
+        // 🔍 Detectar si estás en modo admin
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorId = sessionStorage.getItem('vendedorId'); // ID del vendedor que estás administrando
 
-    // Render inicial
-    function renderProducts(filtered = availableProducts) {
-        listContainer.innerHTML = "";
-        if (filtered.length === 0) {
-            listContainer.innerHTML = `<div class="dropdown-item disabled">No hay productos</div>`;
-            return;
+        // 🔧 Construir endpoint con filtro por usuario
+        let endpoint = "/products";
+        if (adminMode && vendedorId) {
+            endpoint = `/products/vendedor/${vendedorId}`; // Solo productos de ese vendedor
         }
-        filtered.forEach(product => {
-            const item = document.createElement("div");
-            item.className = "dropdown-item";
-            item.innerHTML = `
-                <div class="product-card-dropdown" style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 12px;
-                    border-radius: 8px;
-                    background: var(--light-gray);
-                    transition: background 0.2s ease;
-                " onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='var(--light-gray)'">
 
-                    <div class="info" style="flex: 1;">
-                        <div class="name" style="font-weight: 600; color: var(--primary); font-size: 14px;">
-                            ${product.name}
+        const products = await apiFetch(endpoint, "GET", null, token);
+        const panel = document.getElementById("productDropdownPanel");
+        const searchInput = document.getElementById("productSearchInput");
+        const listContainer = document.getElementById("productDropdownList");
+
+        // ✅ Filtrar solo productos NO vendidos
+        const availableProducts = products.filter(p => !p.sold);
+
+        // Render inicial
+        function renderProducts(filtered = availableProducts) {
+            listContainer.innerHTML = "";
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `<div class="dropdown-item disabled">No hay productos disponibles</div>`;
+                return;
+            }
+
+            filtered.forEach(product => {
+                const item = document.createElement("div");
+                item.className = "dropdown-item";
+                item.innerHTML = `
+                    <div class="product-card-dropdown" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 12px;
+                        border-radius: 8px;
+                        background: var(--light-gray);
+                        transition: background 0.2s ease;
+                    " onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='var(--light-gray)'">
+
+                        <div class="info" style="flex: 1;">
+                            <div class="name" style="font-weight: 600; color: var(--primary); font-size: 14px;">
+                                ${product.name}
+                            </div>
+                            <div class="price" style="font-size: 13px; color: var(--success); margin-top: 2px;">
+                                $${product.salePrice.toLocaleString()}
+                            </div>
+                            <div style="font-size: 11px; color: var(--medium-gray); margin-top: 4px;">
+                                <i class="fas fa-tag"></i> ${product.brand}
+                                <i class="fas fa-folder" style="margin-left: 8px;"></i> ${product.category}
+                                ${product.size ? `<i class="fas fa-ruler" style="margin-left: 8px;"></i> ${product.size}` : ''}
+                            </div>
                         </div>
-                        <div class="price" style="font-size: 13px; color: var(--success); margin-top: 2px;">
-                            $${product.salePrice.toLocaleString()}
-                        </div>
-                        <div style="font-size: 11px; color: var(--medium-gray); margin-top: 4px;">
-                            <i class="fas fa-tag"></i> ${product.brand}
-                            <i class="fas fa-folder" style="margin-left: 8px;"></i> ${product.category}
-                            ${product.size ? `<i class="fas fa-ruler" style="margin-left: 8px;"></i> ${product.size}` : ''}
+
+                        <div class="actions">
+                            <button class="btn-edit-dropdown" data-id="${product._id}" style="
+                                background: var(--accent);
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                padding: 6px 8px;
+                                font-size: 12px;
+                                cursor: pointer;
+                                transition: background 0.2s ease;
+                            " onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='var(--accent)'">
+                                <i class="fas fa-edit"></i>
+                            </button>
                         </div>
                     </div>
+                `;
 
-                    <div class="actions">
-                        <button class="btn-edit-dropdown" data-id="${product._id}" style="
-                            background: var(--accent);
-                            color: white;
-                            border: none;
-                            border-radius: 6px;
-                            padding: 6px 8px;
-                            font-size: 12px;
-                            cursor: pointer;
-                            transition: background 0.2s ease;
-                        " onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='var(--accent)'">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
+                item.querySelector('.btn-edit-dropdown').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const productId = e.currentTarget.dataset.id;
+                    window.location.href = `productos.html?edit=${productId}`;
+                });
 
-            item.querySelector('.btn-edit-dropdown').addEventListener('click', (e) => {
-                e.stopPropagation();
-                const productId = e.currentTarget.dataset.id;
-                window.location.href = `productos.html?edit=${productId}`;
+                item.addEventListener("click", (e) => {
+                    if (e.target.closest('.btn-edit-dropdown')) return;
+                    selectProduct(product);
+                });
+
+                listContainer.appendChild(item);
             });
+        }
 
-            item.addEventListener("click", (e) => {
-                if (e.target.closest('.btn-edit-dropdown')) return;
-                selectProduct(product);
-            });
-
-            listContainer.appendChild(item);
+        // Búsqueda en tiempo real
+        searchInput.addEventListener("input", () => {
+            const query = searchInput.value.toLowerCase();
+            const filtered = availableProducts.filter(p =>
+                p.name.toLowerCase().includes(query)
+            );
+            renderProducts(filtered);
         });
+
+        // Render inicial
+        renderProducts();
+
+    } catch (error) {
+        console.error("Error al cargar productos para dropdown:", error);
+        document.getElementById("productDropdownList").innerHTML =
+            `<div class="dropdown-item disabled">Error al cargar productos</div>`;
     }
-
-    // Búsqueda en tiempo real
-    searchInput.addEventListener("input", () => {
-        const query = searchInput.value.toLowerCase();
-        const filtered = availableProducts.filter(p =>
-            p.name.toLowerCase().includes(query)
-        );
-        renderProducts(filtered);
-    });
-
-    searchInput.addEventListener("input", () => {
-    const query = searchInput.value.trim();
-    const day = dayFilterInput.value;
-    loadSales(query, day);
-});
-
-dayFilterInput.addEventListener("change", () => {
-    const query = searchInput.value.trim();
-    const day = dayFilterInput.value;
-    loadSales(query, day);
-});
-
-// Función para limpiar el filtro de día
-function clearDayFilter() {
-    dayFilterInput.value = "";
-    const query = searchInput.value.trim();
-    loadSales(query, "");
-}
-
-// Hacer la función global
-window.clearDayFilter = clearDayFilter;
-
-    // Render inicial
-    renderProducts();
 }
 
 function selectProduct(product) {
