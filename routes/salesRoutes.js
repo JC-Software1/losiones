@@ -108,81 +108,125 @@ router.delete("/:id/settled", auth, checkPermission('eliminarVentas'), async (re
     }
 });
 
-// Obtener ventas activas
-router.get("/", auth, checkPermission('verVentas'), async (req, res) => {
+// Obtener una venta específica
+router.get("/:id", auth, checkPermission('verVentas'), async (req, res) => {
     try {
-        // ✅ CORREGIDO: Admins ven todas las ventas
-        const query = { settled: { $ne: true } };
-        if (req.user.tipo === 1) {
-            query.user = req.user.id;
-        }
-        
-        const sales = await Sale.find(query);
-        res.json(sales);
-    } catch (error) {
-        res.status(500).json({ error: "Error al obtener las ventas" });
-    }
-});
+        // ✅ CORREGIDO: Usar función con permisos admin
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
-// Obtener ventas liquidadas
-router.get("/settled", auth, checkPermission('verVentasLiquidadas'), async (req, res) => {
-    try {
-        // ✅ CORREGIDO: Admins ven todas las ventas
-        const query = { settled: true };
-        if (req.user.tipo === 1) {
-            query.user = req.user.id;
+        if (!sale) {
+            return res.status(404).json({ error: "Venta no encontrada" });
         }
-        
-        const sales = await Sale.find(query);
-        res.json(sales);
+
+        res.json(sale);
     } catch (error) {
-        res.status(500).json({ error: "Error al obtener las ventas liquidadas" });
+        res.status(500).json({ error: "Error al obtener la venta" });
     }
 });
 
 // Crear nueva venta
 router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
     try {
-        const {
-            clientName,
-            products,
-            saleDate,
-            price,
-            installments,
-            advancePayment,
-            clientAddress,
-            paymentDays
-        } = req.body;
+        const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress, paymentDays } = req.body;
 
-        const productName = products.map(p => p.name).join(', ');
-        const initiallySettled = advancePayment >= price;
+        if (!clientName || !productName || !price || !saleDate) {
+            return res.status(400).json({ error: "Todos los campos son obligatorios" });
+        }
 
         const sale = new Sale({
             clientName,
             productName,
-            products,
-            saleDate,
+            saleDate: new Date(saleDate),
             price,
             installments,
-            advancePayment,
+            advancePayment: advancePayment || 0,
             clientAddress,
             paymentDays,
             user: req.user.id,
-            settled: initiallySettled,
-            settledDate: initiallySettled ? new Date() : null,
-            liquidatedDay: false,
-            payments: advancePayment > 0 ? [{ 
-                amount: advancePayment, 
-                date: saleDate,
-                liquidatedDay: false
-            }] : []
+            settled: false
         });
+
+        if (advancePayment > 0) {
+            sale.payments.push({
+                amount: advancePayment,
+                date: new Date(saleDate),
+                liquidatedDay: false
+            });
+
+            if (advancePayment >= price) {
+                sale.settled = true;
+                sale.settledDate = new Date();
+            }
+        }
 
         await sale.save();
         res.status(201).json(sale);
     } catch (error) {
-        console.error("Error en el servidor:", error);
-        res.status(500).json({ error: error.message });
+        console.error("Error al crear la venta:", error);
+        res.status(500).json({ error: "Error al crear la venta" });
+    }
+});
+
+// Crear nueva venta para vendedor específico (para administradores)
+router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
+    try {
+        const { vendedorId } = req.params;
+        
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos para crear ventas para otros usuarios' });
+        }
+        
+        const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress, paymentDays } = req.body;
+
+        if (!clientName || !productName || !price || !saleDate) {
+            return res.status(400).json({ error: "Todos los campos son obligatorios" });
+        }
+
+        const sale = new Sale({
+            clientName,
+            productName,
+            saleDate: new Date(saleDate),
+            price,
+            installments,
+            advancePayment: advancePayment || 0,
+            clientAddress,
+            paymentDays,
+            user: vendedorId,  // Usar vendedorId en lugar de req.user.id
+            settled: false
+        });
+
+        if (advancePayment > 0) {
+            sale.payments.push({
+                amount: advancePayment,
+                date: new Date(saleDate),
+                liquidatedDay: false
+            });
+
+            if (advancePayment >= price) {
+                sale.settled = true;
+                sale.settledDate = new Date();
+            }
+        }
+
+        await sale.save();
+        res.status(201).json(sale);
+    } catch (error) {
+        console.error("Error al crear la venta para vendedor:", error);
+        res.status(500).json({ error: "Error al crear la venta" });
+    }
+});
+
+// Obtener ventas liquidadas
+router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        const query = req.user.tipo === 1 
+            ? { user: req.user.id, settled: true } 
+            : { settled: true };
+            
+        const sales = await Sale.find(query).sort({ settledDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        res.status(500).json({ error: "Error al obtener ventas liquidadas" });
     }
 });
 
@@ -308,6 +352,23 @@ router.get('/vendedor/:vendedorId', auth, async (req, res) => {
     } catch (error) {
         console.error('Error al obtener ventas del vendedor:', error);
         res.status(500).json({ error: 'Error al obtener ventas del vendedor' });
+    }
+});
+
+// Obtener ventas liquidadas de un vendedor específico (para administradores)
+router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
+    try {
+        const { vendedorId } = req.params;
+        
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
+        }
+        
+        const sales = await Sale.find({ user: vendedorId, settled: true }).sort({ settledDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error('Error al obtener ventas liquidadas del vendedor:', error);
+        res.status(500).json({ error: 'Error al obtener ventas liquidadas' });
     }
 });
 
