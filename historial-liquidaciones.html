@@ -430,7 +430,16 @@
         async function loadHistory() {
             try {
                 const token = getToken();
-                allLiquidations = await apiFetch("/liquidation/history", "GET", null, token);
+                // Detectar modo admin
+const vendedorId = window.adminModeUtils?.isActive()
+                 ? window.adminModeUtils.getVendedorId()
+                 : null;
+
+const endpoint = vendedorId
+               ? `/liquidation/vendedor/${vendedorId}/history`
+               : '/liquidation/history';
+
+allLiquidations = await apiFetch(endpoint, "GET", null, token);
 
                 document.getElementById("loadingContainer").style.display = "none";
 
@@ -601,7 +610,9 @@
 
             try {
                 const token = getToken();
-                await apiFetch(`/liquidation/${id}`, "DELETE", null, token);
+                // Nota: El DELETE no necesita cambios porque usa el ID directo
+// El backend valida permisos internamente
+await apiFetch(`/liquidation/${id}`, "DELETE", null, token);
                 alert("Liquidación eliminada");
                 loadHistory();
             } catch (error) {

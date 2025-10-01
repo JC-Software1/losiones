@@ -336,9 +336,14 @@ router.post("/new", auth, async (req, res) => {
             });
         });
 
-        const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
-        const paymentsCommission = 3;
-        const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
+const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
+
+// ✅ Usar las comisiones que vienen del frontend
+const paymentsCommission = req.body.paymentsCommission || 0;
+const salesCommission = req.body.salesCommission || 0;
+
+const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
+const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
         const totalIncome = paymentsAfterCommission + totalInitialPayments;
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
@@ -356,12 +361,12 @@ router.post("/new", auth, async (req, res) => {
                 afterCommission: paymentsAfterCommission,
                 commissionPercentage: paymentsCommission
             },
-            sales: {
-                count: sales.length,
-                total: totalSales,
-                afterCommission: 0,
-                commissionPercentage: 0
-            },
+sales: {
+    count: sales.length,
+    total: totalSales,
+    afterCommission: salesAfterCommission,
+    commissionPercentage: salesCommission
+},
             totalIncome,
             inventory: {
                 totalCost: totalInventoryCost,
@@ -503,9 +508,14 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
             });
         });
 
-        const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
-        const paymentsCommission = 3;
-        const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
+const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
+
+// ✅ Usar las comisiones que vienen del frontend
+const paymentsCommission = req.body.paymentsCommission || 0;
+const salesCommission = req.body.salesCommission || 0;
+
+const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
+const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
         const totalIncome = paymentsAfterCommission + totalInitialPayments;
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
@@ -523,12 +533,12 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
                 afterCommission: paymentsAfterCommission,
                 commissionPercentage: paymentsCommission
             },
-            sales: {
-                count: sales.length,
-                total: totalSales,
-                afterCommission: 0,
-                commissionPercentage: 0
-            },
+sales: {
+    count: sales.length,
+    total: totalSales,
+    afterCommission: salesAfterCommission,
+    commissionPercentage: salesCommission
+},
             totalIncome,
             inventory: {
                 totalCost: totalInventoryCost,

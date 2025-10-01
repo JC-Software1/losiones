@@ -153,6 +153,31 @@ if (url.includes('/api/expenses') && !url.includes('/vendedor/')) {
                     }
                 }
             }
+
+            // LIQUIDACIONES
+if (url.includes('/api/liquidation') && !url.includes('/vendedor/')) {
+    const baseUrl = url.split('/api/liquidation')[0];
+    const pathAfter = url.split('/api/liquidation')[1] || '';
+    
+    // GET: Redirigir rutas de consulta
+    if (!pathAfter || pathAfter === '' || pathAfter === '/' || 
+        pathAfter === '/history' || pathAfter === '/pending') {
+        
+        if (pathAfter === '/history') {
+            url = `${baseUrl}/api/liquidation/vendedor/${vendedorId}/history`;
+            console.log('📊 Redirigiendo historial de liquidaciones:', url);
+        } else if (pathAfter === '/pending') {
+            url = `${baseUrl}/api/liquidation/vendedor/${vendedorId}/pending`;
+            console.log('📊 Redirigiendo liquidaciones pendientes:', url);
+        }
+    }
+    // POST: Redirigir creación (ya lo tienes en liquidacion.js pero por si acaso)
+    else if (pathAfter === '/new' || pathAfter === '/create') {
+        url = `${baseUrl}/api/liquidation/vendedor/${vendedorId}/new`;
+        console.log('📊 Redirigiendo creación de liquidación:', url);
+    }
+}
+
         }
 
         return originalFetch(url, options);

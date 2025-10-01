@@ -293,7 +293,16 @@ if (initialCash < 0) {
             notes
         };
 
-        const response = await apiFetch("/liquidation/create", "POST", liquidationData, token);
+        // Detectar modo admin
+const vendedorId = window.adminModeUtils?.isActive()
+                 ? window.adminModeUtils.getVendedorId()
+                 : null;
+
+const endpoint = vendedorId
+               ? `/liquidation/vendedor/${vendedorId}/new`
+               : '/liquidation/new';
+
+const response = await apiFetch(endpoint, "POST", liquidationData, token);
 
         // Mostrar mensaje de éxito
         alert(`¡Liquidación completada exitosamente!\n\nCaja Final: $${response.liquidation.finalCash.toLocaleString('es-CO')}`);
