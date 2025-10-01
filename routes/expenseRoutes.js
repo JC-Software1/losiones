@@ -13,6 +13,45 @@ async function findExpenseWithAdminPermission(expenseId, userId, userTipo) {
     }
 }
 
+// 🔥 NUEVA RUTA: Crear gasto para un vendedor específico (SOLO ADMINS)
+router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
+    try {
+        // Verificar que sea admin
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos' });
+        }
+
+        const { vendedorId } = req.params;
+        const { date, items } = req.body;
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ error: "Debe agregar al menos un gasto" });
+        }
+
+        for (const item of items) {
+            if (!item.description || !item.description.trim()) {
+                return res.status(400).json({ error: "Todas las descripciones son obligatorias" });
+            }
+            if (!item.amount || item.amount <= 0) {
+                return res.status(400).json({ error: "Todos los montos deben ser mayores a cero" });
+            }
+        }
+
+        const expense = new Expense({
+            user: vendedorId,  // 👈 Usar el ID del vendedor seleccionado
+            date: date || new Date(),
+            items
+        });
+
+        await expense.save();
+        res.status(201).json(expense);
+
+    } catch (error) {
+        console.error("Error al crear gasto:", error);
+        res.status(500).json({ error: "Error al crear gasto: " + error.message });
+    }
+});
+
 // 🔥 RUTA PARA ADMINS: Obtener gastos de un vendedor específico
 router.get("/vendedor/:vendedorId", auth, async (req, res) => {
     try {

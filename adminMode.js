@@ -94,16 +94,23 @@
             const vendedorId = getVendedorId();
 
             // GASTOS
-            if (url.includes('/api/expenses') && !url.includes('/vendedor/')) {
-                const baseUrl = url.split('/api/expenses')[0];
-                const pathAfter = url.split('/api/expenses')[1] || '';
-                
-                // Solo redirigir GET sin parámetros o rutas específicas
-                if (!pathAfter || pathAfter === '' || pathAfter === '/') {
-                    url = `${baseUrl}/api/expenses/vendedor/${vendedorId}`;
-                    console.log('📊 Redirigiendo gastos del vendedor:', url);
-                }
-            }
+// GASTOS
+if (url.includes('/api/expenses') && !url.includes('/vendedor/')) {
+    const baseUrl = url.split('/api/expenses')[0];
+    const pathAfter = url.split('/api/expenses')[1] || '';
+    const method = options?.method || 'GET';
+    
+    // GET: Redirigir a /vendedor/:id
+    if (method === 'GET' && (!pathAfter || pathAfter === '' || pathAfter === '/')) {
+        url = `${baseUrl}/api/expenses/vendedor/${vendedorId}`;
+        console.log('📊 Redirigiendo gastos del vendedor (GET):', url);
+    }
+    // POST: Redirigir a /vendedor/:id/new
+    else if (method === 'POST' && (!pathAfter || pathAfter === '' || pathAfter === '/')) {
+        url = `${baseUrl}/api/expenses/vendedor/${vendedorId}/new`;
+        console.log('📊 Redirigiendo creación de gasto (POST):', url);
+    }
+}
 
             // PRODUCTOS
             if (url.includes('/api/products') && !url.includes('/vendedor/')) {
