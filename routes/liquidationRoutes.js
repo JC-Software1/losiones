@@ -16,11 +16,10 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
         }
         
         // Usar vendedorId en lugar de req.user.id
-        const sales = await Sale.find({ 
-            user: vendedorId, 
-            liquidatedDay: false 
-        }).lean().select('_id clientName price advancePayment payments');
-
+const sales = await Sale.find({ 
+    user: vendedorId, 
+    liquidatedDay: false 
+}).lean().select('_id clientName productName price advancePayment payments');
         const products = await Product.find({ 
             user: vendedorId, 
             liquidatedDay: false,
@@ -79,12 +78,12 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
             ? ((paidTodayCount / totalActiveClients) * 100).toFixed(1)
             : 0;
 
-        const salesData = sales.map(s => ({
-            _id: s._id,
-            clientName: s.clientName,
-            price: s.price
-        }));
-
+const salesData = sales.map(s => ({
+    _id: s._id,
+    clientName: s.clientName,
+    productName: s.productName,
+    price: s.price
+}));
         const productsData = products.map(p => ({
             _id: p._id,
             name: p.name,
@@ -159,12 +158,12 @@ router.get("/pending", auth, async (req, res) => {
     try {
         const userId = req.user.id; // Simplificado, ya que admins no usan esta ruta para vendedores
         
-        const sales = await Sale.find({ 
-            user: userId, 
-            liquidatedDay: false 
-        }).lean().select('_id clientName price advancePayment payments');
+const sales = await Sale.find({ 
+    user: userId, 
+    liquidatedDay: false 
+}).lean().select('_id clientName productName price advancePayment payments'); 
 
-        const products = await Product.find({ 
+const products = await Product.find({ 
             user: userId, 
             liquidatedDay: false,
             sold: false
@@ -222,12 +221,12 @@ router.get("/pending", auth, async (req, res) => {
             ? ((paidTodayCount / totalActiveClients) * 100).toFixed(1)
             : 0;
 
-        const salesData = sales.map(s => ({
-            _id: s._id,
-            clientName: s.clientName,
-            price: s.price
-        }));
-
+const salesData = sales.map(s => ({
+    _id: s._id,
+    clientName: s.clientName,
+    productName: s.productName,
+    price: s.price
+}));
         const productsData = products.map(p => ({
             _id: p._id,
             name: p.name,

@@ -122,12 +122,11 @@ function displayPendingData() {
 document.getElementById("initialPaymentsTotal").textContent = `$${(payments.totalInitialPayments || 0).toLocaleString('es-CO')}`;
     
     // Detalles de abonos
+// Detalles de abonos
 const paymentsDetailsHTML = payments.data.map(p => {
-    const isInitial = sales.data.some(s => 
-        s.clientName === p.clientName && 
-        s.advancePayment === p.amount
-    );
-    const badge = isInitial ? '<span style="background: #9b59b6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Seña</span>' : '';
+    const badge = p.isInitialPayment 
+        ? '<span style="background: #9b59b6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Seña</span>' 
+        : '';
     
     return `
         <div class="detail-item">
