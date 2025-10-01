@@ -285,7 +285,7 @@ router.delete("/:id", auth, async (req, res) => {
 });
 
 // Obtener ventas de un vendedor específico (para administradores)
-router.get('/vendedor/:vendedorId', authMiddleware, async (req, res) => {
+router.get('/vendedor/:vendedorId', auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
         
@@ -295,7 +295,7 @@ router.get('/vendedor/:vendedorId', authMiddleware, async (req, res) => {
         }
         
         // Buscar ventas del vendedor
-        const sales = await Sale.find({ userId: vendedorId }).sort({ saleDate: -1 });
+        const sales = await Sale.find({ user: vendedorId }).sort({ saleDate: -1 });
         
         res.json(sales);
     } catch (error) {
