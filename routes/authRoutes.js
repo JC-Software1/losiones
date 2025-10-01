@@ -223,13 +223,6 @@ router.delete("/users/:id", auth, async (req, res) => {
   }
 });
 
-// Agregar al inicio del archivo authRoutes.js
-const VendedorAsignado = require("../models/VendedorAsignado");
-
-/* ============================================================
-   RUTAS PARA GESTORES (tipo 2) - CON ASIGNACIÓN
-   ============================================================ */
-
 /* ----------  BUSCAR Y ASIGNAR VENDEDOR POR ID ---------- */
 router.get("/vendedor/:id", auth, async (req, res) => {
   try {
