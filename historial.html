@@ -248,6 +248,143 @@
         .btn:active {
             transform: scale(0.96);
         }
+
+        /* ============================
+  Mejora visual y espaciado del menu-toggle
+  ============================ */
+
+/* Forzar máximo alto y scroll interno para evitar que el contenido se amontone */
+.menu-items {
+  max-width: 92%;
+  width: auto;
+  max-height: calc(100vh - 120px); /* deja espacio arriba/abajo */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 18px; /* más aire alrededor */
+  gap: 12px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+}
+
+/* Cabecera del menú: más separación y tipografía clara */
+.menu-head {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.menu-head strong {
+  font-size:15px;
+  letter-spacing:0.2px;
+  color:var(--primary);
+}
+
+/* Ajuste del grid: columnas y gaps más generosos */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr)); /* 2 columnas limpias por defecto */
+  gap: 12px;
+  align-items:stretch;
+}
+
+/* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
+@media (max-width:420px) {
+  .menu-grid { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
+.menu-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(180deg,#fff,var(--light-gray));
+  border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+  min-height: 52px;           /* mayor área táctil */
+  align-items: center;
+  white-space: normal;
+}
+
+/* Icono: tamaño y contenedor */
+.menu-link i {
+  font-size: 18px;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  color: var(--accent);
+  background: rgba(52,152,219,0.06);
+  border-radius: 8px;
+  flex: 0 0 30px;
+}
+
+/* Texto: permitir varias líneas y buen espaciado */
+.menu-link span {
+  display: block;
+  text-align: left;
+  line-height: 1.1;
+  font-size: 14px;
+  color: var(--primary);
+  margin: 0;
+  word-break: break-word;
+}
+
+/* Estado hover / focus: contraste y sombra más suave */
+.menu-link:hover,
+.menu-link:focus {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.12);
+  background: linear-gradient(180deg,var(--accent),#2a86c8);
+  color: #fff;
+}
+.menu-link:hover i,
+.menu-link:focus i { color: #fff; background: transparent; }
+
+/* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
+.menu-grid .btn-go-liquidation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  min-height: 52px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  text-decoration: none;
+}
+
+/* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
+.menu-items .menu-grid { margin-top: 6px; }
+
+/* indicadores de focus accesible */
+.menu-link:focus { outline: 3px solid rgba(52,152,219,0.12); }
+
+/* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
+.menu-link > *:first-child { margin-left: 2px; }
+
+/* Si quieres dividir opciones por secciones (opcional) */
+.menu-section {
+  display:block;
+  margin-bottom: 8px;
+}
+.menu-section + .menu-section { border-top: 1px dashed rgba(0,0,0,0.04); padding-top: 8px; margin-top: 8px; }
+
+/* Scrollbar más discreto (WebKit) */
+.menu-items::-webkit-scrollbar { width: 8px; }
+.menu-items::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 6px; }
+
+
     </style>
 </head>
 <body>

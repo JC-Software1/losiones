@@ -31,6 +31,9 @@ async function handleLogin(event) {
         if (userInfo.tipo === 3) {
             console.log("Redirigiendo a super admin...");
             window.location.href = "superAdmin.html";
+        } else if (userInfo.tipo === 2) {
+            console.log("Redirigiendo a gestor de vendedores...");
+            window.location.href = "gestorVendedores.html";
         } else {
             console.log("Redirigiendo a categorías...");
             window.location.href = "categories.html";

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Gestión de Vendedores</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="max-w-4xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                Panel de Gestión de Vendedores
+            </h1>
+            <p class="text-gray-600">
+                Busca y gestiona vendedores utilizando su ID de MongoDB
+            </p>
+        </div>
+
+        <!-- Búsqueda -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                ID del Vendedor
+            </label>
+            <div class="flex gap-3">
+                <input
+                    type="text"
+                    id="vendedorId"
+                    placeholder="Ej: 507f1f77bcf86cd799439011"
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none"
+                />
+                <button
+                    id="btnBuscar"
+                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <span>Buscar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mensajes -->
+        <div id="mensajeError" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6 fade-in">
+            <div class="flex items-start gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-600 flex-shrink-0">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <p id="textoError" class="text-red-800"></p>
+            </div>
+        </div>
+
+        <div id="mensajeExito" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 mb-6 fade-in">
+            <div class="flex items-start gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-600 flex-shrink-0">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <p id="textoExito" class="text-green-800"></p>
+            </div>
+        </div>
+
+        <!-- Tarjeta del Vendedor -->
+        <div id="tarjetaVendedor" class="hidden bg-white rounded-lg shadow-lg overflow-hidden fade-in">
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6">
+                <div class="flex items-center gap-4">
+                    <div class="bg-white rounded-full p-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600">
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="text-white">
+                        <h2 id="vendedorNombre" class="text-2xl font-bold"></h2>
+                        <p id="vendedorUsername" class="text-blue-100"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600 mb-1">ID de MongoDB</p>
+                        <p id="vendedorIdMongo" class="text-sm font-mono text-gray-800 break-all"></p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-sm text-gray-600 mb-1">Estado</p>
+                        <p id="vendedorEstado" class="font-semibold"></p>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <button
+                        id="btnPermisos"
+                        class="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        Otorgar Permisos
+                    </button>
+
+                    <button
+                        id="btnInspeccionar"
+                        class="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Inspeccionar
+                    </button>
+
+                    <button
+                        id="btnEliminar"
+                        class="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="estadoVacio" class="bg-white rounded-lg shadow-lg p-12 text-center">
+            <div class="bg-gray-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-2">
+                Busca un vendedor
+            </h3>
+            <p class="text-gray-600">
+                Ingresa el ID de MongoDB del vendedor para ver sus detalles y gestionar su cuenta
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Configuración
+        const API_URL = 'http://localhost:5000/api/auth'; // Ajusta según tu configuración
+        let vendedorActual = null;
+
+        // Elementos del DOM
+        const vendedorIdInput = document.getElementById('vendedorId');
+        const btnBuscar = document.getElementById('btnBuscar');
+        const mensajeError = document.getElementById('mensajeError');
+        const mensajeExito = document.getElementById('mensajeExito');
+        const textoError = document.getElementById('textoError');
+        const textoExito = document.getElementById('textoExito');
+        const tarjetaVendedor = document.getElementById('tarjetaVendedor');
+        const estadoVacio = document.getElementById('estadoVacio');
+        const btnPermisos = document.getElementById('btnPermisos');
+        const btnInspeccionar = document.getElementById('btnInspeccionar');
+        const btnEliminar = document.getElementById('btnEliminar');
+
+        // Funciones auxiliares
+        function mostrarError(mensaje) {
+            textoError.textContent = mensaje;
+            mensajeError.classList.remove('hidden');
+            mensajeExito.classList.add('hidden');
+        }
+
+        function mostrarExito(mensaje) {
+            textoExito.textContent = mensaje;
+            mensajeExito.classList.remove('hidden');
+            mensajeError.classList.add('hidden');
+        }
+
+        function ocultarMensajes() {
+            mensajeError.classList.add('hidden');
+            mensajeExito.classList.add('hidden');
+        }
+
+        function mostrarVendedor(vendedor) {
+            document.getElementById('vendedorNombre').textContent = vendedor.name;
+            document.getElementById('vendedorUsername').textContent = '@' + vendedor.username;
+            document.getElementById('vendedorIdMongo').textContent = vendedor._id;
+            
+            const estadoElement = document.getElementById('vendedorEstado');
+            if (vendedor.bloqueado) {
+                estadoElement.innerHTML = '<span class="text-red-600">Bloqueado</span>';
+            } else {
+                estadoElement.innerHTML = '<span class="text-green-600">Activo</span>';
+            }
+
+            tarjetaVendedor.classList.remove('hidden');
+            estadoVacio.classList.add('hidden');
+        }
+
+        function ocultarVendedor() {
+            tarjetaVendedor.classList.add('hidden');
+            estadoVacio.classList.remove('hidden');
+        }
+
+        function deshabilitarBotones(deshabilitar) {
+            const botones = [btnBuscar, btnPermisos, btnInspeccionar, btnEliminar];
+            botones.forEach(btn => {
+                btn.disabled = deshabilitar;
+                if (deshabilitar) {
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+
+        // Obtener token
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        // Buscar vendedor
+        async function buscarVendedor() {
+            const vendedorId = vendedorIdInput.value.trim();
+
+            if (!vendedorId) {
+                mostrarError('Por favor ingresa un ID de vendedor');
+                return;
+            }
+
+            ocultarMensajes();
+            deshabilitarBotones(true);
+            btnBuscar.querySelector('span').textContent = 'Buscando...';
+
+            try {
+                const token = getToken();
+                const response = await fetch(`${API_URL}/vendedor/${vendedorId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al buscar vendedor');
+                }
+
+                vendedorActual = data;
+                mostrarVendedor(data);
+                mostrarExito('Vendedor encontrado exitosamente');
+            } catch (error) {
+                mostrarError(error.message);
+                ocultarVendedor();
+                vendedorActual = null;
+            } finally {
+                deshabilitarBotones(false);
+                btnBuscar.querySelector('span').textContent = 'Buscar';
+            }
+        }
+
+        // Otorgar permisos
+        async function otorgarPermisos() {
+            if (!vendedorActual) return;
+
+            ocultarMensajes();
+            deshabilitarBotones(true);
+
+            try {
+                const token = getToken();
+                const response = await fetch(`${API_URL}/vendedor/${vendedorActual._id}/permisos`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ permisos: true })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al otorgar permisos');
+                }
+
+                mostrarExito('Permisos otorgados exitosamente');
+                vendedorActual.permisos = true;
+            } catch (error) {
+                mostrarError(error.message);
+            } finally {
+                deshabilitarBotones(false);
+            }
+        }
+
+        // Inspeccionar vendedor
+        function inspeccionarVendedor() {
+            if (!vendedorActual) return;
+
+            const detalles = `
+Detalles del Vendedor
+━━━━━━━━━━━━━━━━━━━━
+ID: ${vendedorActual._id}
+Nombre: ${vendedorActual.name}
+Usuario: ${vendedorActual.username}
+Tipo: ${vendedorActual.tipo}
+Bloqueado: ${vendedorActual.bloqueado ? 'Sí' : 'No'}
+Permisos: ${vendedorActual.permisos ? 'Sí' : 'No'}
+            `;
+
+            alert(detalles);
+        }
+
+        // Eliminar vendedor
+        async function eliminarVendedor() {
+            if (!vendedorActual) return;
+
+            const confirmacion = confirm(
+                `¿Estás seguro de que deseas eliminar al vendedor ${vendedorActual.name}?\n\nEsta acción no se puede deshacer.`
+            );
+
+            if (!confirmacion) return;
+
+            ocultarMensajes();
+            deshabilitarBotones(true);
+
+            try {
+                const token = getToken();
+                const response = await fetch(`${API_URL}/vendedor/${vendedorActual._id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al eliminar vendedor');
+                }
+
+                mostrarExito('Vendedor eliminado exitosamente');
+                vendedorActual = null;
+                vendedorIdInput.value = '';
+                ocultarVendedor();
+            } catch (error) {
+                mostrarError(error.message);
+            } finally {
+                deshabilitarBotones(false);
+            }
+        }
+
+        // Event listeners
+        btnBuscar.addEventListener('click', buscarVendedor);
+        vendedorIdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                buscarVendedor();
+            }
+        });
+        btnPermisos.addEventListener('click', otorgarPermisos);
+        btnInspeccionar.addEventListener('click', inspeccionarVendedor);
+        btnEliminar.addEventListener('click', eliminarVendedor);
+
+        // Verificar si hay token al cargar
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = getToken();
+            if (!token) {
+                mostrarError('No se encontró token de autenticación. Por favor inicia sesión.');
+            }
+        });
+    </script>
+</body>
+</html>

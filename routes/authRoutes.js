@@ -222,4 +222,110 @@ router.delete("/users/:id", auth, async (req, res) => {
   }
 });
 
+// Agregar estas rutas al final de authRoutes.js, antes de module.exports
+
+/* ============================================================
+   RUTAS PARA GESTORES (tipo 2)
+   ============================================================ */
+
+/* ----------  BUSCAR VENDEDOR POR ID ---------- */
+router.get("/vendedor/:id", auth, async (req, res) => {
+  try {
+    // Permitir acceso a tipo 2 y tipo 3
+    if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const vendedor = await User.findById(req.params.id).select("-password");
+    
+    if (!vendedor) {
+      return res.status(404).json({ error: "Vendedor no encontrado" });
+    }
+
+    // Verificar que sea un vendedor (tipo 1)
+    if (vendedor.tipo !== 1) {
+      return res.status(400).json({ error: "El usuario no es un vendedor" });
+    }
+
+    res.json(vendedor);
+  } catch (e) {
+    if (e.name === 'CastError') {
+      return res.status(400).json({ error: "ID de vendedor inválido" });
+    }
+    res.status(500).json({ error: "Error al buscar vendedor" });
+  }
+});
+
+/* ----------  OTORGAR PERMISOS A VENDEDOR ---------- */
+router.put("/vendedor/:id/permisos", auth, async (req, res) => {
+  try {
+    if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const { permisos } = req.body;
+    
+    const vendedor = await User.findById(req.params.id);
+    if (!vendedor) {
+      return res.status(404).json({ error: "Vendedor no encontrado" });
+    }
+
+    if (vendedor.tipo !== 1) {
+      return res.status(400).json({ error: "El usuario no es un vendedor" });
+    }
+
+    // Aquí puedes agregar la lógica de permisos según tu necesidad
+    // Por ejemplo, podrías agregar un campo 'permisos' al schema de User
+    vendedor.permisos = permisos;
+    await vendedor.save();
+
+    res.json({ 
+      message: "Permisos otorgados exitosamente", 
+      vendedor: { ...vendedor.toObject(), password: undefined }
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Error al otorgar permisos" });
+  }
+});
+
+/* ----------  ELIMINAR VENDEDOR ---------- */
+router.delete("/vendedor/:id", auth, async (req, res) => {
+  try {
+    if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const vendedor = await User.findById(req.params.id);
+    if (!vendedor) {
+      return res.status(404).json({ error: "Vendedor no encontrado" });
+    }
+
+    if (vendedor.tipo !== 1) {
+      return res.status(400).json({ error: "El usuario no es un vendedor" });
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "Vendedor eliminado exitosamente" });
+  } catch (e) {
+    res.status(500).json({ error: "Error al eliminar vendedor" });
+  }
+});
+
+/* ----------  OBTENER TODOS LOS VENDEDORES (opcional) ---------- */
+router.get("/vendedores", auth, async (req, res) => {
+  try {
+    if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const vendedores = await User.find({ tipo: 1 })
+      .select("-password")
+      .sort({ createdAt: -1 });
+    
+    res.json(vendedores);
+  } catch (e) {
+    res.status(500).json({ error: "Error al obtener vendedores" });
+  }
+});
+
 module.exports = router;

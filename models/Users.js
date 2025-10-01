@@ -22,7 +22,22 @@ const userSchema = new mongoose.Schema({
   bloqueado: {
     type: Boolean,
     default: false
+  },
+  // Nuevo campo para permisos especiales
+  permisos: {
+    type: Boolean,
+    default: false
+  },
+  // Campos adicionales útiles
+  fechaCreacion: {
+    type: Date,
+    default: Date.now
+  },
+  ultimoAcceso: {
+    type: Date
   }
+}, {
+  timestamps: true // Agrega createdAt y updatedAt automáticamente
 });
 
 module.exports = mongoose.model("User", userSchema);

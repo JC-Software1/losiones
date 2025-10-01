@@ -282,6 +282,338 @@
   box-shadow: 0 6px 20px rgba(22, 160, 133, 0.4);
 }
 
+/* ---------- iPhone 12 Pro ---------- */
+@media only screen
+  and (device-width: 390px)
+  and (device-height: 844px)
+  and (-webkit-device-pixel-ratio: 3) {
+
+  /* Seguridad: evita el scroll horizontal */
+  html, body { overflow-x: hidden; }
+
+  /* Acomoda el notch */
+  body { padding-top: env(safe-area-inset-top, 47px); }
+
+  /* Header más compacto */
+  .header { padding: 16px 12px 12px; }
+  .header h1 { font-size: 22px; }
+  .header p  { font-size: 13px; }
+
+  /* Búsqueda: una columna, botones redondos */
+  .search-container {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .day-filter-wrapper { grid-template-columns: 1fr auto; }
+  .clear-filter-btn { justify-self: center; }
+
+  /* Formulario: inputs más altos para el pulgar */
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px;      /* evita zoom en iOS */
+    padding: 14px 12px;
+    border-radius: 10px;
+  }
+
+  /* Botones: mínimo 44 px de altura (directriz Apple) */
+  .btn { min-height: 44px; font-size: 16px; }
+
+  /* Tarjetas de venta: más aire */
+  .sale-card { padding: 16px 14px; }
+  .sale-actions { gap: 6px; }
+  .sale-actions .btn { flex: 1 1 45%; }
+
+  /* Dropdown de productos: altura máxima menor */
+  .dropdown-panel { max-height: 40vh; }
+
+  /* Modal de calendario: evita que quede debajo del notch */
+  .calendar-modal { padding-top: env(safe-area-inset-top); }
+  .calendar-content { max-width: 360px; }
+
+  /* Scanner: video con bordes redondeados y área de seguridad */
+  .scanner-box { padding: 16px; }
+  .scanner-box video {
+    border-radius: 12px;
+    max-height: 50vh;
+  }
+  .scanner-actions { padding-bottom: env(safe-area-inset-bottom, 20px); }
+
+  /* Menú hamburguesa: desplazado del notch */
+  .menu-toggle {
+    top: calc(env(safe-area-inset-top) + 8px);
+    right: 12px;
+  }
+}
+
+/* ============================
+  Dos inputs por fila en móviles
+  y evitar que se salgan del contenedor
+   (Pegar AL FINAL de <style> en categories.html)
+   ============================ */
+
+/* seguridad general */
+*,
+*::before,
+*::after { box-sizing: border-box; min-width: 0; }
+
+/* contenedor principal: límite y padding para que no haya overflow */
+.container,
+.page-wrapper,
+.page-content {
+  max-width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* grid por defecto: flexible */
+.form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: start;
+}
+
+/* cada grupo/columna del formulario */
+.form-grid .form-group,
+.form-grid .field,
+.form-grid .control {
+  width: 100%;
+  min-width: 0; /* evita que el input imponga ancho mínimo */
+  display: flex;
+  flex-direction: column; /* etiqueta arriba, control abajo */
+}
+
+/* inputs, selects, textarea y botones se adaptan siempre */
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
+.form-grid button {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: block;
+}
+
+/* etiquetas/chips que podrían romper la línea */
+.selected-products,
+.selected-product-tag,
+.tags,
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+/* dropdowns y paneles no salgan del viewport */
+.dropdown-panel,
+.modal-content,
+.sale-card {
+  max-width: calc(100% - 28px);
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+/* --------------------------
+   Reglas específicas para móviles (dos por fila)
+   -------------------------- */
+@media (max-width: 420px) {
+  /* dos columnas iguales en móviles */
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  /* forzar que elementos que deben ocupar 2 columnas lo hagan */
+  .form-grid .full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* reducir padding para que todo quepa sin overflow */
+  .container,
+  .page-wrapper,
+  .page-content {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  /* botón o clear filter ocupe ancho completo si lo necesitas */
+  .clear-filter-btn,
+  .submit-btn,
+  .btn.full-width {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  /* inputs con íconos dentro */
+  .input-with-icon { display: flex; gap: 8px; align-items: center; }
+  .input-with-icon input { flex: 1; min-width: 0; }
+
+  /* evitar scroll horizontal */
+  html, body { overflow-x: hidden; }
+}
+
+/* Media query específica para iPhone 12/12 Pro (refuerzo) */
+@media only screen
+  and (device-width: 390px)
+  and (device-height: 844px)
+  and (-webkit-device-pixel-ratio: 3) {
+
+  .form-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea {
+    padding: 11px 10px;
+    font-size: 15px;
+  }
+}
+
+
+
+/* Si después de esto algún elemento sigue saliéndose:
+   - identifica su clase y aplica: `.mi-clase { min-width: 0; max-width: 100%; overflow-wrap: break-word; }` */
+
+   /* ============================
+  Mejora visual y espaciado del menu-toggle
+  ============================ */
+
+/* Forzar máximo alto y scroll interno para evitar que el contenido se amontone */
+.menu-items {
+  max-width: 92%;
+  width: auto;
+  max-height: calc(100vh - 120px); /* deja espacio arriba/abajo */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 18px; /* más aire alrededor */
+  gap: 12px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+}
+
+/* Cabecera del menú: más separación y tipografía clara */
+.menu-head {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.menu-head strong {
+  font-size:15px;
+  letter-spacing:0.2px;
+  color:var(--primary);
+}
+
+/* Ajuste del grid: columnas y gaps más generosos */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr)); /* 2 columnas limpias por defecto */
+  gap: 12px;
+  align-items:stretch;
+}
+
+/* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
+@media (max-width:420px) {
+  .menu-grid { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
+.menu-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(180deg,#fff,var(--light-gray));
+  border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+  min-height: 52px;           /* mayor área táctil */
+  align-items: center;
+  white-space: normal;
+}
+
+/* Icono: tamaño y contenedor */
+.menu-link i {
+  font-size: 18px;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  color: var(--accent);
+  background: rgba(52,152,219,0.06);
+  border-radius: 8px;
+  flex: 0 0 30px;
+}
+
+/* Texto: permitir varias líneas y buen espaciado */
+.menu-link span {
+  display: block;
+  text-align: left;
+  line-height: 1.1;
+  font-size: 14px;
+  color: var(--primary);
+  margin: 0;
+  word-break: break-word;
+}
+
+/* Estado hover / focus: contraste y sombra más suave */
+.menu-link:hover,
+.menu-link:focus {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.12);
+  background: linear-gradient(180deg,var(--accent),#2a86c8);
+  color: #fff;
+}
+.menu-link:hover i,
+.menu-link:focus i { color: #fff; background: transparent; }
+
+/* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
+.menu-grid .btn-go-liquidation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  min-height: 52px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  text-decoration: none;
+}
+
+/* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
+.menu-items .menu-grid { margin-top: 6px; }
+
+/* indicadores de focus accesible */
+.menu-link:focus { outline: 3px solid rgba(52,152,219,0.12); }
+
+/* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
+.menu-link > *:first-child { margin-left: 2px; }
+
+/* Si quieres dividir opciones por secciones (opcional) */
+.menu-section {
+  display:block;
+  margin-bottom: 8px;
+}
+.menu-section + .menu-section { border-top: 1px dashed rgba(0,0,0,0.04); padding-top: 8px; margin-top: 8px; }
+
+/* Scrollbar más discreto (WebKit) */
+.menu-items::-webkit-scrollbar { width: 8px; }
+.menu-items::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 6px; }
+
+
     </style>
 </head>
 <body>
