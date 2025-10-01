@@ -464,4 +464,99 @@ router.get("/vendedores", auth, async (req, res) => {
   }
 });
 
+// Agregar estas rutas a tu archivo authRoutes.js existente
+
+// Obtener permisos detallados de un vendedor
+router.get('/vendedor/:id/permisos-detallados', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Verificar que el usuario actual sea admin/jefe
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos para ver permisos de otros usuarios' });
+        }
+        
+        const vendedor = await User.findById(id);
+        
+        if (!vendedor) {
+            return res.status(404).json({ error: 'Vendedor no encontrado' });
+        }
+        
+        // Verificar que el vendedor pertenezca al jefe actual
+        if (vendedor.jefe && vendedor.jefe.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Este vendedor no está asignado a ti' });
+        }
+        
+        res.json({
+            permisosDetallados: vendedor.permisosDetallados || {},
+            permisos: vendedor.permisos
+        });
+    } catch (error) {
+        console.error('Error al obtener permisos:', error);
+        res.status(500).json({ error: 'Error al obtener permisos detallados' });
+    }
+});
+
+// Actualizar permisos detallados de un vendedor
+router.put('/vendedor/:id/permisos-detallados', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { permisosDetallados } = req.body;
+        
+        // Verificar que el usuario actual sea admin/jefe
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos para modificar permisos de otros usuarios' });
+        }
+        
+        const vendedor = await User.findById(id);
+        
+        if (!vendedor) {
+            return res.status(404).json({ error: 'Vendedor no encontrado' });
+        }
+        
+        // Verificar que el vendedor pertenezca al jefe actual
+        if (vendedor.jefe && vendedor.jefe.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Este vendedor no está asignado a ti' });
+        }
+        
+        // Actualizar permisos detallados
+        vendedor.permisosDetallados = permisosDetallados;
+        
+        // Si todos los permisos están en false, marcar permisos general como false
+        const algunPermisoActivo = Object.values(permisosDetallados).some(val => val === true);
+        vendedor.permisos = algunPermisoActivo;
+        
+        await vendedor.save();
+        
+        res.json({
+            message: 'Permisos actualizados exitosamente',
+            permisosDetallados: vendedor.permisosDetallados,
+            permisos: vendedor.permisos
+        });
+    } catch (error) {
+        console.error('Error al actualizar permisos:', error);
+        res.status(500).json({ error: 'Error al actualizar permisos detallados' });
+    }
+});
+
+// Ruta para obtener los permisos del usuario actual (para el frontend)
+router.get('/mis-permisos', auth, async (req, res) => {
+    try {
+        const usuario = await User.findById(req.user.id);
+        
+        if (!usuario) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        
+        res.json({
+            permisosDetallados: usuario.permisosDetallados || {},
+            permisos: usuario.permisos,
+            tipo: usuario.tipo
+        });
+    } catch (error) {
+        console.error('Error al obtener mis permisos:', error);
+        res.status(500).json({ error: 'Error al obtener permisos' });
+    }
+});
+
 module.exports = router;

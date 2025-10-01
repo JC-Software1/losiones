@@ -140,6 +140,15 @@
             background: #dc2626;
         }
 
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #4b5563;
+        }
+
         .alert {
             padding: 16px;
             border-radius: 8px;
@@ -346,10 +355,211 @@
             color: #111827;
         }
 
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .permisos-section {
+            margin-bottom: 24px;
+        }
+
+        .permisos-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .permisos-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .permisos-section-title svg {
+            width: 20px;
+            height: 20px;
+            color: #667eea;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .permission-item:hover {
+            background: #f3f4f6;
+        }
+
+        .permission-info {
+            flex: 1;
+        }
+
+        .permission-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 2px;
+        }
+
+        .permission-desc {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #e5e7eb;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #10b981;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(22px);
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .bulk-actions button {
+            flex: 1;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
             }
             to {
                 opacity: 1;
@@ -383,6 +593,14 @@
                 gap: 12px;
                 align-items: flex-start;
             }
+
+            .modal {
+                max-height: 95vh;
+            }
+
+            .bulk-actions {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -409,7 +627,6 @@
                     </button>
                 </div>
                 <div id="listaVendedores" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
-                    <!-- Los vendedores se cargarán aquí -->
                 </div>
                 <div id="sinVendedores" class="empty-state" style="padding: 40px 20px; display: none;">
                     <p style="color: #6b7280; font-size: 14px;">No tienes vendedores asignados aún. Busca un vendedor por su ID para asignarlo.</p>
@@ -500,7 +717,7 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                         </svg>
-                        Otorgar Permisos
+                        Gestionar Permisos
                     </button>
 
                     <button id="btnInspeccionar" class="btn btn-info">
@@ -537,12 +754,318 @@
         </div>
     </div>
 
+    <!-- Modal de Permisos -->
+    <div id="modalPermisos" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Gestionar Permisos Detallados</h2>
+                <button class="modal-close" id="btnCerrarModal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="bulk-actions">
+                    <button id="btnActivarTodos" class="btn btn-success">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Activar Todos
+                    </button>
+                    <button id="btnDesactivarTodos" class="btn btn-danger">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                        Desactivar Todos
+                    </button>
+                </div>
+
+                <!-- Permisos de Productos -->
+                <div class="permisos-section">
+                    <div class="permisos-section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        </svg>
+                        Productos
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Ver Productos</div>
+                            <div class="permission-desc">Permite ver la lista de productos</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="verProductos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Crear Productos</div>
+                            <div class="permission-desc">Permite agregar nuevos productos al inventario</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="crearProductos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Editar Productos</div>
+                            <div class="permission-desc">Permite modificar información de productos</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="editarProductos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Eliminar Productos</div>
+                            <div class="permission-desc">Permite eliminar productos del inventario</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="eliminarProductos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Marcar como Vendido</div>
+                            <div class="permission-desc">Permite marcar productos como vendidos</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="marcarVendido">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Permisos de Ventas -->
+                <div class="permisos-section">
+                    <div class="permisos-section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        Ventas
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Ver Ventas</div>
+                            <div class="permission-desc">Permite ver la lista de ventas activas</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="verVentas">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Crear Ventas</div>
+                            <div class="permission-desc">Permite registrar nuevas ventas</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="crearVentas">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Editar Ventas</div>
+                            <div class="permission-desc">Permite modificar información de ventas</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="editarVentas">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Eliminar Ventas</div>
+                            <div class="permission-desc">Permite eliminar ventas del sistema</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="eliminarVentas">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Agregar Abonos</div>
+                            <div class="permission-desc">Permite registrar pagos a las ventas</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="agregarAbonos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Eliminar Abonos</div>
+                            <div class="permission-desc">Permite eliminar pagos registrados</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="eliminarAbonos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Ver Ventas Liquidadas</div>
+                            <div class="permission-desc">Permite ver historial de ventas liquidadas</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="verVentasLiquidadas">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Permisos de Gastos -->
+                <div class="permisos-section">
+                    <div class="permisos-section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        Gastos
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Ver Gastos</div>
+                            <div class="permission-desc">Permite ver la lista de gastos</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="verGastos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Crear Gastos</div>
+                            <div class="permission-desc">Permite registrar nuevos gastos</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="crearGastos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Editar Gastos</div>
+                            <div class="permission-desc">Permite modificar gastos registrados</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="editarGastos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Eliminar Gastos</div>
+                            <div class="permission-desc">Permite eliminar gastos del sistema</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="eliminarGastos">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Permisos de Liquidación -->
+                <div class="permisos-section">
+                    <div class="permisos-section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        Liquidación
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Realizar Liquidación</div>
+                            <div class="permission-desc">Permite realizar el proceso de liquidación del día</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="realizarLiquidacion">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Ver Historial de Liquidaciones</div>
+                            <div class="permission-desc">Permite ver liquidaciones anteriores</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="verHistorialLiquidaciones">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Permisos de Reportes -->
+                <div class="permisos-section">
+                    <div class="permisos-section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        Reportes
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Ver Reportes</div>
+                            <div class="permission-desc">Permite acceder a reportes y estadísticas</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="verReportes">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="permission-info">
+                            <div class="permission-name">Exportar Reportes</div>
+                            <div class="permission-desc">Permite exportar reportes a PDF o Excel</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-permission="exportarReportes">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="btnCancelar" class="btn btn-secondary">Cancelar</button>
+                <button id="btnGuardarPermisos" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { getToken } from './utils/auth.js';
 
         const API_URL = 'https://losiones-1.onrender.com/api/auth';
         
         let vendedorActual = null;
+        let permisosActuales = {};
 
         const vendedorIdInput = document.getElementById('vendedorId');
         const btnBuscar = document.getElementById('btnBuscar');
@@ -558,8 +1081,15 @@
         const btnRefrescar = document.getElementById('btnRefrescar');
         const listaVendedores = document.getElementById('listaVendedores');
         const sinVendedores = document.getElementById('sinVendedores');
+        
+        // Elementos del modal
+        const modalPermisos = document.getElementById('modalPermisos');
+        const btnCerrarModal = document.getElementById('btnCerrarModal');
+        const btnCancelar = document.getElementById('btnCancelar');
+        const btnGuardarPermisos = document.getElementById('btnGuardarPermisos');
+        const btnActivarTodos = document.getElementById('btnActivarTodos');
+        const btnDesactivarTodos = document.getElementById('btnDesactivarTodos');
 
-        // Función para encriptar ID (simple hash)
         function encriptarId(id) {
             let hash = 0;
             for (let i = 0; i < id.length; i++) {
@@ -735,47 +1265,134 @@
             }
         }
 
-        async function otorgarPermisos() {
+        async function abrirModalPermisos() {
             if (!vendedorActual) return;
 
             ocultarMensajes();
-            deshabilitarBotones(true);
+            btnGuardarPermisos.disabled = true;
+            btnGuardarPermisos.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                Cargando...
+            `;
 
             try {
                 const token = getToken();
-                const nuevoEstadoPermisos = !vendedorActual.permisos;
-                
-                const response = await fetch(`${API_URL}/vendedor/${vendedorActual._id}/permisos`, {
-                    method: 'PUT',
+                const response = await fetch(`${API_URL}/vendedor/${vendedorActual._id}/permisos-detallados`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ permisos: nuevoEstadoPermisos })
+                    }
                 });
 
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error || 'Error al actualizar permisos');
+                    throw new Error(data.error || 'Error al cargar permisos');
                 }
 
-                vendedorActual.permisos = nuevoEstadoPermisos;
-                mostrarExito(nuevoEstadoPermisos ? 'Permisos otorgados exitosamente' : 'Permisos revocados exitosamente');
+                permisosActuales = data.permisosDetallados || {};
                 
+                // Cargar permisos en los checkboxes
+                document.querySelectorAll('[data-permission]').forEach(checkbox => {
+                    const permiso = checkbox.getAttribute('data-permission');
+                    checkbox.checked = permisosActuales[permiso] || false;
+                });
+
+                modalPermisos.classList.add('show');
+            } catch (error) {
+                mostrarError('Error al cargar permisos: ' + error.message);
+            } finally {
+                btnGuardarPermisos.disabled = false;
+                btnGuardarPermisos.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Guardar Cambios
+                `;
+            }
+        }
+
+        function cerrarModal() {
+            modalPermisos.classList.remove('show');
+        }
+
+        async function guardarPermisos() {
+            if (!vendedorActual) return;
+
+            btnGuardarPermisos.disabled = true;
+            btnGuardarPermisos.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                Guardando...
+            `;
+
+            try {
+                const nuevosPermisos = {};
+                document.querySelectorAll('[data-permission]').forEach(checkbox => {
+                    const permiso = checkbox.getAttribute('data-permission');
+                    nuevosPermisos[permiso] = checkbox.checked;
+                });
+
+                const token = getToken();
+                const response = await fetch(`${API_URL}/vendedor/${vendedorActual._id}/permisos-detallados`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ permisosDetallados: nuevosPermisos })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al guardar permisos');
+                }
+
+                permisosActuales = nuevosPermisos;
+                vendedorActual.permisos = data.permisos;
+                
+                // Actualizar el indicador de permisos en la tarjeta
                 const permisosElement = document.getElementById('vendedorPermisos');
-                if (nuevoEstadoPermisos) {
+                if (data.permisos) {
                     permisosElement.innerHTML = '<span class="status-active">Concedidos</span>';
                 } else {
                     permisosElement.innerHTML = '<span class="status-blocked">No concedidos</span>';
                 }
 
+                mostrarExito('Permisos actualizados exitosamente');
+                cerrarModal();
                 await cargarMisVendedores();
             } catch (error) {
-                mostrarError(error.message);
+                mostrarError('Error al guardar permisos: ' + error.message);
             } finally {
-                deshabilitarBotones(false);
+                btnGuardarPermisos.disabled = false;
+                btnGuardarPermisos.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Guardar Cambios
+                `;
             }
+        }
+
+        function activarTodosPermisos() {
+            document.querySelectorAll('[data-permission]').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        }
+
+        function desactivarTodosPermisos() {
+            document.querySelectorAll('[data-permission]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
         }
 
         function inspeccionarVendedor() {
@@ -789,12 +1406,10 @@
             );
 
             if (confirmacion) {
-                // Guardar el ID del vendedor en sessionStorage para el modo admin
                 sessionStorage.setItem('adminMode', 'true');
                 sessionStorage.setItem('vendedorId', vendedorActual._id);
                 sessionStorage.setItem('vendedorName', vendedorActual.name);
                 
-                // Redirigir a categories.html
                 window.location.href = 'categories.html';
             }
         }
@@ -840,18 +1455,40 @@
             }
         }
 
+        // Event Listeners
         btnBuscar.addEventListener('click', buscarVendedor);
         vendedorIdInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 buscarVendedor();
             }
         });
-        btnPermisos.addEventListener('click', otorgarPermisos);
+        btnPermisos.addEventListener('click', abrirModalPermisos);
         btnInspeccionar.addEventListener('click', inspeccionarVendedor);
         btnEliminar.addEventListener('click', eliminarVendedor);
         btnRefrescar.addEventListener('click', cargarMisVendedores);
 
-       window.addEventListener('DOMContentLoaded', () => {
+        // Modal event listeners
+        btnCerrarModal.addEventListener('click', cerrarModal);
+        btnCancelar.addEventListener('click', cerrarModal);
+        btnGuardarPermisos.addEventListener('click', guardarPermisos);
+        btnActivarTodos.addEventListener('click', activarTodosPermisos);
+        btnDesactivarTodos.addEventListener('click', desactivarTodosPermisos);
+
+        // Cerrar modal al hacer click fuera
+        modalPermisos.addEventListener('click', (e) => {
+            if (e.target === modalPermisos) {
+                cerrarModal();
+            }
+        });
+
+        // Cerrar modal con tecla ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modalPermisos.classList.contains('show')) {
+                cerrarModal();
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
             try {
                 const token = getToken();
                 if (!token) {
