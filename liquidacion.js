@@ -33,11 +33,22 @@ setTimeout(() => updateSummary(), 100);
 });
 
 // Cargar datos pendientes de liquidación
+// Cargar datos pendientes de liquidación
 async function loadPendingData() {
     try {
         const token = getToken();
-        const response = await apiFetch("/liquidation/pending", "GET", null, token);
-        
+
+        /* ===== NUEVO: elegir ruta según modo admin ===== */
+        const vendedorId = window.adminModeUtils?.isActive()
+                         ? window.adminModeUtils.getVendedorId()
+                         : null;
+        const endPoint = vendedorId
+                       ? `/liquidation/vendedor/${vendedorId}/pending`
+                       : '/liquidation/pending';
+        /* =============================================== */
+
+        const response = await apiFetch(endPoint, "GET", null, token);
+
         pendingData = response;
 
         // Cargar última liquidación para obtener caja final
@@ -45,7 +56,6 @@ async function loadPendingData() {
 
         // Mostrar datos
         displayPendingData();
-
         updateSummary();
 
         // Ocultar loading y mostrar contenido
@@ -63,33 +73,41 @@ async function loadPendingData() {
         `;
     }
 }
-
 // Cargar comisiones guardadas
+// Cargar comisiones guardadas (ADMIN-SAFE)
 async function loadSavedCommissions() {
     try {
         const token = getToken();
-        
-        // Cargar comisión de abonos
+        const vendedorId = window.adminModeUtils?.isActive()
+                         ? window.adminModeUtils.getVendedorId()
+                         : null;
+
+        // Comisión de abonos
         try {
-            const paymentsComm = await apiFetch("/commission", "GET", null, token);
-            document.getElementById("paymentsCommission").value = paymentsComm.percentage || 0;
+            const endPoint = vendedorId
+                           ? `/commission/vendedor/${vendedorId}`
+                           : '/commission';
+            const paymentsComm = await apiFetch(endPoint, 'GET', null, token);
+            document.getElementById('paymentsCommission').value = paymentsComm.percentage || 0;
         } catch (e) {
-            console.log("No hay comisión de abonos guardada");
+            console.log('No hay comisión de abonos guardada');
         }
 
-        // Cargar comisión de ventas
+        // Comisión de ventas
         try {
-            const salesComm = await apiFetch("/sales-commission", "GET", null, token);
-            document.getElementById("salesCommission").value = salesComm.percentage || 0;
+            const endPoint = vendedorId
+                           ? `/sales-commission/vendedor/${vendedorId}`
+                           : '/sales-commission';
+            const salesComm = await apiFetch(endPoint, 'GET', null, token);
+            document.getElementById('salesCommission').value = salesComm.percentage || 0;
         } catch (e) {
-            console.log("No hay comisión de ventas guardada");
+            console.log('No hay comisión de ventas guardada');
         }
 
     } catch (error) {
-        console.error("Error al cargar comisiones:", error);
+        console.error('Error al cargar comisiones:', error);
     }
 }
-
 // Mostrar datos pendientes
 // Mostrar datos pendientes
 function displayPendingData() {
@@ -292,16 +310,25 @@ if (initialCash < 0) {
 
 
 // Cargar última liquidación para prellenar caja inicial
+// Cargar última liquidación para prellenar caja inicial
 async function loadLastLiquidation() {
     try {
         const token = getToken();
-        const liquidations = await apiFetch("/liquidation/history", "GET", null, token);
-        
+
+        /* ===== NUEVO: elegir ruta según modo admin ===== */
+        const vendedorId = window.adminModeUtils?.isActive()
+                         ? window.adminModeUtils.getVendedorId()
+                         : null;
+        const endPoint = vendedorId
+                       ? `/liquidation/vendedor/${vendedorId}/history`
+                       : '/liquidation/history';
+        /* =============================================== */
+
+        const liquidations = await apiFetch(endPoint, "GET", null, token);
+
         if (liquidations && liquidations.length > 0) {
-            // La primera es la más reciente (están ordenadas por fecha descendente)
             const lastLiquidation = liquidations[0];
             document.getElementById("initialCash").value = lastLiquidation.finalCash;
-            
             console.log('✅ Caja inicial prellenada con caja final anterior:', lastLiquidation.finalCash);
         } else {
             console.log('ℹ️ No hay liquidaciones previas, caja inicial en 0');

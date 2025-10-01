@@ -19,6 +19,20 @@ router.get("/", auth, async (req, res) => {
         res.json({ percentage: sc.percentage });
     } catch (e) { res.status(500).json({ error: "Error obteniendo comisión ventas" }); }
 });
+// GET /api/sales-commission/vendedor/:vendedorId  (para admins)
+router.get("/vendedor/:vendedorId", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: "Sin permisos" });
+        }
+        const sc = await SalesCommission.findOne({ user: req.params.vendedorId });
+        if (!sc) return res.status(404).json({ error: "No hay porcentaje guardado" });
+        res.json({ percentage: sc.percentage });
+    } catch (error) {
+        console.error("Error al obtener comisión de ventas del vendedor:", error);
+        res.status(500).json({ error: "Error al obtener comisión de ventas" });
+    }
+});
 
 // POST /api/sales-commission
 router.post("/", auth, async (req, res) => {

@@ -42,6 +42,21 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
+// GET /api/commission/vendedor/:vendedorId  (para admins)
+router.get("/vendedor/:vendedorId", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: "Sin permisos" });
+        }
+        const commission = await Commission.findOne({ user: req.params.vendedorId });
+        if (!commission) return res.status(404).json({ error: "No hay porcentaje guardado" });
+        res.json({ percentage: commission.percentage });
+    } catch (error) {
+        console.error("Error al obtener comisión del vendedor:", error);
+        res.status(500).json({ error: "Error al obtener comisión" });
+    }
+});
+
 // Guardar o actualizar porcentaje de comisión
 router.post("/", auth, async (req, res) => {
     try {
