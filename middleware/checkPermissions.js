@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../models/Users');
 
 // Middleware para verificar permisos específicos
 const checkPermission = (permisoRequerido) => {
