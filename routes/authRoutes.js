@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const User = require("../models/Users");
 const validator = require("validator");
 const auth = require("../middleware/auth");
+const VendedorAsignado = require("../models/VendedorAsignado");
 
 const router = express.Router();
 
@@ -222,13 +223,14 @@ router.delete("/users/:id", auth, async (req, res) => {
   }
 });
 
-// Agregar estas rutas al final de authRoutes.js, antes de module.exports
+// Agregar al inicio del archivo authRoutes.js
+const VendedorAsignado = require("../models/VendedorAsignado");
 
 /* ============================================================
-   RUTAS PARA GESTORES (tipo 2)
+   RUTAS PARA GESTORES (tipo 2) - CON ASIGNACIÓN
    ============================================================ */
 
-/* ----------  BUSCAR VENDEDOR POR ID ---------- */
+/* ----------  BUSCAR Y ASIGNAR VENDEDOR POR ID ---------- */
 router.get("/vendedor/:id", auth, async (req, res) => {
   try {
     // Permitir acceso a tipo 2 y tipo 3
@@ -247,12 +249,65 @@ router.get("/vendedor/:id", auth, async (req, res) => {
       return res.status(400).json({ error: "El usuario no es un vendedor" });
     }
 
-    res.json(vendedor);
+    // Si es tipo 2, guardar/actualizar la asignación automáticamente
+    if (req.user.tipo === 2) {
+      await VendedorAsignado.findOneAndUpdate(
+        { administrador: req.user.id, vendedor: vendedor._id },
+        { 
+          administrador: req.user.id, 
+          vendedor: vendedor._id,
+          fechaAsignacion: Date.now()
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    // Verificar si ya está asignado y obtener datos adicionales
+    const asignacion = await VendedorAsignado.findOne({ 
+      administrador: req.user.id, 
+      vendedor: vendedor._id 
+    });
+
+    res.json({
+      ...vendedor.toObject(),
+      asignado: !!asignacion,
+      permisos: asignacion?.permisos || false,
+      fechaAsignacion: asignacion?.fechaAsignacion,
+      notas: asignacion?.notas || ""
+    });
   } catch (e) {
     if (e.name === 'CastError') {
       return res.status(400).json({ error: "ID de vendedor inválido" });
     }
     res.status(500).json({ error: "Error al buscar vendedor" });
+  }
+});
+
+/* ----------  OBTENER MIS VENDEDORES ASIGNADOS ---------- */
+router.get("/mis-vendedores", auth, async (req, res) => {
+  try {
+    if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const asignaciones = await VendedorAsignado.find({ 
+      administrador: req.user.id 
+    })
+    .populate('vendedor', '-password')
+    .sort({ fechaAsignacion: -1 });
+
+    const vendedores = asignaciones.map(asig => ({
+      ...asig.vendedor.toObject(),
+      permisos: asig.permisos,
+      fechaAsignacion: asig.fechaAsignacion,
+      notas: asig.notas,
+      asignacionId: asig._id
+    }));
+
+    res.json(vendedores);
+  } catch (e) {
+    console.error("Error obteniendo vendedores:", e);
+    res.status(500).json({ error: "Error al obtener vendedores asignados" });
   }
 });
 
@@ -274,21 +329,78 @@ router.put("/vendedor/:id/permisos", auth, async (req, res) => {
       return res.status(400).json({ error: "El usuario no es un vendedor" });
     }
 
-    // Aquí puedes agregar la lógica de permisos según tu necesidad
-    // Por ejemplo, podrías agregar un campo 'permisos' al schema de User
-    vendedor.permisos = permisos;
-    await vendedor.save();
+    // Actualizar en la tabla de asignaciones
+    const asignacion = await VendedorAsignado.findOneAndUpdate(
+      { administrador: req.user.id, vendedor: vendedor._id },
+      { permisos: permisos },
+      { new: true }
+    );
+
+    if (!asignacion) {
+      return res.status(404).json({ error: "Vendedor no asignado a este administrador" });
+    }
 
     res.json({ 
-      message: "Permisos otorgados exitosamente", 
-      vendedor: { ...vendedor.toObject(), password: undefined }
+      message: "Permisos actualizados exitosamente", 
+      vendedor: { ...vendedor.toObject(), password: undefined },
+      permisos: asignacion.permisos
     });
   } catch (e) {
     res.status(500).json({ error: "Error al otorgar permisos" });
   }
 });
 
-/* ----------  ELIMINAR VENDEDOR ---------- */
+/* ----------  ACTUALIZAR NOTAS DEL VENDEDOR ---------- */
+router.put("/vendedor/:id/notas", auth, async (req, res) => {
+  try {
+    if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const { notas } = req.body;
+    
+    const asignacion = await VendedorAsignado.findOneAndUpdate(
+      { administrador: req.user.id, vendedor: req.params.id },
+      { notas: notas || "" },
+      { new: true }
+    );
+
+    if (!asignacion) {
+      return res.status(404).json({ error: "Vendedor no asignado a este administrador" });
+    }
+
+    res.json({ 
+      message: "Notas actualizadas exitosamente", 
+      notas: asignacion.notas
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Error al actualizar notas" });
+  }
+});
+
+/* ----------  DESASIGNAR VENDEDOR ---------- */
+router.delete("/vendedor/:id/asignar", auth, async (req, res) => {
+  try {
+    if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const resultado = await VendedorAsignado.findOneAndDelete({
+      administrador: req.user.id,
+      vendedor: req.params.id
+    });
+
+    if (!resultado) {
+      return res.status(404).json({ error: "Vendedor no estaba asignado" });
+    }
+
+    res.json({ message: "Vendedor desasignado exitosamente" });
+  } catch (e) {
+    res.status(500).json({ error: "Error al desasignar vendedor" });
+  }
+});
+
+/* ----------  ELIMINAR VENDEDOR (SOLO TIPO 3 O SI ESTÁ ASIGNADO) ---------- */
 router.delete("/vendedor/:id", auth, async (req, res) => {
   try {
     if (req.user.tipo !== 2 && req.user.tipo !== 3) {
@@ -304,14 +416,29 @@ router.delete("/vendedor/:id", auth, async (req, res) => {
       return res.status(400).json({ error: "El usuario no es un vendedor" });
     }
 
+    // Si es tipo 2, verificar que el vendedor esté asignado
+    if (req.user.tipo === 2) {
+      const asignacion = await VendedorAsignado.findOne({
+        administrador: req.user.id,
+        vendedor: vendedor._id
+      });
+
+      if (!asignacion) {
+        return res.status(403).json({ error: "No tienes permiso para eliminar este vendedor" });
+      }
+    }
+
+    // Eliminar vendedor y todas sus asignaciones
     await User.findByIdAndDelete(req.params.id);
+    await VendedorAsignado.deleteMany({ vendedor: req.params.id });
+
     res.json({ message: "Vendedor eliminado exitosamente" });
   } catch (e) {
     res.status(500).json({ error: "Error al eliminar vendedor" });
   }
 });
 
-/* ----------  OBTENER TODOS LOS VENDEDORES (opcional) ---------- */
+/* ----------  OBTENER TODOS LOS VENDEDORES (BÚSQUEDA) ---------- */
 router.get("/vendedores", auth, async (req, res) => {
   try {
     if (req.user.tipo !== 2 && req.user.tipo !== 3) {
@@ -321,6 +448,22 @@ router.get("/vendedores", auth, async (req, res) => {
     const vendedores = await User.find({ tipo: 1 })
       .select("-password")
       .sort({ createdAt: -1 });
+    
+    // Si es tipo 2, marcar cuáles están asignados
+    if (req.user.tipo === 2) {
+      const asignaciones = await VendedorAsignado.find({ 
+        administrador: req.user.id 
+      });
+      
+      const idsAsignados = new Set(asignaciones.map(a => a.vendedor.toString()));
+      
+      const vendedoresConEstado = vendedores.map(v => ({
+        ...v.toObject(),
+        asignado: idsAsignados.has(v._id.toString())
+      }));
+      
+      return res.json(vendedoresConEstado);
+    }
     
     res.json(vendedores);
   } catch (e) {
