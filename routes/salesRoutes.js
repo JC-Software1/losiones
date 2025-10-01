@@ -1,11 +1,11 @@
 const express = require("express");
 const auth = require("../middleware/auth");
+const { checkPermission } = require("../middleware/checkPermissions");
 const Sale = require("../models/Sale");
-const salesController = require('../controllers/salesController');
 const router = express.Router();
 
-// Eliminar un abono específico de una venta
-router.delete("/:saleId/payment/:paymentId", auth, async (req, res) => {
+// Eliminar un abono específico - requiere "eliminarAbonos"
+router.delete("/:saleId/payment/:paymentId", auth, checkPermission('eliminarAbonos'), async (req, res) => {
     try {
         const { saleId, paymentId } = req.params;
 
@@ -14,7 +14,6 @@ router.delete("/:saleId/payment/:paymentId", auth, async (req, res) => {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
-        // Filtrar el abono que se desea eliminar
         const initialLength = sale.payments.length;
         sale.payments = sale.payments.filter(p => p._id.toString() !== paymentId);
 
@@ -22,7 +21,6 @@ router.delete("/:saleId/payment/:paymentId", auth, async (req, res) => {
             return res.status(404).json({ error: "Abono no encontrado" });
         }
 
-        // Si estaba liquidada, verificar si aún debería estarlo
         if (sale.settled) {
             const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
             if (totalPaid < sale.price) {
@@ -39,14 +37,12 @@ router.delete("/:saleId/payment/:paymentId", auth, async (req, res) => {
     }
 });
 
-
-// Obtener ventas por fecha (exacta)
-router.get("/by-date/:date", auth, async (req, res) => {
+// Obtener ventas por fecha - requiere "verVentas"
+router.get("/by-date/:date", auth, checkPermission('verVentas'), async (req, res) => {
     try {
         const userId = req.user.id;
         const dateParam = new Date(req.params.date);
 
-        // Obtener inicio y fin del día
         const startOfDay = new Date(dateParam.setHours(0, 0, 0, 0));
         const endOfDay = new Date(dateParam.setHours(23, 59, 59, 999));
 
@@ -65,9 +61,8 @@ router.get("/by-date/:date", auth, async (req, res) => {
     }
 });
 
-
-// Obtener todas las ventas (liquidadas y no liquidadas)
-router.get("/all", auth, async (req, res) => {
+// Obtener todas las ventas - requiere "verVentas"
+router.get("/all", auth, checkPermission('verVentas'), async (req, res) => {
     try {
         const sales = await Sale.find({ user: req.user.id });
         res.json(sales);
@@ -76,8 +71,8 @@ router.get("/all", auth, async (req, res) => {
     }
 });
 
-// Eliminar una venta liquidada
-router.delete("/:id/settled", auth, async (req, res) => {
+// Eliminar una venta liquidada - requiere "eliminarVentas"
+router.delete("/:id/settled", auth, checkPermission('eliminarVentas'), async (req, res) => {
     try {
         const sale = await Sale.findOneAndDelete({ _id: req.params.id, user: req.user.id, settled: true });
 
@@ -91,14 +86,12 @@ router.delete("/:id/settled", auth, async (req, res) => {
     }
 });
 
-
-
-// Obtener todas las ventas, excluyendo las liquidadas
-router.get("/", auth, async (req, res) => {
+// Obtener ventas activas - requiere "verVentas"
+router.get("/", auth, checkPermission('verVentas'), async (req, res) => {
     try {
         const sales = await Sale.find({ 
             user: req.user.id, 
-            settled: { $ne: true }  // Excluir ventas donde settled es true
+            settled: { $ne: true }
         });
         res.json(sales);
     } catch (error) {
@@ -106,10 +99,8 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
-
-
-// Obtener todas las ventas liquidadas del usuario
-router.get("/settled", auth, async (req, res) => {
+// Obtener ventas liquidadas - requiere "verVentasLiquidadas"
+router.get("/settled", auth, checkPermission('verVentasLiquidadas'), async (req, res) => {
     try {
         const sales = await Sale.find({ user: req.user.id, settled: true });
         res.json(sales);
@@ -118,11 +109,8 @@ router.get("/settled", auth, async (req, res) => {
     }
 });
 
-
-
-
-// Crear nueva venta
-router.post("/new", auth, async (req, res) => {
+// Crear nueva venta - requiere "crearVentas"
+router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
     try {
         const {
             clientName,
@@ -152,10 +140,9 @@ router.post("/new", auth, async (req, res) => {
             settled: initiallySettled,
             settledDate: initiallySettled ? new Date() : null,
             liquidatedDay: false,
-            // 🔥 CAMBIO AQUÍ: Usar saleDate en vez de new Date()
             payments: advancePayment > 0 ? [{ 
                 amount: advancePayment, 
-                date: saleDate,  // ✅ Ahora usa la fecha de la venta
+                date: saleDate,
                 liquidatedDay: false
             }] : []
         });
@@ -167,8 +154,11 @@ router.post("/new", auth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// Actualizar una venta
-router.put("/:id", auth, async (req, res) => {
+
+
+
+// Actualizar una venta - requiere "editarVentas"
+router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
     const { clientName, productName, saleDate, price, installments, clientAddress, paymentDays } = req.body;
 
     try {
@@ -178,7 +168,6 @@ router.put("/:id", auth, async (req, res) => {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
-        // Actualizamos los datos básicos
         sale.clientName = clientName;
         sale.productName = productName;
         sale.saleDate = saleDate;
@@ -186,20 +175,16 @@ router.put("/:id", auth, async (req, res) => {
         sale.installments = installments;
         sale.clientAddress = clientAddress;
         
-        // ✅ Actualizar los días de pago
         if (paymentDays !== undefined) {
             sale.paymentDays = paymentDays;
         }
 
-        // Verificar si con el nuevo precio, la venta debería actualizarse a liquidada o no
         const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
         
-        // Si bajamos el precio y los pagos ya cubren el nuevo precio
         if (totalPaid >= price && !sale.settled) {
             sale.settled = true;
             sale.settledDate = new Date();
         } 
-        // Si subimos el precio y los pagos ya no cubren el nuevo precio
         else if (totalPaid < price && sale.settled) {
             sale.settled = false;
             sale.settledDate = null;
@@ -212,8 +197,8 @@ router.put("/:id", auth, async (req, res) => {
     }
 });
 
-
-router.post("/:id/payment", auth, async (req, res) => {
+// Agregar abono - requiere "agregarAbonos"
+router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, res) => {
     const { amount, date } = req.body;
 
     if (!amount || amount <= 0) {
@@ -227,24 +212,20 @@ router.post("/:id/payment", auth, async (req, res) => {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
-        // Si ya está liquidada no permitir más pagos
         if (sale.settled) {
             return res.status(400).json({ error: "La venta ya está liquidada, no puedes agregar más pagos" });
         }
 
-        // Agregar el nuevo abono
-sale.payments.push({
-    amount,
-    date: date || new Date(),
-    liquidatedDay: false  // ← AGREGAR ESTA LÍNEA
-});
+        sale.payments.push({
+            amount,
+            date: date || new Date(),
+            liquidatedDay: false
+        });
 
-        // 💥 Aquí recalculamos bien el total pagado
         const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
 
         let justSettled = false;
 
-        // 💥 Aquí marcamos como liquidada si pagó todo
         if (totalPaid >= sale.price) {
             sale.settled = true;
             sale.settledDate = new Date();
@@ -253,7 +234,6 @@ sale.payments.push({
 
         await sale.save();
 
-        // Devolver respuesta correcta
         res.json({
             settled: sale.settled,
             justSettled,
@@ -267,10 +247,8 @@ sale.payments.push({
     }
 });
 
-
-
-// Eliminar una venta
-router.delete("/:id", auth, async (req, res) => {
+// Eliminar una venta - requiere "eliminarVentas"
+router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) => {
     try {
         const sale = await Sale.findOneAndDelete({ _id: req.params.id, user: req.user.id });
 
@@ -294,7 +272,6 @@ router.get('/vendedor/:vendedorId', auth, async (req, res) => {
             return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
         }
         
-        // Buscar ventas del vendedor
         const sales = await Sale.find({ user: vendedorId }).sort({ saleDate: -1 });
         
         res.json(sales);
@@ -303,6 +280,5 @@ router.get('/vendedor/:vendedorId', auth, async (req, res) => {
         res.status(500).json({ error: 'Error al obtener ventas del vendedor' });
     }
 });
-
 
 module.exports = router;

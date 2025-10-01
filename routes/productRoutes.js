@@ -1,11 +1,12 @@
 const express = require("express");
 const auth = require("../middleware/auth");
+const { checkPermission } = require("../middleware/checkPermissions");
 const Sale = require("../models/Sale");
 const Product = require("../models/Product");
 const router = express.Router();
 
-// Get all products for the logged in user
-router.get("/", auth, async (req, res) => {
+// Get all products - requiere permiso "verProductos"
+router.get("/", auth, checkPermission('verProductos'), async (req, res) => {
     try {
         const products = await Product.find({ user: req.user.id });
         res.json(products);
@@ -14,12 +15,11 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
-// Create a new product
-router.post("/new", auth, async (req, res) => {
+// Create a new product - requiere permiso "crearProductos"
+router.post("/new", auth, checkPermission('crearProductos'), async (req, res) => {
     try {
-const { name, costPrice, salePrice, category, brand, size } = req.body;
+        const { name, costPrice, salePrice, category, brand, size } = req.body;
 
-        // Log received data for debugging
         console.log("Datos recibidos en el servidor:", { 
             name, 
             costPrice, 
@@ -30,16 +30,15 @@ const { name, costPrice, salePrice, category, brand, size } = req.body;
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
 
-
-const product = new Product({
-    name,
-    costPrice,
-    salePrice,
-    category,
-    brand,
-    size,
-    user: req.user.id
-});
+        const product = new Product({
+            name,
+            costPrice,
+            salePrice,
+            category,
+            brand,
+            size,
+            user: req.user.id
+        });
 
         await product.save();
         res.status(201).json(product);
@@ -49,9 +48,9 @@ const product = new Product({
     }
 });
 
-// Update a product
-router.put("/:id", auth, async (req, res) => {
-const { name, costPrice, salePrice, category, brand, size } = req.body;
+// Update a product - requiere permiso "editarProductos"
+router.put("/:id", auth, checkPermission('editarProductos'), async (req, res) => {
+    const { name, costPrice, salePrice, category, brand, size } = req.body;
     try {
         const product = await Product.findOne({ _id: req.params.id, user: req.user.id });
 
@@ -59,13 +58,12 @@ const { name, costPrice, salePrice, category, brand, size } = req.body;
             return res.status(404).json({ error: "Producto no encontrado" });
         }
 
-        // Update the product data
-product.name = name;
-product.costPrice = costPrice;
-product.salePrice = salePrice;
-product.category = category;
-product.brand = brand;
-product.size = size || null;
+        product.name = name;
+        product.costPrice = costPrice;
+        product.salePrice = salePrice;
+        product.category = category;
+        product.brand = brand;
+        product.size = size || null;
 
         await product.save();
         res.json(product);
@@ -74,8 +72,8 @@ product.size = size || null;
     }
 });
 
-// Delete a product
-router.delete("/:id", auth, async (req, res) => {
+// Delete a product - requiere permiso "eliminarProductos"
+router.delete("/:id", auth, checkPermission('eliminarProductos'), async (req, res) => {
     try {
         const product = await Product.findOneAndDelete({ _id: req.params.id, user: req.user.id });
 
@@ -89,11 +87,10 @@ router.delete("/:id", auth, async (req, res) => {
     }
 });
 
-// Marcar un producto como vendido
-// Marcar un producto como vendido
-router.put("/:id/sell", auth, async (req, res) => {
+// Marcar un producto como vendido - requiere permiso "marcarVendido"
+router.put("/:id/sell", auth, checkPermission('marcarVendido'), async (req, res) => {
     try {
-        const { soldTo } = req.body; // ✅ Recibís el nombre del cliente
+        const { soldTo } = req.body;
 
         const product = await Product.findOne({ _id: req.params.id, user: req.user.id });
 
@@ -105,7 +102,6 @@ router.put("/:id/sell", auth, async (req, res) => {
             return res.status(400).json({ error: "El producto ya está marcado como vendido" });
         }
 
-        // ✅ Marcás como vendido con el nombre del cliente
         product.sold = true;
         product.soldDate = new Date();
         product.soldTo = soldTo || "Cliente no registrado";
@@ -128,8 +124,7 @@ router.patch("/:id/product", auth, async (req, res) => {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
-        // Eliminar el nombre del producto de la venta
-        sale.productName = null;  // Si deseas eliminar el producto por completo
+        sale.productName = null;
 
         await sale.save();
         res.json(sale);
@@ -139,10 +134,10 @@ router.patch("/:id/product", auth, async (req, res) => {
 });
 
 // Último producto creado por el usuario
-router.get("/last", auth, async (req, res) => {
+router.get("/last", auth, checkPermission('verProductos'), async (req, res) => {
   try {
     const last = await Product.findOne({ user: req.user.id })
-                              .sort({ createdAt: -1 }) // el más reciente
+                              .sort({ createdAt: -1 })
                               .select("_id name costPrice salePrice");
     if (!last) return res.status(404).json({ error: "No hay productos" });
     res.json(last);

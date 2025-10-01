@@ -1,10 +1,11 @@
 const express = require("express");
 const auth = require("../middleware/auth");
+const { checkPermission } = require("../middleware/checkPermissions");
 const Expense = require("../models/Expense");
 const router = express.Router();
 
-// Obtener todos los gastos del usuario
-router.get("/", auth, async (req, res) => {
+// Obtener todos los gastos - requiere "verGastos"
+router.get("/", auth, checkPermission('verGastos'), async (req, res) => {
     try {
         const expenses = await Expense.find({ 
             user: req.user.id,
@@ -18,8 +19,8 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
-// Obtener gastos por fecha
-router.get("/by-date/:date", auth, async (req, res) => {
+// Obtener gastos por fecha - requiere "verGastos"
+router.get("/by-date/:date", auth, checkPermission('verGastos'), async (req, res) => {
     try {
         const dateParam = new Date(req.params.date);
         const startOfDay = new Date(dateParam.setHours(0, 0, 0, 0));
@@ -40,8 +41,8 @@ router.get("/by-date/:date", auth, async (req, res) => {
     }
 });
 
-// Crear nuevo gasto
-router.post("/", auth, async (req, res) => {
+// Crear nuevo gasto - requiere "crearGastos"
+router.post("/", auth, checkPermission('crearGastos'), async (req, res) => {
     try {
         const { date, items } = req.body;
 
@@ -49,7 +50,6 @@ router.post("/", auth, async (req, res) => {
             return res.status(400).json({ error: "Debe agregar al menos un gasto" });
         }
 
-        // Validar que todos los items tengan descripción y monto
         for (const item of items) {
             if (!item.description || !item.description.trim()) {
                 return res.status(400).json({ error: "Todas las descripciones son obligatorias" });
@@ -74,8 +74,8 @@ router.post("/", auth, async (req, res) => {
     }
 });
 
-// Actualizar gasto
-router.put("/:id", auth, async (req, res) => {
+// Actualizar gasto - requiere "editarGastos"
+router.put("/:id", auth, checkPermission('editarGastos'), async (req, res) => {
     try {
         const { date, items } = req.body;
 
@@ -104,8 +104,8 @@ router.put("/:id", auth, async (req, res) => {
     }
 });
 
-// Eliminar gasto
-router.delete("/:id", auth, async (req, res) => {
+// Eliminar gasto - requiere "eliminarGastos"
+router.delete("/:id", auth, checkPermission('eliminarGastos'), async (req, res) => {
     try {
         const expense = await Expense.findOneAndDelete({ 
             _id: req.params.id, 
@@ -123,8 +123,8 @@ router.delete("/:id", auth, async (req, res) => {
     }
 });
 
-// Obtener total de gastos no liquidados
-router.get("/total", auth, async (req, res) => {
+// Obtener total de gastos - requiere "verGastos"
+router.get("/total", auth, checkPermission('verGastos'), async (req, res) => {
     try {
         const expenses = await Expense.find({ 
             user: req.user.id,
