@@ -6,7 +6,7 @@ const DailyLiquidation = require("../models/DailyLiquidation");
 const Expense = require("../models/Expense");
 const router = express.Router();
 
-// 🔥 RUTA PARA ADMINS: Datos pendientes de un vendedor
+// RUTA PARA ADMINS: Datos pendientes de un vendedor
 router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
@@ -135,7 +135,7 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
     }
 });
 
-// 🔥 RUTA PARA ADMINS: Historial de liquidaciones de un vendedor
+// RUTA PARA ADMINS: Historial de liquidaciones de un vendedor
 router.get("/vendedor/:vendedorId/history", auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
@@ -157,7 +157,7 @@ router.get("/vendedor/:vendedorId/history", auth, async (req, res) => {
 // Obtener datos pendientes de liquidación
 router.get("/pending", auth, async (req, res) => {
     try {
-        const userId = req.user.tipo === 1 ? req.user.id : req.user.id;
+        const userId = req.user.id; // Simplificado, ya que admins no usan esta ruta para vendedores
         
         const sales = await Sale.find({ 
             user: userId, 
@@ -278,44 +278,57 @@ router.get("/pending", auth, async (req, res) => {
     }
 });
 
-// Crear liquidación del día (sin cambios)
-router.post("/create", auth, async (req, res) => {
+// Crear nueva liquidación (para el usuario logueado, e.g. vendedores)
+router.post("/new", auth, async (req, res) => {
     try {
-        const {
-            initialCash,
-            paymentsCommission,
-            salesCommission,
-            notes
-        } = req.body;
-
+        const { initialCash, notes } = req.body;
+        
+        const userId = req.user.id;
         const sales = await Sale.find({ 
-            user: req.user.id, 
+            user: userId, 
             liquidatedDay: false 
-        });
+        }).lean().select('_id clientName price advancePayment payments');
 
         const products = await Product.find({ 
-            user: req.user.id, 
+            user: userId, 
             liquidatedDay: false,
             sold: false
-        });
+        }).lean().select('_id name brand costPrice');
 
         const expenses = await Expense.find({ 
-            user: req.user.id, 
+            user: userId, 
             liquidatedDay: false 
-        });
+        }).lean().select('_id date totalAmount items');
 
-        const allSales = await Sale.find({ user: req.user.id });
-        
+        const allActiveSales = await Sale.find({ 
+            user: userId, 
+            settled: false
+        }).lean().select('_id clientName payments advancePayment');
+
         let paymentsData = [];
         let paymentUpdates = [];
-        
-        allSales.forEach(sale => {
+        let totalPayments = 0;
+        let totalInitialPayments = 0;
+
+        allActiveSales.forEach(sale => {
+            if (!sale.payments) return;
+            
             const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
-            unliquidatedPayments.forEach(payment => {
+            
+            unliquidatedPayments.forEach((payment, index) => {
+                const isFirstPayment = index === 0 && sale.advancePayment > 0 && payment.amount === sale.advancePayment;
+                
+                if (isFirstPayment) {
+                    totalInitialPayments += payment.amount;
+                }
+                
+                totalPayments += payment.amount;
                 paymentsData.push({
                     saleId: sale._id,
                     clientName: sale.clientName,
-                    amount: payment.amount
+                    amount: payment.amount,
+                    date: payment.date,
+                    paymentId: payment._id
                 });
                 paymentUpdates.push({
                     saleId: sale._id,
@@ -325,31 +338,16 @@ router.post("/create", auth, async (req, res) => {
         });
 
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
-        const totalPayments = paymentsData.reduce((sum, p) => sum + p.amount, 0);
-        const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
-
-        let totalInitialPayments = 0;
-        allSales.forEach(sale => {
-            if (sale.payments && sale.payments.length > 0 && sale.advancePayment > 0) {
-                const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
-                if (unliquidatedPayments.length > 0) {
-                    const firstUnliquidated = unliquidatedPayments[0];
-                    if (firstUnliquidated.amount === sale.advancePayment) {
-                        totalInitialPayments += firstUnliquidated.amount;
-                    }
-                }
-            }
-        });
-
-        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
-
+        const paymentsCommission = 3;
         const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
-        const totalIncome = Math.round(paymentsAfterCommission + totalInitialPayments);
+        const totalIncome = paymentsAfterCommission + totalInitialPayments;
+        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
+        const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         const totalExpenses = totalInventoryCost + totalExpensesAmount;
         const finalCash = initialCash + totalIncome - totalExpenses;
 
         const liquidation = new DailyLiquidation({
-            user: req.user.id,
+            user: userId,
             initialCash,
             finalCash,
             payments: {
@@ -400,7 +398,7 @@ router.post("/create", auth, async (req, res) => {
         await Sale.updateMany(
             { 
                 _id: { $in: sales.map(s => s._id) },
-                user: req.user.id 
+                user: userId 
             },
             { $set: { liquidatedDay: true } }
         );
@@ -408,7 +406,7 @@ router.post("/create", auth, async (req, res) => {
         await Product.updateMany(
             { 
                 _id: { $in: products.map(p => p._id) },
-                user: req.user.id 
+                user: userId 
             },
             { $set: { liquidatedDay: true } }
         );
@@ -416,7 +414,7 @@ router.post("/create", auth, async (req, res) => {
         await Expense.updateMany(
             { 
                 _id: { $in: expenses.map(e => e._id) },
-                user: req.user.id 
+                user: userId 
             },
             { $set: { liquidatedDay: true } }
         );
@@ -439,6 +437,173 @@ router.post("/create", auth, async (req, res) => {
         });
     } catch (error) {
         console.error("Error al crear liquidación:", error);
+        res.status(500).json({ error: "Error al crear liquidación: " + error.message });
+    }
+});
+
+// RUTA NUEVA PARA ADMINS: Crear liquidación para un vendedor específico
+router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
+    try {
+        const { vendedorId } = req.params;
+        const { initialCash, notes } = req.body;
+        
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos' });
+        }
+        
+        const sales = await Sale.find({ 
+            user: vendedorId, 
+            liquidatedDay: false 
+        }).lean().select('_id clientName price advancePayment payments');
+
+        const products = await Product.find({ 
+            user: vendedorId, 
+            liquidatedDay: false,
+            sold: false
+        }).lean().select('_id name brand costPrice');
+
+        const expenses = await Expense.find({ 
+            user: vendedorId, 
+            liquidatedDay: false 
+        }).lean().select('_id date totalAmount items');
+
+        const allActiveSales = await Sale.find({ 
+            user: vendedorId, 
+            settled: false
+        }).lean().select('_id clientName payments advancePayment');
+
+        let paymentsData = [];
+        let paymentUpdates = [];
+        let totalPayments = 0;
+        let totalInitialPayments = 0;
+
+        allActiveSales.forEach(sale => {
+            if (!sale.payments) return;
+            
+            const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
+            
+            unliquidatedPayments.forEach((payment, index) => {
+                const isFirstPayment = index === 0 && sale.advancePayment > 0 && payment.amount === sale.advancePayment;
+                
+                if (isFirstPayment) {
+                    totalInitialPayments += payment.amount;
+                }
+                
+                totalPayments += payment.amount;
+                paymentsData.push({
+                    saleId: sale._id,
+                    clientName: sale.clientName,
+                    amount: payment.amount,
+                    date: payment.date,
+                    paymentId: payment._id
+                });
+                paymentUpdates.push({
+                    saleId: sale._id,
+                    paymentId: payment._id
+                });
+            });
+        });
+
+        const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
+        const paymentsCommission = 3;
+        const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
+        const totalIncome = paymentsAfterCommission + totalInitialPayments;
+        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
+        const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
+        const totalExpenses = totalInventoryCost + totalExpensesAmount;
+        const finalCash = initialCash + totalIncome - totalExpenses;
+
+        const liquidation = new DailyLiquidation({
+            user: vendedorId,
+            initialCash,
+            finalCash,
+            payments: {
+                count: paymentsData.length,
+                total: totalPayments,
+                totalInitialPayments: totalInitialPayments,
+                afterCommission: paymentsAfterCommission,
+                commissionPercentage: paymentsCommission
+            },
+            sales: {
+                count: sales.length,
+                total: totalSales,
+                afterCommission: 0,
+                commissionPercentage: 0
+            },
+            totalIncome,
+            inventory: {
+                totalCost: totalInventoryCost,
+                productCount: products.length
+            },
+            expenses: {
+                totalAmount: totalExpensesAmount,
+                count: expenses.length
+            },
+            totalExpenses,
+            liquidatedSales: sales.map(s => ({
+                saleId: s._id,
+                clientName: s.clientName,
+                amount: s.price
+            })),
+            liquidatedPayments: paymentsData,
+            liquidatedProducts: products.map(p => ({
+                productId: p._id,
+                name: p.name,
+                costPrice: p.costPrice
+            })),
+            liquidatedExpenses: expenses.map(e => ({
+                expenseId: e._id,
+                date: e.date,
+                totalAmount: e.totalAmount,
+                items: e.items
+            })),
+            notes: notes || ""
+        });
+
+        await liquidation.save();
+
+        await Sale.updateMany(
+            { 
+                _id: { $in: sales.map(s => s._id) },
+                user: vendedorId 
+            },
+            { $set: { liquidatedDay: true } }
+        );
+
+        await Product.updateMany(
+            { 
+                _id: { $in: products.map(p => p._id) },
+                user: vendedorId 
+            },
+            { $set: { liquidatedDay: true } }
+        );
+
+        await Expense.updateMany(
+            { 
+                _id: { $in: expenses.map(e => e._id) },
+                user: vendedorId 
+            },
+            { $set: { liquidatedDay: true } }
+        );
+
+        for (const update of paymentUpdates) {
+            await Sale.updateOne(
+                {
+                    _id: update.saleId,
+                    'payments._id': update.paymentId
+                },
+                {
+                    $set: { 'payments.$.liquidatedDay': true }
+                }
+            );
+        }
+
+        res.json({
+            message: "Liquidación creada exitosamente para el vendedor",
+            liquidation
+        });
+    } catch (error) {
+        console.error("Error al crear liquidación para vendedor:", error);
         res.status(500).json({ error: "Error al crear liquidación: " + error.message });
     }
 });
