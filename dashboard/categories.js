@@ -106,7 +106,21 @@ const dayFilterInput = document.getElementById("dayFilterInput");
 async function loadSales(query = "", filterDay = "") {
     try {
         const token = getToken();
-        const sales = await apiFetch("/sales", "GET", null, token);
+        
+        // ✅ Verificar si estamos en modo administrador
+        const adminMode = sessionStorage.getItem('adminMode');
+        const vendedorIdAdmin = sessionStorage.getItem('vendedorId');
+        
+        // Cambiar el endpoint según el modo
+        let endpoint = "/sales";
+        if (adminMode === 'true' && vendedorIdAdmin) {
+            endpoint = `/sales/vendedor/${vendedorIdAdmin}`;
+            console.log("🔍 Modo admin activado - Buscando ventas del vendedor:", vendedorIdAdmin);
+        }
+        
+        const sales = await apiFetch(endpoint, "GET", null, token);
+        console.log("📊 Ventas obtenidas:", sales.length);
+        
         list.innerHTML = "";
 
         const filteredSales = sales.filter(sale => {
@@ -140,6 +154,7 @@ async function loadSales(query = "", filterDay = "") {
                 : `<div class="empty-state">
                     <i class="fas fa-inbox"></i>
                     <h3>No se encontraron ventas</h3>
+                    <p>${adminMode === 'true' ? 'Este vendedor no tiene ventas registradas' : 'No tienes ventas registradas'}</p>
                    </div>`;
             list.innerHTML = message;
             return;
@@ -154,7 +169,6 @@ async function loadSales(query = "", filterDay = "") {
             card.className = "sale-card";
             card.setAttribute("data-sale-id", sale._id);
 
-            // Mostrar días de pago si existen
             const paymentDaysInfo = sale.paymentDays 
                 ? `<p><i class="fas fa-calendar-check"></i> Días de pago: ${sale.paymentDays}</p>`
                 : '';

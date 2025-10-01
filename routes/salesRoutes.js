@@ -290,7 +290,7 @@ router.get('/vendedor/:vendedorId', auth, async (req, res) => {
         const { vendedorId } = req.params;
         
         // Verificar que el usuario actual sea admin/jefe
-        if (req.user.tipo !== 'jefe' && req.user.tipo !== 'admin') {
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
             return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
         }
         
