@@ -76,6 +76,7 @@ router.get("/last", auth, checkPermission('verProductos'), async (req, res) => {
 });
 
 // Create a new product
+// Create a new product
 router.post("/new", auth, checkPermission('crearProductos'), async (req, res) => {
     try {
         const { name, costPrice, salePrice, category, brand, size } = req.body;
@@ -92,6 +93,39 @@ router.post("/new", auth, checkPermission('crearProductos'), async (req, res) =>
             brand,
             size,
             user: req.user.id
+        });
+
+        await product.save();
+        res.status(201).json(product);
+    } catch (error) {
+        console.error("Error en el servidor:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 🔥 NUEVA RUTA: Crear producto para un vendedor específico (SOLO ADMINS)
+router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
+    try {
+        // Verificar que sea admin
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos' });
+        }
+
+        const { vendedorId } = req.params;
+        const { name, costPrice, salePrice, category, brand, size } = req.body;
+
+        if (!name || !costPrice || !salePrice) {
+            return res.status(400).json({ error: "Todos los campos son obligatorios" });
+        }
+
+        const product = new Product({
+            name,
+            costPrice,
+            salePrice,
+            category,
+            brand,
+            size,
+            user: vendedorId  // 👈 Usar el ID del vendedor seleccionado
         });
 
         await product.save();

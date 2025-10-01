@@ -366,22 +366,35 @@ async function saveProduct() {
         if (!confirm) return;
     }
 
+try {
+    const token = getToken();
+    
+    // Detectar modo admin
+    const adminMode = sessionStorage.getItem('adminMode') === 'true';
+    const vendedorId = sessionStorage.getItem('vendedorId');
+
+    // Guardar el producto la cantidad de veces indicada
+    for (let i = 0; i < quantity; i++) {
+        await apiFetch("/products/new", "POST", baseProduct, token);
+    }
+
+    // Obtener el último producto creado (funciona tanto en modo normal como admin)
+    let lastProductEndpoint = "/products/last";
+    
+    if (adminMode && vendedorId) {
+        lastProductEndpoint = `/products/vendedor/${vendedorId}/last`;
+    }
+    
+    // Generar código de barras del último producto creado
     try {
-        const token = getToken();
-
-        // Guardar el producto la cantidad de veces indicada
-        for (let i = 0; i < quantity; i++) {
-            await apiFetch("/products/new", "POST", baseProduct, token);
+        const lastProduct = await apiFetch(lastProductEndpoint, "GET", null, token);
+        if (lastProduct && lastProduct._id) {
+            generateBarcodeImage(lastProduct._id, lastProduct.name, lastProduct.salePrice);
         }
-
-         const newProductId = (await apiFetch("/products/last", "GET", null, token))._id;
-        await generateBarcodeImage(newProductId, baseProduct.name, baseProduct.salePrice);
-        /*  ======================================  */
-
-        showNotification(`${quantity} producto(s) guardado(s) correctamente.`, "success");
-        form.reset();
-        clearMarginPreview();
-        await loadProducts();
+    } catch (error) {
+        console.log("No se pudo generar el código de barras:", error);
+    }
+      
 
         showNotification(`${quantity} producto(s) guardado(s) correctamente.`, "success");
         form.reset();
