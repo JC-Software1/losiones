@@ -35,17 +35,45 @@ router.get("/vendedor/:vendedorId", auth, async (req, res) => {
 });
 
 // Obtener todos los gastos
+// ✅ Mostrar todos los gastos
 router.get("/", auth, checkPermission('verGastos'), async (req, res) => {
     try {
-        const query = { liquidatedDay: false };
+        const query = { liquidatedDay: false };  // REMOVER ESTE FILTRO
         if (req.user.tipo === 1) {
             query.user = req.user.id;
         }
         
-        const expenses = await Expense.find(query).sort({ date: -1 });
+        // ✅ CAMBIAR A:
+        const baseQuery = {};
+        if (req.user.tipo === 1) {
+            baseQuery.user = req.user.id;
+        }
+        
+        const expenses = await Expense.find(baseQuery).sort({ date: -1 });
         res.json(expenses);
     } catch (error) {
         console.error("Error al obtener gastos:", error);
+        res.status(500).json({ error: "Error al obtener gastos" });
+    }
+});
+
+// Igual para la ruta del vendedor
+router.get("/vendedor/:vendedorId", auth, async (req, res) => {
+    try {
+        const { vendedorId } = req.params;
+        
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos' });
+        }
+        
+        // ✅ Sin filtro de liquidatedDay
+        const expenses = await Expense.find({ 
+            user: vendedorId
+        }).sort({ date: -1 });
+        
+        res.json(expenses);
+    } catch (error) {
+        console.error("Error al obtener gastos del vendedor:", error);
         res.status(500).json({ error: "Error al obtener gastos" });
     }
 });
