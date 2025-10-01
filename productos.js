@@ -374,10 +374,16 @@ try {
     const vendedorId = sessionStorage.getItem('vendedorId');
 
     // Guardar el producto la cantidad de veces indicada
-    for (let i = 0; i < quantity; i++) {
-        await apiFetch("/products/new", "POST", baseProduct, token);
-    }
+// Determinar el endpoint según el modo
+let createEndpoint = "/products/new";
+if (adminMode && vendedorId) {
+    createEndpoint = `/products/vendedor/${vendedorId}/new`;
+}
 
+// Guardar el producto la cantidad de veces indicada
+for (let i = 0; i < quantity; i++) {
+    await apiFetch(createEndpoint, "POST", baseProduct, token);
+}
     // Obtener el último producto creado (funciona tanto en modo normal como admin)
     let lastProductEndpoint = "/products/last";
     
