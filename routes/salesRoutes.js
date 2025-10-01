@@ -284,7 +284,25 @@ router.delete("/:id", auth, async (req, res) => {
     }
 });
 
-
+// Obtener ventas de un vendedor específico (para administradores)
+router.get('/vendedor/:vendedorId', authMiddleware, async (req, res) => {
+    try {
+        const { vendedorId } = req.params;
+        
+        // Verificar que el usuario actual sea admin/jefe
+        if (req.user.tipo !== 'jefe' && req.user.tipo !== 'admin') {
+            return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
+        }
+        
+        // Buscar ventas del vendedor
+        const sales = await Sale.find({ userId: vendedorId }).sort({ saleDate: -1 });
+        
+        res.json(sales);
+    } catch (error) {
+        console.error('Error al obtener ventas del vendedor:', error);
+        res.status(500).json({ error: 'Error al obtener ventas del vendedor' });
+    }
+});
 
 
 module.exports = router;

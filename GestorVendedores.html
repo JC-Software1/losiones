@@ -247,6 +247,13 @@
             color: #ef4444;
         }
 
+        .status-verified {
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         .actions-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -469,8 +476,14 @@
             <div class="vendedor-details">
                 <div class="details-grid">
                     <div class="detail-item">
-                        <p class="detail-label">ID de MongoDB</p>
-                        <p id="vendedorIdMongo" class="detail-value mono"></p>
+                        <p class="detail-label">ID JC-C</p>
+                        <p id="vendedorIdJCC" class="detail-value status-verified">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                            <span></span>
+                        </p>
                     </div>
                     <div class="detail-item">
                         <p class="detail-label">Estado</p>
@@ -525,15 +538,12 @@
     </div>
 
     <script type="module">
-        // Importar funciones de autenticación desde tu proyecto
         import { getToken } from './utils/auth.js';
 
-        // Configuración - URL de tu backend en Render
         const API_URL = 'https://losiones-1.onrender.com/api/auth';
         
         let vendedorActual = null;
 
-        // Elementos del DOM
         const vendedorIdInput = document.getElementById('vendedorId');
         const btnBuscar = document.getElementById('btnBuscar');
         const mensajeError = document.getElementById('mensajeError');
@@ -549,7 +559,17 @@
         const listaVendedores = document.getElementById('listaVendedores');
         const sinVendedores = document.getElementById('sinVendedores');
 
-        // Funciones auxiliares
+        // Función para encriptar ID (simple hash)
+        function encriptarId(id) {
+            let hash = 0;
+            for (let i = 0; i < id.length; i++) {
+                const char = id.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return 'JCC' + Math.abs(hash).toString(16).toUpperCase().substring(0, 10);
+        }
+
         function mostrarError(mensaje) {
             textoError.textContent = mensaje;
             mensajeError.classList.add('show');
@@ -576,7 +596,9 @@
         function mostrarVendedor(vendedor) {
             document.getElementById('vendedorNombre').textContent = vendedor.name;
             document.getElementById('vendedorUsername').textContent = '@' + vendedor.username;
-            document.getElementById('vendedorIdMongo').textContent = vendedor._id;
+            
+            const idEncriptado = encriptarId(vendedor._id);
+            document.getElementById('vendedorIdJCC').querySelector('span').textContent = idEncriptado + ' Confirmada';
             
             const estadoElement = document.getElementById('vendedorEstado');
             if (vendedor.bloqueado) {
@@ -608,7 +630,6 @@
             });
         }
 
-        // Cargar mis vendedores asignados
         async function cargarMisVendedores() {
             try {
                 const token = getToken();
@@ -661,7 +682,6 @@
             }
         }
 
-        // Buscar y asignar vendedor
         async function buscarVendedor() {
             const vendedorId = vendedorIdInput.value.trim();
 
@@ -703,7 +723,6 @@
                     mostrarExito('Vendedor encontrado y asignado a tu lista exitosamente');
                 }
                 
-                // Refrescar lista de vendedores
                 await cargarMisVendedores();
             } catch (error) {
                 console.error('Error:', error);
@@ -716,7 +735,6 @@
             }
         }
 
-        // Otorgar permisos
         async function otorgarPermisos() {
             if (!vendedorActual) return;
 
@@ -745,7 +763,6 @@
                 vendedorActual.permisos = nuevoEstadoPermisos;
                 mostrarExito(nuevoEstadoPermisos ? 'Permisos otorgados exitosamente' : 'Permisos revocados exitosamente');
                 
-                // Actualizar la vista
                 const permisosElement = document.getElementById('vendedorPermisos');
                 if (nuevoEstadoPermisos) {
                     permisosElement.innerHTML = '<span class="status-active">Concedidos</span>';
@@ -753,7 +770,6 @@
                     permisosElement.innerHTML = '<span class="status-blocked">No concedidos</span>';
                 }
 
-                // Refrescar lista
                 await cargarMisVendedores();
             } catch (error) {
                 mostrarError(error.message);
@@ -762,25 +778,27 @@
             }
         }
 
-        // Inspeccionar vendedor
         function inspeccionarVendedor() {
             if (!vendedorActual) return;
 
-            const detalles = `Detalles del Vendedor
-━━━━━━━━━━━━━━━━━━━━
-ID: ${vendedorActual._id}
-Nombre: ${vendedorActual.name}
-Usuario: ${vendedorActual.username}
-Tipo: ${vendedorActual.tipo}
-Bloqueado: ${vendedorActual.bloqueado ? 'Sí' : 'No'}
-Permisos: ${vendedorActual.permisos ? 'Sí' : 'No'}
-Asignado: ${vendedorActual.asignado ? 'Sí' : 'No'}
-Fecha de asignación: ${vendedorActual.fechaAsignacion ? new Date(vendedorActual.fechaAsignacion).toLocaleString('es-ES') : 'N/A'}`;
+            const confirmacion = confirm(
+                `Modo Administrador\n\n` +
+                `Vas a acceder al panel de ventas del vendedor:\n` +
+                `${vendedorActual.name} (@${vendedorActual.username})\n\n` +
+                `¿Continuar?`
+            );
 
-            alert(detalles);
+            if (confirmacion) {
+                // Guardar el ID del vendedor en sessionStorage para el modo admin
+                sessionStorage.setItem('adminMode', 'true');
+                sessionStorage.setItem('vendedorId', vendedorActual._id);
+                sessionStorage.setItem('vendedorName', vendedorActual.name);
+                
+                // Redirigir a categories.html
+                window.location.href = 'categories.html';
+            }
         }
 
-        // Eliminar vendedor
         async function eliminarVendedor() {
             if (!vendedorActual) return;
 
@@ -814,7 +832,6 @@ Fecha de asignación: ${vendedorActual.fechaAsignacion ? new Date(vendedorActual
                 vendedorIdInput.value = '';
                 ocultarVendedor();
                 
-                // Refrescar lista
                 await cargarMisVendedores();
             } catch (error) {
                 mostrarError(error.message);
@@ -823,7 +840,6 @@ Fecha de asignación: ${vendedorActual.fechaAsignacion ? new Date(vendedorActual
             }
         }
 
-        // Event listeners
         btnBuscar.addEventListener('click', buscarVendedor);
         vendedorIdInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -835,8 +851,7 @@ Fecha de asignación: ${vendedorActual.fechaAsignacion ? new Date(vendedorActual
         btnEliminar.addEventListener('click', eliminarVendedor);
         btnRefrescar.addEventListener('click', cargarMisVendedores);
 
-        // Verificar token al cargar
-        window.addEventListener('DOMContentLoaded', () => {
+       window.addEventListener('DOMContentLoaded', () => {
             try {
                 const token = getToken();
                 if (!token) {
@@ -845,7 +860,6 @@ Fecha de asignación: ${vendedorActual.fechaAsignacion ? new Date(vendedorActual
                         window.location.href = 'login.html';
                     }, 2000);
                 } else {
-                    // Cargar vendedores asignados al iniciar
                     cargarMisVendedores();
                 }
             } catch (error) {
