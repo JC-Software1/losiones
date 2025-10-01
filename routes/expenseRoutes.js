@@ -4,14 +4,45 @@ const { checkPermission } = require("../middleware/checkPermissions");
 const Expense = require("../models/Expense");
 const router = express.Router();
 
-// Obtener todos los gastos - requiere "verGastos"
-router.get("/", auth, checkPermission('verGastos'), async (req, res) => {
+// ✅ FUNCIÓN AUXILIAR: Buscar gastos con permisos admin
+async function findExpenseWithAdminPermission(expenseId, userId, userTipo) {
+    if (userTipo === 2 || userTipo === 3) {
+        return await Expense.findById(expenseId);
+    } else {
+        return await Expense.findOne({ _id: expenseId, user: userId });
+    }
+}
+
+// 🔥 NUEVA RUTA: Obtener gastos de un vendedor específico (para admins)
+router.get("/vendedor/:vendedorId", auth, async (req, res) => {
     try {
+        const { vendedorId } = req.params;
+        
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos' });
+        }
+        
         const expenses = await Expense.find({ 
-            user: req.user.id,
+            user: vendedorId,
             liquidatedDay: false 
         }).sort({ date: -1 });
         
+        res.json(expenses);
+    } catch (error) {
+        console.error("Error al obtener gastos del vendedor:", error);
+        res.status(500).json({ error: "Error al obtener gastos" });
+    }
+});
+
+// Obtener todos los gastos
+router.get("/", auth, checkPermission('verGastos'), async (req, res) => {
+    try {
+        const query = { liquidatedDay: false };
+        if (req.user.tipo === 1) {
+            query.user = req.user.id;
+        }
+        
+        const expenses = await Expense.find(query).sort({ date: -1 });
         res.json(expenses);
     } catch (error) {
         console.error("Error al obtener gastos:", error);
@@ -19,21 +50,25 @@ router.get("/", auth, checkPermission('verGastos'), async (req, res) => {
     }
 });
 
-// Obtener gastos por fecha - requiere "verGastos"
+// Obtener gastos por fecha
 router.get("/by-date/:date", auth, checkPermission('verGastos'), async (req, res) => {
     try {
         const dateParam = new Date(req.params.date);
         const startOfDay = new Date(dateParam.setHours(0, 0, 0, 0));
         const endOfDay = new Date(dateParam.setHours(23, 59, 59, 999));
 
-        const expenses = await Expense.find({
-            user: req.user.id,
+        const query = {
             date: {
                 $gte: startOfDay,
                 $lte: endOfDay
             }
-        });
+        };
+        
+        if (req.user.tipo === 1) {
+            query.user = req.user.id;
+        }
 
+        const expenses = await Expense.find(query);
         res.json(expenses);
     } catch (error) {
         console.error("Error al filtrar gastos por fecha:", error);
@@ -41,7 +76,7 @@ router.get("/by-date/:date", auth, checkPermission('verGastos'), async (req, res
     }
 });
 
-// Crear nuevo gasto - requiere "crearGastos"
+// Crear nuevo gasto
 router.post("/", auth, checkPermission('crearGastos'), async (req, res) => {
     try {
         const { date, items } = req.body;
@@ -74,7 +109,7 @@ router.post("/", auth, checkPermission('crearGastos'), async (req, res) => {
     }
 });
 
-// Actualizar gasto - requiere "editarGastos"
+// Actualizar gasto
 router.put("/:id", auth, checkPermission('editarGastos'), async (req, res) => {
     try {
         const { date, items } = req.body;
@@ -83,10 +118,7 @@ router.put("/:id", auth, checkPermission('editarGastos'), async (req, res) => {
             return res.status(400).json({ error: "Debe agregar al menos un gasto" });
         }
 
-        const expense = await Expense.findOne({ 
-            _id: req.params.id, 
-            user: req.user.id 
-        });
+        const expense = await findExpenseWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
         if (!expense) {
             return res.status(404).json({ error: "Gasto no encontrado" });
@@ -104,18 +136,16 @@ router.put("/:id", auth, checkPermission('editarGastos'), async (req, res) => {
     }
 });
 
-// Eliminar gasto - requiere "eliminarGastos"
+// Eliminar gasto
 router.delete("/:id", auth, checkPermission('eliminarGastos'), async (req, res) => {
     try {
-        const expense = await Expense.findOneAndDelete({ 
-            _id: req.params.id, 
-            user: req.user.id 
-        });
+        const expense = await findExpenseWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
         if (!expense) {
             return res.status(404).json({ error: "Gasto no encontrado" });
         }
 
+        await Expense.findByIdAndDelete(req.params.id);
         res.json({ message: "Gasto eliminado correctamente" });
     } catch (error) {
         console.error("Error al eliminar gasto:", error);
@@ -123,14 +153,15 @@ router.delete("/:id", auth, checkPermission('eliminarGastos'), async (req, res) 
     }
 });
 
-// Obtener total de gastos - requiere "verGastos"
+// Obtener total de gastos
 router.get("/total", auth, checkPermission('verGastos'), async (req, res) => {
     try {
-        const expenses = await Expense.find({ 
-            user: req.user.id,
-            liquidatedDay: false 
-        });
-
+        const query = { liquidatedDay: false };
+        if (req.user.tipo === 1) {
+            query.user = req.user.id;
+        }
+        
+        const expenses = await Expense.find(query);
         const total = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         
         res.json({ 

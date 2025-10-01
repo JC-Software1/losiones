@@ -1,7 +1,7 @@
 /* ============================================================
    SISTEMA DE MODO ADMINISTRADOR GLOBAL
    - Detecta automáticamente si estás en modo admin
-   - Redirige peticiones de ventas al vendedor seleccionado
+   - Redirige peticiones al vendedor seleccionado
    - Muestra banner informativo en todas las páginas
    - Compatible con tipo 2 (admin) y tipo 3 (superadmin)
    ============================================================ */
@@ -9,26 +9,21 @@
 (function() {
     'use strict';
 
-    // Verificar si estamos en modo administrador
     function isAdminMode() {
         const adminMode = sessionStorage.getItem('adminMode');
         const vendedorId = sessionStorage.getItem('vendedorId');
         return adminMode === 'true' && vendedorId;
     }
 
-    // Obtener ID del vendedor actual
     function getVendedorId() {
         return sessionStorage.getItem('vendedorId');
     }
 
-    // Obtener nombre del vendedor actual
     function getVendedorName() {
         return sessionStorage.getItem('vendedorName');
     }
 
-    // Mostrar banner de modo administrador en todas las páginas
     function showAdminBanner() {
-        // Evitar duplicados
         if (document.getElementById('adminModeBanner')) return;
 
         const vendedorName = getVendedorName();
@@ -77,14 +72,12 @@
         
         document.body.insertBefore(banner, document.body.firstChild);
         
-        // Ajustar padding del contenido principal
         const container = document.querySelector('.container');
         if (container) {
             container.style.paddingTop = '70px';
         }
     }
 
-    // Función global para salir del modo admin
     window.exitAdminMode = function() {
         sessionStorage.removeItem('adminMode');
         sessionStorage.removeItem('vendedorId');
@@ -92,27 +85,64 @@
         window.location.href = 'GestorVendedores.html';
     };
 
-    // Interceptor de fetch para redirigir peticiones
+    // INTERCEPTOR DE FETCH
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
         let [url, options] = args;
 
-        // Si estamos en modo admin y es una petición de ventas
         if (isAdminMode() && typeof url === 'string') {
             const vendedorId = getVendedorId();
 
-            // Redirigir peticiones de ventas al vendedor
+            // GASTOS
+            if (url.includes('/api/expenses') && !url.includes('/vendedor/')) {
+                const baseUrl = url.split('/api/expenses')[0];
+                const pathAfter = url.split('/api/expenses')[1] || '';
+                
+                // Solo redirigir GET sin parámetros o rutas específicas
+                if (!pathAfter || pathAfter === '' || pathAfter === '/') {
+                    url = `${baseUrl}/api/expenses/vendedor/${vendedorId}`;
+                    console.log('📊 Redirigiendo gastos del vendedor:', url);
+                }
+            }
+
+            // PRODUCTOS
+            if (url.includes('/api/products') && !url.includes('/vendedor/')) {
+                const baseUrl = url.split('/api/products')[0];
+                const pathAfter = url.split('/api/products')[1] || '';
+                
+                if (!pathAfter || pathAfter === '' || pathAfter === '/' || pathAfter === '/last') {
+                    url = `${baseUrl}/api/products/vendedor/${vendedorId}`;
+                    console.log('📦 Redirigiendo productos del vendedor:', url);
+                }
+            }
+
+            // LIQUIDACIONES
+            if (url.includes('/api/liquidations') && !url.includes('/vendedor/')) {
+                const baseUrl = url.split('/api/liquidations')[0];
+                const pathAfter = url.split('/api/liquidations')[1] || '';
+                
+                if (pathAfter === '/pending' || pathAfter === '/history' || !pathAfter || pathAfter === '/') {
+                    // Construir nueva URL con parámetro
+                    if (pathAfter === '/pending') {
+                        url = `${baseUrl}/api/liquidations/vendedor/${vendedorId}/pending`;
+                    } else if (pathAfter === '/history') {
+                        url = `${baseUrl}/api/liquidations/vendedor/${vendedorId}/history`;
+                    } else {
+                        url = `${baseUrl}/api/liquidations/vendedor/${vendedorId}`;
+                    }
+                    console.log('💰 Redirigiendo liquidaciones del vendedor:', url);
+                }
+            }
+
+            // VENTAS
             if (url.includes('/api/sales') && !url.includes('/vendedor/')) {
-                // Excluir peticiones que ya son específicas de vendedor o nuevas ventas
                 if (!url.includes('/new') && !url.includes('/payment')) {
-                    // Convertir la URL para usar el endpoint del vendedor
                     const baseUrl = url.split('/api/sales')[0];
-                    const pathAfterSales = url.split('/api/sales')[1] || '';
+                    const pathAfter = url.split('/api/sales')[1] || '';
                     
-                    // Si es GET sin parámetros adicionales, redirigir al vendedor
-                    if (!pathAfterSales || pathAfterSales === '' || pathAfterSales === '/') {
+                    if (!pathAfter || pathAfter === '' || pathAfter === '/' || pathAfter === '/settled') {
                         url = `${baseUrl}/api/sales/vendedor/${vendedorId}`;
-                        console.log('🔄 Redirigiendo a ventas del vendedor:', url);
+                        console.log('🔄 Redirigiendo ventas del vendedor:', url);
                     }
                 }
             }
@@ -121,7 +151,7 @@
         return originalFetch(url, options);
     };
 
-    // Inicializar cuando el DOM esté listo
+    // Inicializar
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             if (isAdminMode()) {
@@ -134,7 +164,6 @@
         }
     }
 
-    // Exportar funciones útiles
     window.adminModeUtils = {
         isActive: isAdminMode,
         getVendedorId: getVendedorId,
