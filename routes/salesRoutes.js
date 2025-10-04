@@ -125,6 +125,7 @@ router.get("/:id", auth, checkPermission('verVentas'), async (req, res) => {
 });
 
 // Crear nueva venta
+// Crear nueva venta
 router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
     try {
         const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress, paymentDays } = req.body;
@@ -143,7 +144,7 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             clientAddress,
             paymentDays,
             user: req.user.id,
-            settled: false
+            settled: false  // ✅ SIEMPRE false al crear
         });
 
         if (advancePayment > 0) {
@@ -153,10 +154,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
                 liquidatedDay: false
             });
 
-            if (advancePayment >= price) {
-                sale.settled = true;
-                sale.settledDate = new Date();
-            }
+            // ✅ REMOVIDO: la lógica que marcaba como liquidada automáticamente
+            // Ya NO se marca settled = true aquí
         }
 
         await sale.save();
@@ -191,8 +190,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             advancePayment: advancePayment || 0,
             clientAddress,
             paymentDays,
-            user: vendedorId,  // Usar vendedorId en lugar de req.user.id
-            settled: false
+            user: vendedorId,
+            settled: false  // ✅ SIEMPRE false al crear
         });
 
         if (advancePayment > 0) {
@@ -202,10 +201,7 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
                 liquidatedDay: false
             });
 
-            if (advancePayment >= price) {
-                sale.settled = true;
-                sale.settledDate = new Date();
-            }
+            // ✅ REMOVIDO: la lógica de liquidación automática
         }
 
         await sale.save();

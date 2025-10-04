@@ -107,13 +107,12 @@ async function loadSales(query = "", filterDay = "") {
     try {
         const token = getToken();
 
-        /* 🔥 NUEVO: detectar modo admin y construir endpoint 🔥 */
         const adminMode = sessionStorage.getItem('adminMode') === 'true';
         const vendedorIdAdmin = sessionStorage.getItem('vendedorId');
 
-        let endpoint = '/sales/all'; // por defecto trae TODAS (ya filtra backend)
+        let endpoint = '/sales/all';
         if (adminMode && vendedorIdAdmin) {
-            endpoint = `/sales/vendedor/${vendedorIdAdmin}`; // ventas solo de ese vendedor
+            endpoint = `/sales/vendedor/${vendedorIdAdmin}`;
             console.log('🔍 Modo admin activado - Buscando ventas del vendedor:', vendedorIdAdmin);
         }
 
@@ -130,9 +129,27 @@ async function loadSales(query = "", filterDay = "") {
             let dayMatch = true;
             if (filterDay) {
                 const day = parseInt(filterDay);
+                
                 if (sale.paymentDays) {
                     const paymentDaysArray = sale.paymentDays.split(',').map(d => parseInt(d.trim()));
-                    dayMatch = paymentDaysArray.includes(day);
+                    
+                    // Verificar si tiene el día programado
+                    const hasDayScheduled = paymentDaysArray.includes(day);
+                    
+                    // Verificar si tiene días atrasados (días menores al filtrado sin abono)
+                    const hasMissedPayments = paymentDaysArray.some(scheduledDay => {
+                        if (scheduledDay < day) {
+                            // Verificar si existe un pago en ese día específico
+                            const hasPaymentOnDay = sale.payments.some(payment => {
+                                const paymentDate = new Date(payment.date);
+                                return paymentDate.getDate() === scheduledDay;
+                            });
+                            return !hasPaymentOnDay; // Si no hay pago ese día, está atrasado
+                        }
+                        return false;
+                    });
+                    
+                    dayMatch = hasDayScheduled || hasMissedPayments;
                 } else {
                     dayMatch = false;
                 }
@@ -142,7 +159,7 @@ async function loadSales(query = "", filterDay = "") {
 
         if (filteredSales.length === 0) {
             const message = filterDay
-                ? `<div class="empty-state"><i class="fas fa-calendar-times"></i><h3>No hay préstamos para el día ${filterDay}</h3><p>No se encontraron ventas con pagos programados para este día</p></div>`
+                ? `<div class="empty-state"><i class="fas fa-calendar-times"></i><h3>No hay préstamos para el día ${filterDay}</h3><p>No se encontraron ventas con pagos programados o atrasados para este día</p></div>`
                 : `<div class="empty-state"><i class="fas fa-inbox"></i><h3>No se encontraron ventas</h3><p>${adminMode === 'true' ? 'Este vendedor no tiene ventas registradas' : 'No tienes ventas registradas'}</p></div>`;
             list.innerHTML = message;
             return;
@@ -157,8 +174,29 @@ async function loadSales(query = "", filterDay = "") {
             card.className = 'sale-card';
             card.setAttribute('data-sale-id', sale._id);
 
+            // Indicador de atraso
+            let statusBadge = '';
+            if (filterDay) {
+                const day = parseInt(filterDay);
+                const paymentDaysArray = sale.paymentDays ? sale.paymentDays.split(',').map(d => parseInt(d.trim())) : [];
+                const hasMissedPayments = paymentDaysArray.some(scheduledDay => {
+                    if (scheduledDay < day) {
+                        const hasPaymentOnDay = sale.payments.some(payment => {
+                            const paymentDate = new Date(payment.date);
+                            return paymentDate.getDate() === scheduledDay;
+                        });
+                        return !hasPaymentOnDay;
+                    }
+                    return false;
+                });
+                
+                if (hasMissedPayments) {
+                    statusBadge = '<span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">⚠️ ATRASADO</span>';
+                }
+            }
+
             const paymentDaysInfo = sale.paymentDays
-                ? `<p><i class="fas fa-calendar-check"></i> Días de pago: ${sale.paymentDays}</p>`
+                ? `<p><i class="fas fa-calendar-check"></i> Días de pago: ${sale.paymentDays}${statusBadge}</p>`
                 : '';
 
             card.innerHTML = `
