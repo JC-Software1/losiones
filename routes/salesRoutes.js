@@ -15,40 +15,9 @@ async function findSaleWithAdminPermission(saleId, userId, userTipo) {
     }
 }
 
-// Eliminar un abono específico
-router.delete("/:saleId/payment/:paymentId", auth, checkPermission('eliminarAbonos'), async (req, res) => {
-    try {
-        const { saleId, paymentId } = req.params;
-
-        // ✅ CORREGIDO: Usar función que respeta permisos admin
-        const sale = await findSaleWithAdminPermission(saleId, req.user.id, req.user.tipo);
-        
-        if (!sale) {
-            return res.status(404).json({ error: "Venta no encontrada" });
-        }
-
-        const initialLength = sale.payments.length;
-        sale.payments = sale.payments.filter(p => p._id.toString() !== paymentId);
-
-        if (sale.payments.length === initialLength) {
-            return res.status(404).json({ error: "Abono no encontrado" });
-        }
-
-        if (sale.settled) {
-            const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
-            if (totalPaid < sale.price) {
-                sale.settled = false;
-                sale.settledDate = null;
-            }
-        }
-
-        await sale.save();
-        res.json({ message: "Abono eliminado correctamente" });
-    } catch (error) {
-        console.error("Error al eliminar el abono:", error);
-        res.status(500).json({ error: "Error al eliminar el abono" });
-    }
-});
+// ========================================
+// RUTAS ESPECÍFICAS (DEBEN IR PRIMERO)
+// ========================================
 
 // Obtener ventas por fecha
 router.get("/by-date/:date", auth, checkPermission('verVentas'), async (req, res) => {
@@ -59,7 +28,6 @@ router.get("/by-date/:date", auth, checkPermission('verVentas'), async (req, res
         const startOfDay = new Date(dateParam.setHours(0, 0, 0, 0));
         const endOfDay = new Date(dateParam.setHours(23, 59, 59, 999));
 
-        // ✅ CORREGIDO: Admins ven todas las ventas
         const query = {
             saleDate: {
                 $gte: startOfDay,
@@ -82,7 +50,6 @@ router.get("/by-date/:date", auth, checkPermission('verVentas'), async (req, res
 // Obtener todas las ventas
 router.get("/all", auth, checkPermission('verVentas'), async (req, res) => {
     try {
-        // ✅ CORREGIDO: Admins ven todas las ventas
         const query = req.user.tipo === 1 ? { user: req.user.id } : {};
         const sales = await Sale.find(query);
         res.json(sales);
@@ -91,36 +58,18 @@ router.get("/all", auth, checkPermission('verVentas'), async (req, res) => {
     }
 });
 
-// Eliminar una venta liquidada
-router.delete("/:id/settled", auth, checkPermission('eliminarVentas'), async (req, res) => {
+// ⭐ OBTENER VENTAS LIQUIDADAS - DEBE IR ANTES QUE /:id
+router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
     try {
-        // ✅ CORREGIDO: Usar función con permisos admin
-        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
-
-        if (!sale || !sale.settled) {
-            return res.status(404).json({ error: "Venta liquidada no encontrada" });
-        }
-
-        await Sale.findByIdAndDelete(req.params.id);
-        res.json({ message: "Venta liquidada eliminada correctamente" });
+        const query = req.user.tipo === 1 
+            ? { user: req.user.id, settled: true } 
+            : { settled: true };
+            
+        const sales = await Sale.find(query).sort({ settledDate: -1 });
+        res.json(sales);
     } catch (error) {
-        res.status(500).json({ error: "Error al eliminar la venta liquidada" });
-    }
-});
-
-// Obtener una venta específica
-router.get("/:id", auth, checkPermission('verVentas'), async (req, res) => {
-    try {
-        // ✅ CORREGIDO: Usar función con permisos admin
-        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
-
-        if (!sale) {
-            return res.status(404).json({ error: "Venta no encontrada" });
-        }
-
-        res.json(sale);
-    } catch (error) {
-        res.status(500).json({ error: "Error al obtener la venta" });
+        console.error("Error al obtener ventas liquidadas:", error);
+        res.status(500).json({ error: "Error al obtener ventas liquidadas" });
     }
 });
 
@@ -191,7 +140,7 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             advancePayment: advancePayment || 0,
             clientAddress,
             paymentDays,
-            user: vendedorId,  // Usar vendedorId en lugar de req.user.id
+            user: vendedorId,
             settled: false
         });
 
@@ -216,17 +165,106 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
     }
 });
 
-// Obtener ventas liquidadas
-router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
+// Obtener ventas de un vendedor específico (para administradores)
+router.get('/vendedor/:vendedorId', auth, async (req, res) => {
     try {
-        const query = req.user.tipo === 1 
-            ? { user: req.user.id, settled: true } 
-            : { settled: true };
-            
-        const sales = await Sale.find(query).sort({ settledDate: -1 });
+        const { vendedorId } = req.params;
+        
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
+        }
+        
+        const sales = await Sale.find({ user: vendedorId }).sort({ saleDate: -1 });
         res.json(sales);
     } catch (error) {
-        res.status(500).json({ error: "Error al obtener ventas liquidadas" });
+        console.error('Error al obtener ventas del vendedor:', error);
+        res.status(500).json({ error: 'Error al obtener ventas del vendedor' });
+    }
+});
+
+// Obtener ventas liquidadas de un vendedor específico (para administradores)
+router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
+    try {
+        const { vendedorId } = req.params;
+        
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
+        }
+        
+        const sales = await Sale.find({ user: vendedorId, settled: true }).sort({ settledDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error('Error al obtener ventas liquidadas del vendedor:', error);
+        res.status(500).json({ error: 'Error al obtener ventas liquidadas' });
+    }
+});
+
+// ========================================
+// RUTAS CON PARÁMETROS DINÁMICOS (AL FINAL)
+// ========================================
+
+// Eliminar un abono específico
+router.delete("/:saleId/payment/:paymentId", auth, checkPermission('eliminarAbonos'), async (req, res) => {
+    try {
+        const { saleId, paymentId } = req.params;
+
+        const sale = await findSaleWithAdminPermission(saleId, req.user.id, req.user.tipo);
+        
+        if (!sale) {
+            return res.status(404).json({ error: "Venta no encontrada" });
+        }
+
+        const initialLength = sale.payments.length;
+        sale.payments = sale.payments.filter(p => p._id.toString() !== paymentId);
+
+        if (sale.payments.length === initialLength) {
+            return res.status(404).json({ error: "Abono no encontrado" });
+        }
+
+        if (sale.settled) {
+            const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
+            if (totalPaid < sale.price) {
+                sale.settled = false;
+                sale.settledDate = null;
+            }
+        }
+
+        await sale.save();
+        res.json({ message: "Abono eliminado correctamente" });
+    } catch (error) {
+        console.error("Error al eliminar el abono:", error);
+        res.status(500).json({ error: "Error al eliminar el abono" });
+    }
+});
+
+// Eliminar una venta liquidada
+router.delete("/:id/settled", auth, checkPermission('eliminarVentas'), async (req, res) => {
+    try {
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
+
+        if (!sale || !sale.settled) {
+            return res.status(404).json({ error: "Venta liquidada no encontrada" });
+        }
+
+        await Sale.findByIdAndDelete(req.params.id);
+        res.json({ message: "Venta liquidada eliminada correctamente" });
+    } catch (error) {
+        res.status(500).json({ error: "Error al eliminar la venta liquidada" });
+    }
+});
+
+// Obtener una venta específica
+router.get("/:id", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
+
+        if (!sale) {
+            return res.status(404).json({ error: "Venta no encontrada" });
+        }
+
+        res.json(sale);
+    } catch (error) {
+        res.status(500).json({ error: "Error al obtener la venta" });
     }
 });
 
@@ -235,7 +273,6 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
     const { clientName, productName, saleDate, price, installments, clientAddress, paymentDays } = req.body;
 
     try {
-        // ✅ CORREGIDO: Usar función con permisos admin
         const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
         if (!sale) {
@@ -280,7 +317,6 @@ router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, 
     }
 
     try {
-        // ✅ CORREGIDO: Usar función con permisos admin
         const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
         if (!sale) {
@@ -324,7 +360,6 @@ router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, 
 // Eliminar una venta
 router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) => {
     try {
-        // ✅ CORREGIDO: Usar función con permisos admin
         const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
         if (!sale) {
@@ -335,40 +370,6 @@ router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) 
         res.json({ message: "Venta eliminada correctamente" });
     } catch (error) {
         res.status(500).json({ error: "Error al eliminar la venta" });
-    }
-});
-
-// Obtener ventas de un vendedor específico (para administradores)
-router.get('/vendedor/:vendedorId', auth, async (req, res) => {
-    try {
-        const { vendedorId } = req.params;
-        
-        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
-            return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
-        }
-        
-        const sales = await Sale.find({ user: vendedorId }).sort({ saleDate: -1 });
-        res.json(sales);
-    } catch (error) {
-        console.error('Error al obtener ventas del vendedor:', error);
-        res.status(500).json({ error: 'Error al obtener ventas del vendedor' });
-    }
-});
-
-// Obtener ventas liquidadas de un vendedor específico (para administradores)
-router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
-    try {
-        const { vendedorId } = req.params;
-        
-        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
-            return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
-        }
-        
-        const sales = await Sale.find({ user: vendedorId, settled: true }).sort({ settledDate: -1 });
-        res.json(sales);
-    } catch (error) {
-        console.error('Error al obtener ventas liquidadas del vendedor:', error);
-        res.status(500).json({ error: 'Error al obtener ventas liquidadas' });
     }
 });
 
