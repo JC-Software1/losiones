@@ -31,7 +31,7 @@ const PermisosSchema = new mongoose.Schema({
     
     // Permisos de Reportes
     verReportes: { type: Boolean, default: true },
-    exportarReportes: { type: Boolean, default: false }
+    exportarReportes: { type: Boolean, default: false },
     verCostosYGanancias: { type: Boolean, default: true }
 }, { _id: false });
 
