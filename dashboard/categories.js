@@ -5,6 +5,62 @@ import "../keepAlive.js";
 
 /* ---------- referencias DOM (sin cambios) ---------- */
 
+
+
+async function verificarPermisosYOcultarElementos() {
+    try {
+        const token = getToken();
+        const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
+        const { permisosDetallados, tipo } = response;
+        
+        const btnLiquidacion = document.querySelector('.btn-go-liquidation');
+        
+        if (!btnLiquidacion) return;
+        
+        // Admins y jefes: acceso completo
+        if (tipo === 2 || tipo === 3) {
+            btnLiquidacion.style.display = 'inline-flex';
+            return;
+        }
+        
+        // Vendedores sin permiso
+        if (!permisosDetallados?.realizarLiquidacion) {
+            btnLiquidacion.style.display = 'none';
+            
+            // Opcional: agregar mensaje informativo
+            const mensaje = document.createElement('div');
+            mensaje.style.cssText = `
+                background: #fff3cd;
+                color: #856404;
+                padding: 10px 15px;
+                border-radius: 8px;
+                border-left: 4px solid #ffc107;
+                font-size: 13px;
+                margin: 10px 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            `;
+            mensaje.innerHTML = `
+                <i class="fas fa-info-circle"></i>
+                <span>No tienes permiso para realizar liquidaciones. Contacta a tu supervisor.</span>
+            `;
+            
+            // Insertar después del grid de menú
+            const menuGrid = document.querySelector('.menu-grid');
+            if (menuGrid) {
+                menuGrid.after(mensaje);
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error verificando permisos:', error);
+        // Por seguridad, ocultar si hay error
+        const btn = document.querySelector('.btn-go-liquidation');
+        if (btn) btn.style.display = 'none';
+    }
+}
+
 // Verificar si estamos en modo administrador
 function verificarModoAdmin() {
     const adminMode = sessionStorage.getItem('adminMode');
@@ -122,45 +178,54 @@ async function loadSales(query = "", filterDay = "") {
         list.innerHTML = '';
 
         const filteredSales = sales.filter(sale => {
+            // ✅ CRÍTICO: Excluir ventas liquidadas
+            if (sale.settled === true) {
+                return false;
+            }
+
             const clientMatch = sale.clientName.toLowerCase().includes(query.toLowerCase());
             const productMatch = sale.productName.toLowerCase().includes(query.toLowerCase());
             const searchMatch = clientMatch || productMatch;
 
-            let dayMatch = true;
-            if (filterDay) {
-                const day = parseInt(filterDay);
-                
-                if (sale.paymentDays) {
-                    const paymentDaysArray = sale.paymentDays.split(',').map(d => parseInt(d.trim()));
-                    
-                    // Verificar si tiene el día programado
-                    const hasDayScheduled = paymentDaysArray.includes(day);
-                    
-                    // Verificar si tiene días atrasados (días menores al filtrado sin abono)
-                    const hasMissedPayments = paymentDaysArray.some(scheduledDay => {
-                        if (scheduledDay < day) {
-                            // Verificar si existe un pago en ese día específico
-                            const hasPaymentOnDay = sale.payments.some(payment => {
-                                const paymentDate = new Date(payment.date);
-                                return paymentDate.getDate() === scheduledDay;
-                            });
-                            return !hasPaymentOnDay; // Si no hay pago ese día, está atrasado
-                        }
-                        return false;
-                    });
-                    
-                    dayMatch = hasDayScheduled || hasMissedPayments;
-                } else {
-                    dayMatch = false;
-                }
+let dayMatch = true;
+if (filterDay) {
+    const filterDayNum = parseInt(filterDay);
+    const today = new Date().getDate(); // Día actual del mes (1-31)
+    
+    if (sale.paymentDays) {
+        const paymentDaysArray = sale.paymentDays.split(',').map(d => parseInt(d.trim()));
+        
+        // ✅ Verificar si tiene el día programado
+        const hasDayScheduled = paymentDaysArray.includes(filterDayNum);
+        
+        // ✅ CORREGIDO: Solo mostrar atrasados si el día de pago YA PASÓ
+        const hasMissedPayments = paymentDaysArray.some(scheduledDay => {
+            // Solo considerar días que YA PASARON (menores al día actual)
+            if (scheduledDay < today) {
+                // Verificar si existe un pago en ese día específico
+                const hasPaymentOnDay = sale.payments.some(payment => {
+                    const paymentDate = new Date(payment.date);
+                    return paymentDate.getDate() === scheduledDay;
+                });
+                // Si NO hay pago en ese día QUE YA PASÓ, está atrasado
+                return !hasPaymentOnDay;
             }
+            return false;
+        });
+        
+        // ✅ Mostrar si: tiene el día programado O tiene días atrasados REALES
+        dayMatch = hasDayScheduled || hasMissedPayments;
+    } else {
+        dayMatch = false;
+    }
+}
             return searchMatch && dayMatch;
         });
 
         if (filteredSales.length === 0) {
             const message = filterDay
                 ? `<div class="empty-state"><i class="fas fa-calendar-times"></i><h3>No hay préstamos para el día ${filterDay}</h3><p>No se encontraron ventas con pagos programados o atrasados para este día</p></div>`
-                : `<div class="empty-state"><i class="fas fa-inbox"></i><h3>No se encontraron ventas</h3><p>${adminMode === 'true' ? 'Este vendedor no tiene ventas registradas' : 'No tienes ventas registradas'}</p></div>`;
+                : `<div class="empty-state"><i class="fas fa-inbox"></i><h3>No se encontraron ventas activas</h3><p>${adminMode === 'true' ? 'Este vendedor no tiene ventas activas' : 'No tienes ventas activas. Las ventas liquidadas se encuentran en la sección "Liquidados"'}</p></div>`;
             list.innerHTML = message;
             return;
         }
@@ -174,26 +239,40 @@ async function loadSales(query = "", filterDay = "") {
             card.className = 'sale-card';
             card.setAttribute('data-sale-id', sale._id);
 
-            // Indicador de atraso
-            let statusBadge = '';
-            if (filterDay) {
-                const day = parseInt(filterDay);
-                const paymentDaysArray = sale.paymentDays ? sale.paymentDays.split(',').map(d => parseInt(d.trim())) : [];
-                const hasMissedPayments = paymentDaysArray.some(scheduledDay => {
-                    if (scheduledDay < day) {
-                        const hasPaymentOnDay = sale.payments.some(payment => {
-                            const paymentDate = new Date(payment.date);
-                            return paymentDate.getDate() === scheduledDay;
-                        });
-                        return !hasPaymentOnDay;
-                    }
-                    return false;
-                });
-                
-                if (hasMissedPayments) {
-                    statusBadge = '<span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">⚠️ ATRASADO</span>';
-                }
-            }
+            // ✅ NUEVO: Indicador de atraso mejorado
+// ✅ NUEVO: Indicador de atraso con días exactos
+// ✅ NUEVO: Indicador de atraso con días exactos (basado en día actual)
+let statusBadge = '';
+if (filterDay) {
+    const filterDayNum = parseInt(filterDay);
+    const today = new Date().getDate(); // Día actual
+    const paymentDaysArray = sale.paymentDays ? sale.paymentDays.split(',').map(d => parseInt(d.trim())) : [];
+    
+    // Encontrar días que YA PASARON sin pagar
+    const missedDays = paymentDaysArray.filter(scheduledDay => {
+        // Solo días que YA PASARON (menores al día actual)
+        if (scheduledDay < today) {
+            const hasPaymentOnDay = sale.payments.some(payment => {
+                const paymentDate = new Date(payment.date);
+                return paymentDate.getDate() === scheduledDay;
+            });
+            return !hasPaymentOnDay;
+        }
+        return false;
+    });
+    
+    if (missedDays.length > 0) {
+        // Ordenar los días atrasados y tomar el más antiguo
+        const oldestMissedDay = Math.min(...missedDays);
+        
+        // Calcular días exactos de atraso
+        const daysOverdue = filterDayNum - oldestMissedDay;
+        
+        // Mostrar días específicos que debe y cuántos días lleva atrasado
+        const missedDaysText = missedDays.sort((a, b) => a - b).join(', ');
+        statusBadge = `<span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">⚠️ DEBE DÍA(S): ${missedDaysText} | ${daysOverdue} día(s) atrasado</span>`;
+    }
+}
 
             const paymentDaysInfo = sale.paymentDays
                 ? `<p><i class="fas fa-calendar-check"></i> Días de pago: ${sale.paymentDays}${statusBadge}</p>`
@@ -236,6 +315,12 @@ async function loadSales(query = "", filterDay = "") {
         list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar ventas</h3><p>${error.message}</p></div>`;
     }
 }
+
+// ✅ NUEVA FUNCIÓN: Limpiar filtro de día
+window.clearDayFilter = function() {
+    document.getElementById('dayFilterInput').value = '';
+    loadSales(searchInput.value.trim(), '');
+};searchInput.addEventListener
 
 
 /* ---------- detalles ---------- */
@@ -469,14 +554,21 @@ function openPaymentModal(saleId) {
 
 /* ---------- listeners (sin cambios) ---------- */
 searchInput.addEventListener("input", () => loadSales(searchInput.value.trim()));
+// ✅ NUEVO: Listener para filtro de día
+dayFilterInput.addEventListener("change", () => {
+    loadSales(searchInput.value.trim(), dayFilterInput.value);
+});
 btnSave.addEventListener("click", saveSale);
 btnUpdate.addEventListener("click", updateSale);
 btnCancel.addEventListener("click", cancelUpdate);
 btnAddPayment.addEventListener("click", addPayment);
 
 // Al cargar la página
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     verificarModoAdmin();
+    
+    // Verificar permisos ANTES de mostrar la interfaz
+    await verificarPermisosYOcultarElementos();
     
     const today = new Date().toLocaleDateString('en-CA');
     document.getElementById("saleDate").value = today;
@@ -750,13 +842,65 @@ confirmBtn.addEventListener('click', () => {
 });
 
 /* ---------- Renderizar calendario ---------- */
+/* ---------- Renderizar calendario REAL con días de la semana ---------- */
 function renderCalendar(){
     calendar.innerHTML = '';
-    for(let d=1; d<=31; d++){
+    
+    // Obtener el mes y año actual
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-11
+    
+    // Obtener el primer día del mes (0=Domingo, 1=Lunes, etc.)
+    const firstDay = new Date(year, month, 1).getDay();
+    
+    // Obtener el número de días del mes
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // Configurar grid para incluir encabezados de días
+    calendar.style.gridTemplateColumns = 'repeat(7, 1fr)';
+    
+    // Agregar encabezados de días de la semana
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    dayNames.forEach(dayName => {
+        const header = document.createElement('div');
+        header.style.cssText = `
+            text-align: center;
+            font-weight: 700;
+            color: var(--primary);
+            padding: 8px 0;
+            font-size: 12px;
+            background: var(--light-gray);
+            border-radius: 4px;
+        `;
+        header.textContent = dayName;
+        calendar.appendChild(header);
+    });
+    
+    // Agregar espacios vacíos antes del primer día
+    for(let i = 0; i < firstDay; i++){
+        const empty = document.createElement('div');
+        empty.style.visibility = 'hidden';
+        calendar.appendChild(empty);
+    }
+    
+    // Agregar los días del mes
+    for(let d = 1; d <= daysInMonth; d++){
         const day = document.createElement('div');
         day.className = 'day-cell';
         day.textContent = d;
+        
+        // Marcar día actual con estilo especial
+        if(d === now.getDate()){
+            day.style.cssText = `
+                border: 2px solid var(--accent);
+                font-weight: 700;
+                background: rgba(52, 152, 219, 0.1);
+            `;
+        }
+        
         if(selectedDays.includes(d)) day.classList.add('selected');
+        
         day.addEventListener('click', () => {
             day.classList.toggle('selected');
             if(day.classList.contains('selected')){
@@ -766,6 +910,7 @@ function renderCalendar(){
             }
             selectedDays.sort((a,b)=>a-b);
         });
+        
         calendar.appendChild(day);
     }
 }

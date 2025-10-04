@@ -251,9 +251,9 @@
         .calendar-content{background:var(--white);border-radius:var(--radius-lg);width:90%;max-width:420px;padding:20px;transform:scale(.95);transition:transform .3s ease}
         .calendar-modal.show .calendar-content{transform:scale(1)}
         .calendar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-        .calendar-body{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px}
-        .day-cell{aspect-ratio:1/1;border:1px solid var(--border);border-radius:var(--radius);background:var(--light-gray);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:500;transition:background .2s ease,transform .2s ease}
-        .day-cell:hover{background:var(--accent);color:#fff;transform:translateY(-2px)}
+        .calendar-body{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px;margin-top:12px}
+.day-cell{aspect-ratio:1/1;border:1px solid var(--border);border-radius:var(--radius);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:500;transition:background .2s ease,transform .2s ease,box-shadow .2s ease;font-size:14px}       
+.day-cell:hover{background:var(--accent);color:#fff;transform:translateY(-2px);box-shadow:0 4px 8px rgba(52,152,219,0.3)}
         .day-cell.selected{background:var(--success);color:#fff;border-color:var(--success)}
         .days-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
         .day-pill{background:var(--accent);color:#fff;padding:4px 10px;border-radius:20px;font-size:13px;display:inline-flex;align-items:center;gap:6px}

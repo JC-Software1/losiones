@@ -17,6 +17,8 @@ const totalPotentialProfitSpan = document.getElementById("totalPotentialProfit")
 let allProducts = [];
 let filteredProducts = [];
 
+
+
 // Inicialización
 document.addEventListener("DOMContentLoaded", async () => {
     try {
