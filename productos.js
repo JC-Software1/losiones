@@ -25,6 +25,33 @@ let products = [];
 let filteredProducts = [];
 
 
+// Función para verificar permiso y ocultar/mostrar costos
+async function verificarPermisoCostos() {
+    try {
+        const token = getToken();
+        const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
+        const { permisosDetallados, tipo } = response;
+        
+        // Admins y jefes siempre ven costos
+        if (tipo === 2 || tipo === 3) {
+            return true;
+        }
+        
+        // Vendedores: verificar permiso específico
+        return permisosDetallados?.verCostosYGanancias !== false;
+        
+    } catch (error) {
+        console.error('Error al verificar permisos de costos:', error);
+        // Por defecto, ocultar en caso de error para mayor seguridad
+        return false;
+    }
+}
+
+// Función auxiliar para formatear texto oculto
+function ocultarTexto(texto) {
+    return '<span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>';
+}
+
 /* 1️⃣  DECLARAR funciones que se usan después */
 function generateBarcodeImage(id, name, price) {
   // Crear código más corto para mejor lectura
@@ -87,6 +114,10 @@ window.downloadBarcode   = downloadBarcode;
 
 
 
+// Al inicio del archivo, después de las importaciones
+let puedeVerCostos = true; // Variable global
+
+// En el DOMContentLoaded
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         const token = getToken();
@@ -94,6 +125,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             window.location.href = "login.html";
             return;
         }
+        
+        // ✅ Verificar permisos de costos ANTES de cargar productos
+        puedeVerCostos = await verificarPermisoCostos();
         
         await loadProducts();
         setupEventListeners();
@@ -103,22 +137,146 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Error al inicializar:", error);
         showError("Error al cargar la aplicación");
     }
-
-    // ✅ ✅ ✅ MOVER AQUÍ ✅ ✅ ✅
-    const params = new URLSearchParams(window.location.search);
-    const editId = params.get('edit');
-
-    if (editId) {
-        // ✅ Cargar productos y activar edición
-        loadProducts().then(() => {
-            const product = products.find(p => p._id === editId);
-            if (product) {
-                editProduct(product._id); // ✅ activa el formulario
-                window.scrollTo({ top: 0, behavior: 'smooth' }); // ✅ sube al form
-            }
-        });
-    }
 });
+
+// Modificar displayProducts para ocultar costos si no tiene permiso
+function displayProducts(productsList) {
+    const productsContainer = document.getElementById("productsList");
+    productsContainer.innerHTML = "";
+
+    if (productsList.length === 0) {
+        productsContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-box-open"></i>
+                <h3>No hay productos</h3>
+                <p>No se encontraron productos disponibles.</p>
+            </div>`;
+        return;
+    }
+
+    productsList.forEach((product) => {
+        const productCard = document.createElement("div");
+        productCard.classList.add("product-card");
+
+        // Calcular margen solo si puede ver costos
+        let margin = 0;
+        let profit = 0;
+        
+        if (puedeVerCostos) {
+            margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
+            profit = product.salePrice - product.costPrice;
+        }
+        
+        const marginClass = margin >= 30 ? 'success' : margin >= 20 ? 'warning' : 'danger';
+        const marginIcon = margin >= 30 ? 'fas fa-trending-up' : margin >= 20 ? 'fas fa-minus' : 'fas fa-trending-down';
+
+        // ✅ Mostrar u ocultar según permiso
+        const costoPriceHTML = puedeVerCostos 
+            ? `Costo: $${product.costPrice.toLocaleString()}`
+            : `Costo: ${ocultarTexto()}`;
+            
+        const gananciasHTML = puedeVerCostos
+            ? `<div class="profit-margin">
+                <div class="margin-text">
+                    <i class="${marginIcon}"></i> 
+                    Margen: ${margin}% • Ganancia: $${profit.toLocaleString()}
+                </div>
+            </div>`
+            : '';
+            
+        const metaItemsHTML = puedeVerCostos 
+            ? `
+            <div class="meta-item">
+                <i class="fas fa-coins"></i>
+                <span>Costo: <span class="meta-value">$${product.costPrice.toLocaleString()}</span></span>
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-chart-line"></i>
+                <span>Margen: <span class="meta-value">${margin}%</span></span>
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Ganancia: <span class="meta-value">$${profit.toLocaleString()}</span></span>
+            </div>
+            `
+            : '';
+
+        productCard.innerHTML = `
+            <div class="product-header">
+                <div class="product-info">
+                    <h3>${product.name}</h3>
+                    <p>Producto disponible en inventario</p>
+                </div>
+                <div class="product-meta">
+                    <div class="meta-item">
+                        <i class="fas fa-folder"></i>
+                        <span>Categoría: <span class="meta-value">${product.category}</span></span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-tag"></i>
+                        <span>Marca: <span class="meta-value">${product.brand}</span></span>
+                    </div>
+                    ${product.size ? `
+                    <div class="meta-item">
+                        <i class="fas fa-ruler"></i>
+                        <span>Talla: <span class="meta-value">${product.size}</span></span>
+                    </div>` : ''}
+                </div>
+                <div class="product-prices">
+                    <div class="cost-price">${costoPriceHTML}</div>
+                    <div class="sale-price">$${product.salePrice.toLocaleString()}</div>
+                </div>
+            </div>
+            
+            ${gananciasHTML}
+            
+            <div class="product-meta">
+                ${metaItemsHTML}
+                <div class="meta-item">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Venta: <span class="meta-value">$${product.salePrice.toLocaleString()}</span></span>
+                </div>
+            </div>
+            
+            <div class="product-actions">
+                <button class="btn btn-primary" onclick="editProduct('${product._id}')">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+                <button class="btn btn-danger" onclick="deleteProduct('${product._id}')">
+                    <i class="fas fa-trash-alt"></i> Eliminar
+                </button>
+                <button class="btn btn-success" onclick="showProductDetails('${product._id}')">
+                    <i class="fas fa-info-circle"></i> Detalles
+                </button>
+            </div>
+            <button class="btn btn-info" onclick="showBarcode('${product._id}', '${product.name}', '${product.salePrice}')">
+                <i class="fas fa-barcode"></i> Ver código de barras
+            </button>
+        `;
+
+        productsContainer.appendChild(productCard);
+    });
+}
+
+// ✅ Ocultar campo de costo en el formulario si no tiene permiso
+async function setupEventListeners() {
+    btnSave.addEventListener("click", saveProduct);
+    btnUpdate.addEventListener("click", updateProduct);
+    btnCancel.addEventListener("click", cancelUpdate);
+    
+    searchInput.addEventListener("input", applyFilters);
+    
+    // ✅ Ocultar campo de costo si no tiene permiso
+    if (!puedeVerCostos) {
+        const costPriceGroup = inputCostPrice.closest('.form-group');
+        if (costPriceGroup) {
+            costPriceGroup.style.display = 'none';
+        }
+    } else {
+        inputCostPrice.addEventListener("input", calculateMargin);
+        inputSalePrice.addEventListener("input", calculateMargin);
+    }
+}
 
 // Cargar productos
 async function loadProducts() {

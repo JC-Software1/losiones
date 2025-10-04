@@ -721,6 +721,30 @@
         let soldProducts = [];
         let filteredProducts = [];
 
+        let puedeVerCostos = true;
+
+async function verificarPermisoCostos() {
+    try {
+        const token = getToken();
+        const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
+        const { permisosDetallados, tipo } = response;
+        
+        if (tipo === 2 || tipo === 3) {
+            return true;
+        }
+        
+        return permisosDetallados?.verCostosYGanancias !== false;
+        
+    } catch (error) {
+        console.error('Error al verificar permisos de costos:', error);
+        return false;
+    }
+}
+
+function ocultarTexto() {
+    return '<span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>';
+}
+
 
 const salesSummaryCard = document.getElementById('salesSummaryCard');
 const salesTotalDisplay = document.getElementById('salesTotalDisplay');
@@ -789,19 +813,22 @@ document.getElementById('salesCommissionPercentage').addEventListener('keypress'
 });
 
 
-        document.addEventListener("DOMContentLoaded", async () => {
-            const productsList = document.getElementById("productsList");
-            const searchInput = document.getElementById("searchInput");
-            const profitFilter = document.getElementById("profitFilter");
+       document.addEventListener("DOMContentLoaded", async () => {
+    const productsList = document.getElementById("productsList");
+    const searchInput = document.getElementById("searchInput");
+    const profitFilter = document.getElementById("profitFilter");
 
-            try {
-                const token = getToken();
-                if (!token) {
-                    window.location.href = "login.html";
-                    return;
-                }
+    try {
+        const token = getToken();
+        if (!token) {
+            window.location.href = "login.html";
+            return;
+        }
 
-                const products = await apiFetch("/products", "GET", null, token);
+        // ✅ Verificar permisos antes de cargar
+        puedeVerCostos = await verificarPermisoCostos();
+
+        const products = await apiFetch("/products", "GET", null, token);
                 soldProducts = products.filter(product => product.sold);
                 filteredProducts = [...soldProducts];
                 
@@ -854,93 +881,109 @@ document.getElementById('salesCommissionPercentage').addEventListener('keypress'
             updateStatistics(filteredProducts);
         }
 
-        function displayProducts(products) {
-            const productsList = document.getElementById("productsList");
-            productsList.innerHTML = "";
+function displayProducts(products) {
+    const productsList = document.getElementById("productsList");
+    productsList.innerHTML = "";
 
-            if (products.length === 0) {
-                productsList.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <h3>No se encontraron resultados</h3>
-                        <p>No hay productos vendidos que coincidan con los filtros aplicados.</p>
-                    </div>`;
-                return;
-            }
+    if (products.length === 0) {
+        productsList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-search"></i>
+                <h3>No se encontraron resultados</h3>
+                <p>No hay productos vendidos que coincidan con los filtros aplicados.</p>
+            </div>`;
+        return;
+    }
 
-            products.forEach((product) => {
-                const productCard = document.createElement("div");
-                productCard.classList.add("product-card", "sold");
+    products.forEach((product) => {
+        const productCard = document.createElement("div");
+        productCard.classList.add("product-card", "sold");
 
-                const profit = product.salePrice - product.costPrice;
-                const profitPercentage = Math.round((profit / product.costPrice) * 100);
-                
-                let profitClass = "profit-medium";
-                if (profitPercentage >= 30) profitClass = "profit-high";
-                else if (profitPercentage < 15) profitClass = "profit-low";
-
-                const profitIcon = profitPercentage >= 30 ? 'fas fa-arrow-up' : 
-                                 profitPercentage >= 15 ? 'fas fa-minus' : 'fas fa-arrow-down';
-
-                productCard.classList.add(profitClass);
-                
-                productCard.innerHTML = `
-                    <div class="product-header">
-                        <div class="product-info">
-                            <span class="sold-badge"><i class="fas fa-check"></i> Vendido</span>
-                            <h3>${product.name}</h3>
-                            <p>Categoría: ${product.category || 'Sin categoría'}</p>
-                        </div>
-                        <div class="product-amount">
-                            <div class="sale-price">$${product.salePrice.toLocaleString()}</div>
-                        </div>
-                    </div>
-
-                    <div class="meta-item">
-    <i class="fas fa-user"></i>
-    <span>Vendido a: <span class="meta-value">${product.soldTo || 'Cliente no registrado'}</span></span>
-</div>
-                    
-                    <div class="product-meta">
-                        <div class="meta-item">
-                            <i class="fas fa-dollar-sign"></i>
-                            <span>Costo: <span class="meta-value">$${product.costPrice.toLocaleString()}</span></span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-tags"></i>
-                            <span>Venta: <span class="meta-value">$${product.salePrice.toLocaleString()}</span></span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="${profitIcon}"></i>
-                            <span>Margen: <span class="meta-value">${profitPercentage}%</span></span>
-                        </div>
-                        <div class="meta-item">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>Vendido: <span class="meta-value">${product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES') : 'N/A'}</span></span>
-                        </div>
-                    </div>
-                    
-                    <div class="profit-section">
-                        <div class="profit-text">
-                            <i class="${profitIcon}"></i> 
-                            Ganancia: $${profit.toLocaleString()} (${profitPercentage}%)
-                        </div>
-                    </div>
-                    
-                    <div class="product-actions">
-                        <button class="btn btn-info" onclick="showProductDetails('${product._id}')">
-                            <i class="fas fa-info-circle"></i> Ver detalles
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteProduct('${product._id}')">
-                            <i class="fas fa-trash-alt"></i> Eliminar
-                        </button>
-                    </div>
-                `;
-
-                productsList.appendChild(productCard);
-            });
+        // ✅ Calcular solo si tiene permiso
+        let profit = 0;
+        let profitPercentage = 0;
+        
+        if (puedeVerCostos) {
+            profit = product.salePrice - product.costPrice;
+            profitPercentage = Math.round((profit / product.costPrice) * 100);
         }
+        
+        let profitClass = "profit-medium";
+        if (profitPercentage >= 30) profitClass = "profit-high";
+        else if (profitPercentage < 15) profitClass = "profit-low";
 
+        const profitIcon = profitPercentage >= 30 ? 'fas fa-arrow-up' : 
+                         profitPercentage >= 15 ? 'fas fa-minus' : 'fas fa-arrow-down';
+
+        productCard.classList.add(profitClass);
+        
+        // ✅ Mostrar u ocultar costos
+        const costoPriceHTML = puedeVerCostos 
+            ? `$${product.costPrice.toLocaleString()}`
+            : ocultarTexto();
+            
+        const profitSectionHTML = puedeVerCostos
+            ? `<div class="profit-section">
+                <div class="profit-text">
+                    <i class="${profitIcon}"></i> 
+                    Ganancia: $${profit.toLocaleString()} (${profitPercentage}%)
+                </div>
+            </div>`
+            : '';
+        
+        productCard.innerHTML = `
+            <div class="product-header">
+                <div class="product-info">
+                    <span class="sold-badge"><i class="fas fa-check"></i> Vendido</span>
+                    <h3>${product.name}</h3>
+                    <p>Categoría: ${product.category || 'Sin categoría'}</p>
+                </div>
+                <div class="product-amount">
+                    <div class="sale-price">$${product.salePrice.toLocaleString()}</div>
+                </div>
+            </div>
+
+            <div class="meta-item">
+                <i class="fas fa-user"></i>
+                <span>Vendido a: <span class="meta-value">${product.soldTo || 'Cliente no registrado'}</span></span>
+            </div>
+            
+            <div class="product-meta">
+                <div class="meta-item">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span>Costo: <span class="meta-value">${costoPriceHTML}</span></span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-tags"></i>
+                    <span>Venta: <span class="meta-value">$${product.salePrice.toLocaleString()}</span></span>
+                </div>
+                ${puedeVerCostos ? `
+                <div class="meta-item">
+                    <i class="${profitIcon}"></i>
+                    <span>Margen: <span class="meta-value">${profitPercentage}%</span></span>
+                </div>
+                ` : ''}
+                <div class="meta-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Vendido: <span class="meta-value">${product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES') : 'N/A'}</span></span>
+                </div>
+            </div>
+            
+            ${profitSectionHTML}
+            
+            <div class="product-actions">
+                <button class="btn btn-info" onclick="showProductDetails('${product._id}')">
+                    <i class="fas fa-info-circle"></i> Ver detalles
+                </button>
+                <button class="btn btn-danger" onclick="deleteProduct('${product._id}')">
+                    <i class="fas fa-trash-alt"></i> Eliminar
+                </button>
+            </div>
+        `;
+
+        productsList.appendChild(productCard);
+    });
+}
         function updateStatistics(products) {
             const totalRevenue = products.reduce((sum, product) => sum + product.salePrice, 0);
             const totalProfit = products.reduce((sum, product) => sum + (product.salePrice - product.costPrice), 0);

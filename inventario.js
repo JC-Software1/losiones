@@ -19,6 +19,35 @@ let filteredProducts = [];
 
 
 
+// Al inicio del archivo, después de las importaciones
+let puedeVerCostos = true; // Variable global
+
+// FunciÃ³n para verificar permiso y ocultar/mostrar costos
+async function verificarPermisoCostos() {
+    try {
+        const token = getToken();
+        const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
+        const { permisosDetallados, tipo } = response;
+        
+        // Admins y jefes siempre ven costos
+        if (tipo === 2 || tipo === 3) {
+            return true;
+        }
+        
+        // Vendedores: verificar permiso específico
+        return permisosDetallados?.verCostosYGanancias !== false;
+        
+    } catch (error) {
+        console.error('Error al verificar permisos de costos:', error);
+        // Por defecto, ocultar en caso de error para mayor seguridad
+        return false;
+    }
+}
+
+// FunciÃ³n auxiliar para formatear texto oculto
+function ocultarTexto() {
+    return '<span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>';
+}
 // Inicialización
 document.addEventListener("DOMContentLoaded", async () => {
     try {
@@ -27,6 +56,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             window.location.href = "index.html";
             return;
         }
+        
+        // ✅ Verificar permisos de costos ANTES de cargar productos
+        puedeVerCostos = await verificarPermisoCostos();
         
         await loadProducts();
         setupEventListeners();
@@ -78,21 +110,31 @@ function displayProducts(products) {
         const productCard = document.createElement("div");
         productCard.classList.add("product-card");
         
-        // Calcular estadísticas del producto
-        const profit = product.salePrice - product.costPrice;
-        const margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
-        const roi = ((profit / product.costPrice) * 100).toFixed(1);
+        // ✅ Calcular estadísticas solo si puede ver costos
+        let margin = 0;
+        let profit = 0;
         
-        // Determinar clase del margen
-        let marginClass = 'margin-low';
-        let marginText = 'Bajo';
-        if (margin >= 30) {
-            marginClass = 'margin-high';
-            marginText = 'Alto';
-        } else if (margin >= 20) {
-            marginClass = 'margin-medium';
-            marginText = 'Medio';
+        if (puedeVerCostos) {
+            profit = product.salePrice - product.costPrice;
+            margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
         }
+        
+        const marginClass = margin >= 30 ? 'margin-high' : margin >= 20 ? 'margin-medium' : 'margin-low';
+        
+        // ✅ Mostrar u ocultar según permiso
+        const costoPriceHTML = puedeVerCostos 
+            ? `<div class="price-value">$${product.costPrice.toLocaleString()}</div>`
+            : `<div class="price-value">${ocultarTexto()}</div>`;
+            
+        const profitHighlightHTML = puedeVerCostos
+            ? `<div class="profit-highlight">
+                <div class="profit-text">
+                    <i class="fas fa-chart-line"></i> 
+                    Ganancia: $${profit.toLocaleString()} • Margen: ${margin}% 
+                    <span class="margin-indicator ${marginClass}"></span>
+                </div>
+            </div>`
+            : '';
 
         productCard.innerHTML = `
             <div class="product-header">
@@ -101,18 +143,16 @@ function displayProducts(products) {
                 </div>
                 <div class="product-status status-available">
                     <i class="fas fa-check-circle"></i> Disponible
- <i class="fas fa-folder"></i> ${product.category} • 
-                <i class="fas fa-tag"></i> ${product.brand} • 
-                ${product.size ? `<i class="fas fa-ruler"></i> Talla: ${product.size}` : ''}
+                    <i class="fas fa-folder"></i> ${product.category} • 
+                    <i class="fas fa-tag"></i> ${product.brand} • 
+                    ${product.size ? `<i class="fas fa-ruler"></i> Talla: ${product.size}` : ''}
+                </div>
             </div>
-        </div>
-
-            
             
             <div class="product-prices">
                 <div class="price-item">
                     <div class="price-label">Precio de Costo</div>
-                    <div class="price-value">$${product.costPrice.toLocaleString()}</div>
+                    ${costoPriceHTML}
                 </div>
                 <div class="price-item">
                     <div class="price-label">Precio de Venta</div>
@@ -120,13 +160,7 @@ function displayProducts(products) {
                 </div>
             </div>
             
-            <div class="profit-highlight">
-                <div class="profit-text">
-                    <i class="fas fa-chart-line"></i> 
-                    Ganancia: $${profit.toLocaleString()} • Margen: ${margin}% (${marginText})
-                    <span class="margin-indicator ${marginClass}"></span>
-                </div>
-            </div>
+            ${profitHighlightHTML}
             
             <div class="product-actions">
                 <button class="btn btn-primary" onclick="editProduct('${product._id}')" title="Editar producto">
@@ -141,7 +175,6 @@ function displayProducts(products) {
             </div>
         `;
 
-        // Aplicar delay de animación
         productCard.style.animationDelay = `${index * 0.1}s`;
         productsList.appendChild(productCard);
     });

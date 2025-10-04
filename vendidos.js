@@ -1,6 +1,33 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
 
+// Función para verificar permiso y ocultar/mostrar costos
+async function verificarPermisoCostos() {
+    try {
+        const token = getToken();
+        const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
+        const { permisosDetallados, tipo } = response;
+        
+        // Admins y jefes siempre ven costos
+        if (tipo === 2 || tipo === 3) {
+            return true;
+        }
+        
+        // Vendedores: verificar permiso específico
+        return permisosDetallados?.verCostosYGanancias !== false;
+        
+    } catch (error) {
+        console.error('Error al verificar permisos de costos:', error);
+        // Por defecto, ocultar en caso de error para mayor seguridad
+        return false;
+    }
+}
+
+// Función auxiliar para formatear texto oculto
+function ocultarTexto(texto) {
+    return '<span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>';
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     const productsList = document.getElementById("productsList");
     const searchInput = document.getElementById("searchInput");
