@@ -984,37 +984,67 @@ function displayProducts(products) {
         productsList.appendChild(productCard);
     });
 }
-        function updateStatistics(products) {
-            const totalRevenue = products.reduce((sum, product) => sum + product.salePrice, 0);
-            const totalProfit = products.reduce((sum, product) => sum + (product.salePrice - product.costPrice), 0);
-            const avgMargin = products.length > 0 ? 
-                Math.round(products.reduce((sum, product) => sum + ((product.salePrice - product.costPrice) / product.costPrice * 100), 0) / products.length) : 0;
-            
-            const bestProduct = products.length > 0 ? 
-                products.reduce((best, product) => (product.salePrice - product.costPrice) > (best.salePrice - best.costPrice) ? product : best).name : 'N/A';
 
-            document.getElementById("totalRevenue").textContent = `$${totalRevenue.toLocaleString()}`;
-            document.getElementById("totalProducts").textContent = products.length;
-            document.getElementById("totalProfit").textContent = `$${totalProfit.toLocaleString()}`;
-            document.getElementById("avgMargin").textContent = `${avgMargin}%`;
-            document.getElementById("bestProduct").textContent = bestProduct;
-        }
 
+function updateStatistics(products) {
+    const totalRevenue = products.reduce((sum, product) => sum + product.salePrice, 0);
+    const totalProfit = products.reduce((sum, product) => sum + (product.salePrice - product.costPrice), 0);
+    const avgMargin = products.length > 0 ? 
+        Math.round(products.reduce((sum, product) => sum + ((product.salePrice - product.costPrice) / product.costPrice * 100), 0) / products.length) : 0;
+    
+    const bestProduct = products.length > 0 ? 
+        products.reduce((best, product) => (product.salePrice - product.costPrice) > (best.salePrice - best.costPrice) ? product : best).name : 'N/A';
+
+    document.getElementById("totalRevenue").textContent = `$${totalRevenue.toLocaleString()}`;
+    document.getElementById("totalProducts").textContent = products.length;
+    
+    // ✅ Ocultar ganancia total y margen si no tiene permiso
+    if (puedeVerCostos) {
+        document.getElementById("totalProfit").textContent = `$${totalProfit.toLocaleString()}`;
+        document.getElementById("avgMargin").textContent = `${avgMargin}%`;
+    } else {
+        document.getElementById("totalProfit").textContent = '●●●●●';
+        document.getElementById("avgMargin").textContent = '●●●●●';
+    }
+    
+    document.getElementById("bestProduct").textContent = bestProduct;
+}
         // Funciones globales
-        window.showProductDetails = function(productId) {
-            const product = soldProducts.find(p => p._id === productId);
-            if (!product) return;
-            
-            const profit = product.salePrice - product.costPrice;
-            const profitPercentage = Math.round((profit / product.costPrice) * 100);
-            const soldDate = product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            }) : 'Fecha no registrada';
-            
-            alert(`
+ window.showProductDetails = function(productId) {
+    const product = soldProducts.find(p => p._id === productId);
+    if (!product) return;
+    
+    // ✅ Versión sin información financiera si no tiene permiso
+    if (!puedeVerCostos) {
+        const soldDate = product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }) : 'Fecha no registrada';
+        
+        alert(`
+DETALLES DEL PRODUCTO VENDIDO
+
+📦 Producto: ${product.name}
+📂 Categoría: ${product.category || 'Sin categoría'}
+💵 Precio de venta: $${product.salePrice.toLocaleString()} COP
+📅 Fecha de venta: ${soldDate}
+        `);
+        return;
+    }
+    
+    // Versión completa con información financiera
+    const profit = product.salePrice - product.costPrice;
+    const profitPercentage = Math.round((profit / product.costPrice) * 100);
+    const soldDate = product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }) : 'Fecha no registrada';
+    
+    alert(`
 DETALLES DEL PRODUCTO VENDIDO
 
 📦 Producto: ${product.name}
@@ -1029,9 +1059,8 @@ ${product.description ? `📝 Descripción: ${product.description}` : ''}
 
 ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' : 
   profitPercentage >= 15 ? '📊 Rentabilidad moderada' : '⚠️ Rentabilidad baja'}
-            `);
-        };
-
+    `);
+};
         window.deleteProduct = async function(productId) {
             if (!confirm("¿Estás seguro de que deseas eliminar este producto vendido?\n\nEsta acción no se puede deshacer.")) {
                 return;
@@ -1203,12 +1232,19 @@ ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
         }
 
         // Función para mostrar análisis de ventas
-        window.showSalesAnalysis = function() {
-            const analysis = getSalesAnalysis();
-            if (!analysis) {
-                alert("No hay datos suficientes para mostrar el análisis");
-                return;
-            }
+window.showSalesAnalysis = function() {
+    // ✅ Verificar permisos antes de mostrar análisis
+    if (!puedeVerCostos) {
+        alert("No tienes permisos para ver el análisis financiero detallado");
+        return;
+    }
+    
+    const analysis = getSalesAnalysis();
+    if (!analysis) {
+        alert("No hay datos suficientes para mostrar el análisis");
+        return;
+    }
+    
             
             const mostProfitableMargin = analysis.mostProfitable ? 
                 Math.round(((analysis.mostProfitable.salePrice - analysis.mostProfitable.costPrice) / analysis.mostProfitable.costPrice) * 100) : 0;

@@ -618,9 +618,15 @@ sales: {
 });
 
 // Obtener historial de liquidaciones
+// Obtener historial de liquidaciones
 router.get("/history", auth, async (req, res) => {
     try {
-        const query = req.user.tipo === 1 ? { user: req.user.id } : {};
+        // ✅ CORRECCIÓN: Vendedores (tipo 1) solo ven sus propias liquidaciones
+        // Admins (tipo 2 y 3) ven todas
+        const query = (req.user.tipo === 2 || req.user.tipo === 3) 
+            ? {} 
+            : { user: req.user.id };
+        
         const liquidations = await DailyLiquidation.find(query)
             .sort({ liquidationDate: -1 });
         

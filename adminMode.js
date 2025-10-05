@@ -142,17 +142,24 @@ if (url.includes('/api/expenses') && !url.includes('/vendedor/')) {
             }
 
             // VENTAS
-            if (url.includes('/api/sales') && !url.includes('/vendedor/')) {
-                if (!url.includes('/new') && !url.includes('/payment')) {
-                    const baseUrl = url.split('/api/sales')[0];
-                    const pathAfter = url.split('/api/sales')[1] || '';
-                    
-                    if (!pathAfter || pathAfter === '' || pathAfter === '/' || pathAfter === '/settled') {
-                        url = `${baseUrl}/api/sales/vendedor/${vendedorId}`;
-                        console.log('🔄 Redirigiendo ventas del vendedor:', url);
-                    }
-                }
-            }
+// VENTAS
+if (url.includes('/api/sales') && !url.includes('/vendedor/')) {
+    const baseUrl = url.split('/api/sales')[0];
+    const pathAfter = url.split('/api/sales')[1] || '';
+    
+    // Manejar específicamente el endpoint de ventas liquidadas
+    if (pathAfter === '/settled' || pathAfter.startsWith('/settled')) {
+        url = `${baseUrl}/api/sales/vendedor/${vendedorId}/settled`;
+        console.log('✅ Redirigiendo ventas liquidadas del vendedor:', url);
+    }
+    // Otras rutas de ventas (excepto /new y /payment)
+    else if (!url.includes('/new') && !url.includes('/payment')) {
+        if (!pathAfter || pathAfter === '' || pathAfter === '/') {
+            url = `${baseUrl}/api/sales/vendedor/${vendedorId}`;
+            console.log('📄 Redirigiendo ventas del vendedor:', url);
+        }
+    }
+}
 
             // LIQUIDACIONES
 if (url.includes('/api/liquidation') && !url.includes('/vendedor/')) {

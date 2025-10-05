@@ -110,7 +110,7 @@ function displayProducts(products) {
         const productCard = document.createElement("div");
         productCard.classList.add("product-card");
         
-        // ✅ Calcular estadísticas solo si puede ver costos
+        // Calcular estadísticas solo si puede ver costos
         let margin = 0;
         let profit = 0;
         
@@ -121,10 +121,10 @@ function displayProducts(products) {
         
         const marginClass = margin >= 30 ? 'margin-high' : margin >= 20 ? 'margin-medium' : 'margin-low';
         
-        // ✅ Mostrar u ocultar según permiso
+        // Mostrar u ocultar según permiso
         const costoPriceHTML = puedeVerCostos 
             ? `<div class="price-value">$${product.costPrice.toLocaleString()}</div>`
-            : `<div class="price-value">${ocultarTexto()}</div>`;
+            : `<div class="price-value" style="color: var(--medium-gray); font-style: italic;">●●●●●</div>`;
             
         const profitHighlightHTML = puedeVerCostos
             ? `<div class="profit-highlight">
@@ -134,7 +134,12 @@ function displayProducts(products) {
                     <span class="margin-indicator ${marginClass}"></span>
                 </div>
             </div>`
-            : '';
+            : `<div class="profit-highlight">
+                <div class="profit-text" style="color: var(--medium-gray);">
+                    <i class="fas fa-lock"></i> 
+                    Ganancia: <span style="font-style: italic;">●●●●●</span> • Margen: <span style="font-style: italic;">●●●●●</span>
+                </div>
+            </div>`;
 
         productCard.innerHTML = `
             <div class="product-header">
@@ -185,23 +190,29 @@ function updateStatistics(products) {
     totalProductsSpan.textContent = products.length;
     
     if (products.length > 0) {
-        // Calcular margen promedio
-        const avgMargin = (products.reduce((sum, product) => {
-            const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
-            return sum + margin;
-        }, 0) / products.length).toFixed(1);
-        avgMarginSpan.textContent = `${avgMargin}%`;
-        
-        // Calcular valor total del inventario (precio de costo)
-        const totalInventoryValue = products.reduce((sum, product) => sum + product.costPrice, 0);
-        totalInventoryValueSpan.textContent = `$${totalInventoryValue.toLocaleString()}`;
-        
-        // Calcular ganancia potencial total
-        const totalPotentialProfit = products.reduce((sum, product) => {
-            return sum + (product.salePrice - product.costPrice);
-        }, 0);
-        totalPotentialProfitSpan.textContent = `$${totalPotentialProfit.toLocaleString()}`;
-        
+        if (puedeVerCostos) {
+            // Calcular margen promedio
+            const avgMargin = (products.reduce((sum, product) => {
+                const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
+                return sum + margin;
+            }, 0) / products.length).toFixed(1);
+            avgMarginSpan.textContent = `${avgMargin}%`;
+            
+            // Calcular valor total del inventario (precio de costo)
+            const totalInventoryValue = products.reduce((sum, product) => sum + product.costPrice, 0);
+            totalInventoryValueSpan.textContent = `$${totalInventoryValue.toLocaleString()}`;
+            
+            // Calcular ganancia potencial total
+            const totalPotentialProfit = products.reduce((sum, product) => {
+                return sum + (product.salePrice - product.costPrice);
+            }, 0);
+            totalPotentialProfitSpan.textContent = `$${totalPotentialProfit.toLocaleString()}`;
+        } else {
+            // Ocultar estadísticas de costos y ganancias
+            avgMarginSpan.innerHTML = '<span style="font-style: italic; color: var(--medium-gray);">●●●●●</span>';
+            totalInventoryValueSpan.innerHTML = '<span style="font-style: italic; color: var(--medium-gray);">●●●●●</span>';
+            totalPotentialProfitSpan.innerHTML = '<span style="font-style: italic; color: var(--medium-gray);">●●●●●</span>';
+        }
     } else {
         avgMarginSpan.textContent = "0%";
         totalInventoryValueSpan.textContent = "$0";

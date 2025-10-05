@@ -170,10 +170,10 @@ function displayProducts(productsList) {
         const marginClass = margin >= 30 ? 'success' : margin >= 20 ? 'warning' : 'danger';
         const marginIcon = margin >= 30 ? 'fas fa-trending-up' : margin >= 20 ? 'fas fa-minus' : 'fas fa-trending-down';
 
-        // ✅ Mostrar u ocultar según permiso
+        // Mostrar u ocultar según permiso
         const costoPriceHTML = puedeVerCostos 
             ? `Costo: $${product.costPrice.toLocaleString()}`
-            : `Costo: ${ocultarTexto()}`;
+            : `Costo: <span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>`;
             
         const gananciasHTML = puedeVerCostos
             ? `<div class="profit-margin">
@@ -182,7 +182,12 @@ function displayProducts(productsList) {
                     Margen: ${margin}% • Ganancia: $${profit.toLocaleString()}
                 </div>
             </div>`
-            : '';
+            : `<div class="profit-margin">
+                <div class="margin-text" style="color: var(--medium-gray);">
+                    <i class="fas fa-lock"></i> 
+                    Margen: <span style="font-style: italic;">●●●●●</span> • Ganancia: <span style="font-style: italic;">●●●●●</span>
+                </div>
+            </div>`;
             
         const metaItemsHTML = puedeVerCostos 
             ? `
@@ -199,7 +204,20 @@ function displayProducts(productsList) {
                 <span>Ganancia: <span class="meta-value">$${profit.toLocaleString()}</span></span>
             </div>
             `
-            : '';
+            : `
+            <div class="meta-item">
+                <i class="fas fa-coins"></i>
+                <span>Costo: <span class="meta-value" style="color: var(--medium-gray); font-style: italic;">●●●●●</span></span>
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-chart-line"></i>
+                <span>Margen: <span class="meta-value" style="color: var(--medium-gray); font-style: italic;">●●●●●</span></span>
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Ganancia: <span class="meta-value" style="color: var(--medium-gray); font-style: italic;">●●●●●</span></span>
+            </div>
+            `;
 
         productCard.innerHTML = `
             <div class="product-header">
@@ -299,107 +317,7 @@ async function loadProducts() {
     }
 }
 
-// Mostrar productos
-function displayProducts(productsList) {
-    const productsContainer = document.getElementById("productsList");
-    productsContainer.innerHTML = "";
 
-    if (productsList.length === 0) {
-        productsContainer.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-box-open"></i>
-                <h3>No hay productos</h3>
-                <p>No se encontraron productos disponibles.</p>
-            </div>`;
-        return;
-    }
-
-    productsList.forEach((product) => {
-        const productCard = document.createElement("div");
-        productCard.classList.add("product-card");
-
-        // Calcular margen de ganancia
-        const margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
-        const profit = product.salePrice - product.costPrice;
-        
-        // Determinar color del margen
-        const marginClass = margin >= 30 ? 'success' : margin >= 20 ? 'warning' : 'danger';
-        const marginIcon = margin >= 30 ? 'fas fa-trending-up' : margin >= 20 ? 'fas fa-minus' : 'fas fa-trending-down';
-
-        productCard.innerHTML = `
-            <div class="product-header">
-                <div class="product-info">
-                    <h3>${product.name}</h3>
-                    <p>Producto disponible en inventario</p>
-                </div>
-
-                <div class="product-meta">
-    <div class="meta-item">
-        <i class="fas fa-folder"></i>
-        <span>Categoría: <span class="meta-value">${product.category}</span></span>
-    </div>
-    <div class="meta-item">
-        <i class="fas fa-tag"></i>
-        <span>Marca: <span class="meta-value">${product.brand}</span></span>
-    </div>
-    ${product.size ? `
-    <div class="meta-item">
-        <i class="fas fa-ruler"></i>
-        <span>Talla: <span class="meta-value">${product.size}</span></span>
-    </div>` : ''}
-</div>
-
-                <div class="product-prices">
-                    <div class="cost-price">Costo: $${product.costPrice.toLocaleString()}</div>
-                    <div class="sale-price">$${product.salePrice.toLocaleString()}</div>
-                </div>
-            </div>
-            
-            <div class="profit-margin">
-                <div class="margin-text">
-                    <i class="${marginIcon}"></i> 
-                    Margen: ${margin}% • Ganancia: $${profit.toLocaleString()}
-                </div>
-            </div>
-            
-            <div class="product-meta">
-                <div class="meta-item">
-                    <i class="fas fa-coins"></i>
-                    <span>Costo: <span class="meta-value">$${product.costPrice.toLocaleString()}</span></span>
-                </div>
-                <div class="meta-item">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span>Venta: <span class="meta-value">$${product.salePrice.toLocaleString()}</span></span>
-                </div>
-                <div class="meta-item">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Margen: <span class="meta-value">${margin}%</span></span>
-                </div>
-                <div class="meta-item">
-                    <i class="fas fa-hand-holding-usd"></i>
-                    <span>Ganancia: <span class="meta-value">$${profit.toLocaleString()}</span></span>
-                </div>
-            </div>
-            
-            <div class="product-actions">
-                <button class="btn btn-primary" onclick="editProduct('${product._id}')">
-                    <i class="fas fa-edit"></i> Editar
-                </button>
-                <button class="btn btn-danger" onclick="deleteProduct('${product._id}')">
-                    <i class="fas fa-trash-alt"></i> Eliminar
-                </button>
-                <button class="btn btn-success" onclick="showProductDetails('${product._id}')">
-                    <i class="fas fa-info-circle"></i> Detalles
-                </button>
-            </div>
-            <button class="btn btn-info" onclick="showBarcode('${product._id}', '${product.name}', '${product.salePrice}')">
-  <i class="fas fa-barcode"></i> Ver código de barras
-</button>
-        `;
-
-        productsContainer.appendChild(productCard);
-    });
-}
 
 // Actualizar estadísticas
 function updateStatistics(productsList) {
@@ -407,34 +325,28 @@ function updateStatistics(productsList) {
     document.getElementById("totalProducts").textContent = productsList.length;
     
     if (productsList.length > 0) {
-        // Margen promedio
-        const avgMargin = (productsList.reduce((sum, product) => {
-            const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
-            return sum + margin;
-        }, 0) / productsList.length).toFixed(1);
-        document.getElementById("avgMargin").textContent = `${avgMargin}%`;
-        
-        // Valor total del inventario (precio de costo)
-        const totalValue = productsList.reduce((sum, product) => sum + product.costPrice, 0);
-        document.getElementById("totalInventoryValue").textContent = `$${totalValue.toLocaleString()}`;
+        if (puedeVerCostos) {
+            // Margen promedio
+            const avgMargin = (productsList.reduce((sum, product) => {
+                const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
+                return sum + margin;
+            }, 0) / productsList.length).toFixed(1);
+            document.getElementById("avgMargin").textContent = `${avgMargin}%`;
+            
+            // Valor total del inventario (precio de costo)
+            const totalValue = productsList.reduce((sum, product) => sum + product.costPrice, 0);
+            document.getElementById("totalInventoryValue").textContent = `$${totalValue.toLocaleString()}`;
+        } else {
+            // Ocultar estadísticas de costos
+            document.getElementById("avgMargin").innerHTML = '<span style="font-style: italic; color: var(--medium-gray);">●●●●●</span>';
+            document.getElementById("totalInventoryValue").innerHTML = '<span style="font-style: italic; color: var(--medium-gray);">●●●●●</span>';
+        }
     } else {
         document.getElementById("avgMargin").textContent = "0%";
         document.getElementById("totalInventoryValue").textContent = "$0";
     }
 }
 
-// Configurar event listeners
-function setupEventListeners() {
-    btnSave.addEventListener("click", saveProduct);
-    btnUpdate.addEventListener("click", updateProduct);
-    btnCancel.addEventListener("click", cancelUpdate);
-    
-    searchInput.addEventListener("input", applyFilters);
-    
-    // Auto-calcular margen mientras se escribe
-    inputCostPrice.addEventListener("input", calculateMargin);
-    inputSalePrice.addEventListener("input", calculateMargin);
-}
 
 // Aplicar filtros
 function applyFilters() {
@@ -465,6 +377,11 @@ function calculateMargin() {
 
 // Mostrar vista previa del margen
 function showMarginPreview(margin, profit) {
+    // Si no puede ver costos, no mostrar nada
+    if (!puedeVerCostos) {
+        return;
+    }
+    
     let previewElement = document.getElementById('marginPreview');
     
     if (!previewElement) {
@@ -494,7 +411,6 @@ function showMarginPreview(margin, profit) {
         Margen: ${margin}% • Ganancia: ${profit.toLocaleString()}
     `;
 }
-
 // Guardar producto
 // Guardar producto
 async function saveProduct() {
@@ -579,8 +495,8 @@ window.editProduct = function(productId) {
     inputCostPrice.value = product.costPrice;
     inputSalePrice.value = product.salePrice;
     inputCategory.value = product.category;
-inputBrand.value = product.brand;
-inputSize.value = product.size || "";
+    inputBrand.value = product.brand;
+    inputSize.value = product.size || "";
     
     formTitle.innerHTML = '<i class="fas fa-edit"></i> Editar Producto';
     btnSave.classList.add('hidden');
@@ -588,7 +504,10 @@ inputSize.value = product.size || "";
     btnCancel.classList.remove('hidden');
     btnDelete.classList.remove('hidden');
     
-    calculateMargin();
+    // Solo calcular margen si tiene permiso
+    if (puedeVerCostos) {
+        calculateMargin();
+    }
     
     // Scroll al formulario
     document.querySelector('.form-container').scrollIntoView({ behavior: 'smooth' });
