@@ -582,9 +582,8 @@
     let currentReceipts = [];
     let currentReceiptData = null;
 
-    // ---------- Funciones auxiliares ----------
     function getToken() {
-        return localStorage.getItem('token');
+        return localStorage.getItem('authToken'); // ✅ Usa 'authToken'
     }
 
     async function apiFetch(endpoint, method = 'GET', body = null, token = null) {

@@ -1376,11 +1376,29 @@ function generateReceipt(saleData) {
 async function saveReceiptToMongo(receiptData) {
     try {
         const token = getToken();
-        await apiFetch("/receipts", "POST", {
-            receiptNumber: receiptData.receiptNumber, // ✅ ahora es número
+        
+        // ✅ Extraer userId del token JWT
+        let userId;
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            userId = payload.id || payload.userId;
+        } catch (e) {
+            console.warn("No se pudo extraer userId del token");
+        }
+        
+        // ✅ Enviar con userId explícito
+        const dataToSend = {
+            receiptNumber: receiptData.receiptNumber,
             saleData: receiptData.saleData,
             localId: receiptData.id
-        }, token);
+        };
+        
+        // Solo agregar userId si se pudo extraer
+        if (userId) {
+            dataToSend.userId = userId;
+        }
+        
+        await apiFetch("/receipts", "POST", dataToSend, token);
         console.log("✅ Recibo guardado en MongoDB");
     } catch (err) {
         console.warn("❌ No se pudo guardar el recibo en MongoDB:", err);

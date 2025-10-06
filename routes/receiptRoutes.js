@@ -97,4 +97,27 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// RUTA DE MIGRACIÓN - Agregar userId a recibos antiguos
+router.post('/migrate-userid', async (req, res) => {
+  try {
+    const userId = req.user.id; // El usuario que hace la petición
+    
+    // Actualizar todos los recibos sin userId
+    const result = await Receipt.updateMany(
+      { userId: { $exists: false } },
+      { $set: { userId: userId } }
+    );
+    
+    res.json({
+      success: true,
+      message: `${result.modifiedCount} recibos actualizados`,
+      modifiedCount: result.modifiedCount
+    });
+    
+  } catch (err) {
+    console.error('Error en migración:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
