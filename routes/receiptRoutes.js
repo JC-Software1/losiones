@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Receipt = require('../models/receipt');
 const auth = require('../middleware/auth');
-const mongoose = require('mongoose'); // ✅ Importar mongoose
+const mongoose = require('mongoose');
 
 // Aplicar middleware a todas las rutas
 router.use(auth);
@@ -12,18 +12,16 @@ router.use(auth);
 router.post('/', async (req, res) => {
   try {
     const payload = req.body;
-    const authenticatedUserId = req.user.id; // El que tiene el token (puede ser admin)
+    const authenticatedUserId = req.user.id;
     const userTipo = req.user.tipo;
     
     if (!authenticatedUserId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
-    // ✅ CORRECCIÓN: Si viene userId en el payload (admin creando para vendedor), usar ese
-    let targetUserId = authenticatedUserId; // Por defecto, el usuario autenticado
+    let targetUserId = authenticatedUserId;
     
     if (userTipo === 2 || userTipo === 3) {
-      // Es admin, puede especificar otro userId
       if (payload.userId) {
         targetUserId = payload.userId;
         console.log('📝 Admin creando recibo para vendedor:', targetUserId);
@@ -42,7 +40,7 @@ router.post('/', async (req, res) => {
       receiptNumber: payload.receiptNumber,
       saleData: payload.saleData,
       localId: payload.localId,
-      userId: targetUserId // ✅ Usar el userId correcto
+      userId: targetUserId
     });
 
     await r.save();
@@ -54,25 +52,31 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Obtener recibos (con soporte para admin)
+// ✅ OBTENER RECIBOS - CORREGIDO
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.id;
-    const userTipo = req.user.tipo; // 1 = jefe, 2 = vendedor
+    const userTipo = req.user.tipo;
     
     if (!userId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
     
-    // Permitir query param ?userId=xxx para que admin vea recibos de otros
     const targetUserId = req.query.userId;
-    
     let query = {};
     
-    // Si es admin (tipo 1) y se envió userId, buscar por ese usuario
-    if (userTipo === 1 && targetUserId) {
-      // ✅ Convertir string a ObjectId
-      query.userId = mongoose.Types.ObjectId(targetUserId);
+    // ✅ CORRECCIÓN: tipo 2 y 3 son admins, NO tipo 1
+    if ((userTipo === 2 || userTipo === 3) && targetUserId) {
+      // Intentar como ObjectId primero
+      try {
+        if (mongoose.Types.ObjectId.isValid(targetUserId)) {
+          query.userId = new mongoose.Types.ObjectId(targetUserId);
+        } else {
+          query.userId = targetUserId;
+        }
+      } catch (e) {
+        query.userId = targetUserId;
+      }
       console.log('🔍 Admin buscando recibos de:', targetUserId);
     } else {
       // Usuario normal: solo sus propios recibos
@@ -80,8 +84,21 @@ router.get('/', async (req, res) => {
       console.log('🔍 Vendedor buscando sus propios recibos');
     }
     
+    console.log('🔍 Query final:', JSON.stringify(query));
+    
     const receipts = await Receipt.find(query).sort({ createdAt: -1 });
     console.log('📊 Recibos encontrados:', receipts.length);
+    
+    // Debug si no encuentra nada
+    if (receipts.length === 0 && targetUserId) {
+      console.log('⚠️ No se encontraron recibos. Muestreando BD...');
+      const sample = await Receipt.find({}).limit(3);
+      console.log('📋 Muestra de recibos en BD:', sample.map(r => ({
+        receiptNum: r.receiptNumber,
+        userId: r.userId?.toString(),
+        userIdType: typeof r.userId
+      })));
+    }
     
     res.json(receipts);
   } catch (err) {
@@ -103,8 +120,8 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Recibo no encontrado' });
     }
     
-    // Admin puede eliminar cualquier recibo, vendedor solo los suyos
-    if (userTipo !== 1 && receipt.userId.toString() !== userId) {
+    // ✅ Admins (tipo 2 y 3) pueden eliminar cualquier recibo
+    if (userTipo !== 2 && userTipo !== 3 && receipt.userId.toString() !== userId) {
       return res.status(403).json({ error: 'No autorizado' });
     }
     
@@ -116,12 +133,11 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// RUTA DE MIGRACIÓN - Agregar userId a recibos antiguos
+// RUTA DE MIGRACIÓN
 router.post('/migrate-userid', async (req, res) => {
   try {
-    const userId = req.user.id; // El usuario que hace la petición
+    const userId = req.user.id;
     
-    // Actualizar todos los recibos sin userId
     const result = await Receipt.updateMany(
       { userId: { $exists: false } },
       { $set: { userId: userId } }
