@@ -2,15 +2,16 @@
 const express = require('express');
 const router = express.Router();
 const Receipt = require('../models/receipt');
+const auth = require('../middleware/auth'); // Importar el middleware
 
-router.use(authMiddleware);
+// Aplicar middleware a todas las rutas
+router.use(auth);
 
-// Crear / sincronizar un recibo
 // Crear / sincronizar un recibo
 router.post('/', async (req, res) => {
   try {
     const payload = req.body;
-    const userId = req.userId; // Del middleware de autenticación
+    const userId = req.user.id; // El middleware auth guarda req.user = { id, tipo, iat, exp }
     
     if (!userId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
@@ -39,12 +40,11 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// Obtener recibos (puedes filtrar por usuario si implementas auth)
+
 // Obtener recibos del usuario autenticado
 router.get('/', async (req, res) => {
   try {
-    // Obtener userId del token decodificado (req.userId lo setea el middleware de auth)
-    const userId = req.userId; // Asegúrate de tener un middleware que extraiga esto del token
+    const userId = req.user.id; // El middleware auth guarda req.user.id
     
     if (!userId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
@@ -57,10 +57,18 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Eliminar recibo por _id (opcional)
+// Eliminar recibo por _id (solo si pertenece al usuario)
 router.delete('/:id', async (req, res) => {
   try {
     const id = req.params.id;
+    const userId = req.user.id;
+    
+    const receipt = await Receipt.findOne({ _id: id, userId: userId });
+    
+    if (!receipt) {
+      return res.status(404).json({ error: 'Recibo no encontrado o no autorizado' });
+    }
+    
     await Receipt.findByIdAndDelete(id);
     res.json({ ok: true });
   } catch (err) {
