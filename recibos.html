@@ -620,37 +620,70 @@ async function apiFetch(endpoint, method = 'GET', body = null, token = null) {
     });
 
     // ✅ Cargar recibos desde MongoDB + localStorage
-    async function loadReceipts() {
-        try {
-            const token = getToken(); // Si usas autenticación
-            const mongoReceipts = await apiFetch("/receipts", "GET", null, token);
-            const localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-
-            const merged = [...localReceipts];
-
-            mongoReceipts.forEach(mr => {
-                if (!merged.some(r => r.id === mr.localId)) {
-                    merged.push({
-                        id: mr.localId || mr._id,
-                        receiptNumber: mr.receiptNumber,
-                        saleData: mr.saleData,
-                        createdAt: mr.createdAt,
-                        fromMongo: true,
-                        mongoId: mr._id // para eliminar desde Mongo
-                    });
-                }
-            });
-
-            currentReceipts = merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            renderReceipts(currentReceipts);
-        } catch (err) {
-            console.error("Error cargando recibos:", err);
-            const localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-            currentReceipts = localReceipts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            renderReceipts(currentReceipts);
+ async function loadReceipts() {
+    try {
+        const token = getToken();
+        
+        // Verificar si estamos en modo admin
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorId = sessionStorage.getItem('vendedorId');
+        
+        // Determinar qué userId usar
+        let userIdToFilter;
+        if (adminMode && vendedorId) {
+            // Modo admin: usar el ID del vendedor que se está inspeccionando
+            userIdToFilter = vendedorId;
+        } else {
+            // Modo normal: obtener el userId del token decodificado
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            userIdToFilter = payload.userId;
         }
-    }
+        
+        // Cargar recibos de MongoDB
+        const mongoReceipts = await apiFetch("/receipts", "GET", null, token);
+        
+        // Filtrar recibos de MongoDB por userId
+        const filteredMongoReceipts = mongoReceipts.filter(r => r.userId === userIdToFilter);
+        
+        // Cargar recibos de localStorage
+        const localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+        
+        // Filtrar recibos de localStorage por userId
+        const filteredLocalReceipts = localReceipts.filter(r => r.userId === userIdToFilter);
+        
+        const merged = [...filteredLocalReceipts];
 
+        filteredMongoReceipts.forEach(mr => {
+            if (!merged.some(r => r.id === mr.localId)) {
+                merged.push({
+                    id: mr.localId || mr._id,
+                    receiptNumber: mr.receiptNumber,
+                    saleData: mr.saleData,
+                    createdAt: mr.createdAt,
+                    fromMongo: true,
+                    mongoId: mr._id,
+                    userId: mr.userId
+                });
+            }
+        });
+
+        currentReceipts = merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        renderReceipts(currentReceipts);
+    } catch (err) {
+        console.error("Error cargando recibos:", err);
+        
+        // Fallback a localStorage con filtro
+        const token = getToken();
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userIdToFilter = payload.userId;
+        
+        const localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+        const filteredLocalReceipts = localReceipts.filter(r => r.userId === userIdToFilter);
+        
+        currentReceipts = filteredLocalReceipts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        renderReceipts(currentReceipts);
+    }
+}
     // Renderizar recibos
     function renderReceipts(receipts) {
         const grid = document.getElementById('receiptsGrid');

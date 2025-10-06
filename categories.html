@@ -424,10 +424,10 @@
    -------------------------- */
 @media (max-width: 420px) {
   /* dos columnas iguales en móviles */
-  .form-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
+.form-grid { 
+  grid-template-columns: repeat(2, 1fr) !important; 
+  gap: 14px !important; 
+}
 
   /* forzar que elementos que deben ocupar 2 columnas lo hagan */
   .form-grid .full-width {
@@ -612,6 +612,392 @@
 /* Scrollbar más discreto (WebKit) */
 .menu-items::-webkit-scrollbar { width: 8px; }
 .menu-items::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 6px; }
+
+/* Dropdown de productos - Versión más amplia y legible */
+.custom-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.dropdown-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--white);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.dropdown-trigger:hover {
+    border-color: var(--accent);
+}
+
+.dropdown-trigger i {
+    transition: transform 0.3s ease;
+}
+
+.dropdown-trigger.active i {
+    transform: rotate(180deg);
+}
+
+/* Panel más ancho y con mejor altura */
+.dropdown-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 450px; /* Aumentado de 300px */
+    overflow-y: auto;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-hover);
+    z-index: 1000;
+    margin-top: 4px;
+}
+
+/* Búsqueda con botón de cámara */
+.dropdown-search-wrapper {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--light-gray);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    align-items: center;
+}
+
+.dropdown-search {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 15px;
+    outline: none;
+    background: white;
+    transition: var(--transition);
+}
+
+.dropdown-search:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(52,152,219,.1);
+}
+
+.btn-camera {
+    padding: 12px 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+    min-width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+
+/* Items del dropdown - Más espaciosos */
+.dropdown-item {
+    padding: 16px; /* Aumentado de 12px */
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background: var(--light-gray);
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item.selected {
+    background: rgba(52,152,219,0.1);
+    border-left: 4px solid var(--accent);
+}
+
+.dropdown-item.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    padding: 20px;
+    text-align: center;
+    color: var(--medium-gray);
+}
+
+/* Card de producto dentro del dropdown - Más grande y legible */
+.product-card-dropdown {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px; /* Aumentado de 12px */
+    border-radius: 8px;
+    background: var(--light-gray);
+    transition: background 0.2s ease;
+    gap: 12px;
+}
+
+.product-card-dropdown:hover {
+    background: #e9ecef;
+}
+
+.product-card-dropdown .info {
+    flex: 1;
+    min-width: 0; /* Permite que el texto se ajuste */
+}
+
+.product-card-dropdown .name {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 15px; /* Aumentado de 14px */
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.product-card-dropdown .price {
+    font-size: 14px; /* Aumentado de 13px */
+    color: var(--success);
+    font-weight: 600;
+    margin: 4px 0;
+}
+
+.product-card-dropdown .info > div:last-child {
+    font-size: 12px; /* Aumentado de 11px */
+    color: var(--medium-gray);
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.product-card-dropdown .info i {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.product-card-dropdown .actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btn-edit-dropdown {
+    padding: 8px 12px; /* Aumentado de 6px 8px */
+    font-size: 13px; /* Aumentado de 12px */
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-edit-dropdown:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+/* Tags de productos seleccionados - Más grandes */
+.selected-products {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* Aumentado de 8px */
+    margin-bottom: 12px;
+    min-height: 40px;
+    padding: 8px;
+    background: var(--light-gray);
+    border-radius: var(--radius);
+}
+
+.selected-product-tag {
+    background: var(--accent);
+    color: white;
+    padding: 8px 14px; /* Aumentado de 6px 10px */
+    border-radius: 20px;
+    font-size: 14px; /* Aumentado de 13px */
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.selected-product-tag .remove {
+    background: rgba(255,255,255,0.3);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 20px; /* Aumentado de 18px */
+    height: 20px;
+    font-size: 12px; /* Aumentado de 10px */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+    font-weight: bold;
+}
+
+.selected-product-tag .remove:hover {
+    background: rgba(255,255,255,0.5);
+    transform: scale(1.1);
+}
+
+/* Responsive mejorado */
+@media (max-width: 768px) {
+    .dropdown-panel {
+        max-height: 60vh; /* Más alto en móviles */
+    }
+    
+    .product-card-dropdown {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 16px;
+    }
+    
+    .product-card-dropdown .actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+}
+
+@media (max-width: 420px) {
+    .dropdown-panel {
+        max-height: 50vh;
+    }
+    
+    .product-card-dropdown .name {
+        font-size: 14px;
+    }
+    
+    .selected-product-tag {
+        font-size: 13px;
+        padding: 7px 12px;
+    }
+}
+
+/* ============================
+  Ajustes finales para iPhone 13 y móviles pequeños
+  ============================ */
+
+/* Regla específica para iPhone 13 / 12 Pro (390x844, device-pixel-ratio 3) */
+@media only screen
+  and (device-width: 390px)
+  and (device-height: 844px)
+  and (-webkit-device-pixel-ratio: 3) {
+
+  /* Forzar columna única en el formulario para mejor lectura */
+.form-grid {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 16px !important;
+}
+
+
+  /* Aumentar tamaño de inputs para dedo/pulgar y evitar zoom en iOS */
+  .form-group input,
+  .form-group select,
+  .form-group textarea,
+  .dropdown-trigger,
+  .dropdown-search {
+    font-size: 16px !important;
+    padding: 14px 14px !important;
+    border-radius: 10px !important;
+    -webkit-text-size-adjust: 100%; /* evita zoom en iOS */
+  }
+
+  /* Botones más accesibles */
+  .button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .button-group .btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+    padding: 12px 14px;
+    border-radius: 10px;
+  }
+
+  /* Dropdown / panel de productos ocupa todo el ancho y no se corte */
+.dropdown-panel {
+  position: relative !important;
+  width: 100% !important;
+  max-height: 280px;       /* puedes ajustar */
+  margin-top: 6px;         /* separadito del input */
+  box-shadow: none !important;
+  border-radius: 8px;
+}
+
+
+  /* Asegurar que el trigger del dropdown no quede chiquito */
+  .dropdown-trigger {
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Spacing del formulario para que no quede pegado al borde */
+  .form-container {
+    padding-left: 18px;
+    padding-right: 18px;
+    padding-top: 22px;
+    padding-bottom: 22px;
+  }
+
+  /* Ajustes para el botón de calendario */
+  #btnOpenCalendar {
+    width: 100%;
+    text-align: left;
+    justify-content: flex-start;
+    padding: 12px 14px;
+    min-height: 48px;
+    border-radius: 10px;
+  }
+
+  /* Selected pills: legibles y con wrapping */
+  .days-pills, .selected-products {
+    gap: 8px;
+    padding-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* Prevenir overflow horizontal por si algún elemento es más ancho */
+  html, body { overflow-x: hidden; }
+
+  /* Ajusta el top de la barra de menú para evitar notch */
+  .menu-toggle {
+    top: calc(env(safe-area-inset-top, 8px) + 6px);
+    right: 10px;
+  }
+}
+
+/* Regla más general para pantallas <= 420px para reforzar el mismo comportamiento */
+@media (max-width: 420px) {
+  .form-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .form-container { padding-left: 14px; padding-right: 14px; padding-top: 18px; padding-bottom: 18px; }
+  .form-title { font-size: 18px; margin-bottom: 12px; }
+  .form-group input, .form-group select, .form-group textarea { font-size: 15px; padding: 12px; border-radius: 8px; }
+  .button-group { display: flex; flex-direction: column; gap: 10px; }
+  .button-group .btn { min-height: 44px; font-size: 15px; }
+  .dropdown-panel { left: 10px; right: 10px; max-height: 55vh; }
+}
+
 
 
     </style>

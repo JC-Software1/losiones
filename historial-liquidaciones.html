@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historial de Liquidaciones</title>
+    <script src="adminMode.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -427,45 +428,46 @@
 
         document.addEventListener("DOMContentLoaded", loadHistory);
 
-        async function loadHistory() {
-            try {
-                const token = getToken();
-                // Detectar modo admin
-const vendedorId = window.adminModeUtils?.isActive()
-                 ? window.adminModeUtils.getVendedorId()
-                 : null;
+async function loadHistory() {
+    try {
+        const token = getToken();
+        
+        // ✅ CORRECCIÓN: Detectar modo admin y usar endpoint correcto
+        const vendedorId = window.adminModeUtils?.isActive()
+                         ? window.adminModeUtils.getVendedorId()
+                         : null;
 
-const endpoint = vendedorId
-               ? `/liquidation/vendedor/${vendedorId}/history`
-               : '/liquidation/history';
+        const endpoint = vendedorId
+                       ? `/liquidation/vendedor/${vendedorId}/history`
+                       : '/liquidation/history';
 
-allLiquidations = await apiFetch(endpoint, "GET", null, token);
+        allLiquidations = await apiFetch(endpoint, "GET", null, token);
 
-                document.getElementById("loadingContainer").style.display = "none";
+        document.getElementById("loadingContainer").style.display = "none";
 
-                if (allLiquidations.length === 0) {
-                    document.getElementById("emptyState").style.display = "block";
-                    return;
-                }
-
-                filteredLiquidations = [...allLiquidations];
-                updateGlobalStats(allLiquidations);
-                renderLiquidations(filteredLiquidations);
-                setupFilters();
-
-                document.getElementById("liquidationsContainer").style.display = "grid";
-
-            } catch (error) {
-                console.error("Error:", error);
-                document.getElementById("loadingContainer").innerHTML = `
-                    <div style="color: var(--danger);">
-                        <i class="fas fa-exclamation-circle" style="font-size: 48px;"></i>
-                        <p>Error al cargar el historial</p>
-                    </div>
-                `;
-            }
+        if (allLiquidations.length === 0) {
+            document.getElementById("emptyState").style.display = "block";
+            return;
         }
 
+        filteredLiquidations = [...allLiquidations];
+        updateGlobalStats(allLiquidations);
+        renderLiquidations(filteredLiquidations);
+        setupFilters();
+
+        document.getElementById("liquidationsContainer").style.display = "grid";
+
+    } catch (error) {
+        console.error("Error:", error);
+        document.getElementById("loadingContainer").innerHTML = `
+            <div style="color: var(--danger);">
+                <i class="fas fa-exclamation-circle" style="font-size: 48px;"></i>
+                <p>Error al cargar el historial</p>
+            </div>
+        `;
+    }
+}
+        
         function updateGlobalStats(liquidations) {
             if (liquidations.length === 0) return;
 
