@@ -12,16 +12,28 @@ router.use(auth);
 router.post('/', async (req, res) => {
   try {
     const payload = req.body;
-    const userId = req.user.id;
+    const authenticatedUserId = req.user.id; // El que tiene el token (puede ser admin)
+    const userTipo = req.user.tipo;
     
-    if (!userId) {
+    if (!authenticatedUserId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    // ✅ CORRECCIÓN: Si viene userId en el payload (admin creando para vendedor), usar ese
+    let targetUserId = authenticatedUserId; // Por defecto, el usuario autenticado
+    
+    if (userTipo === 2 || userTipo === 3) {
+      // Es admin, puede especificar otro userId
+      if (payload.userId) {
+        targetUserId = payload.userId;
+        console.log('📝 Admin creando recibo para vendedor:', targetUserId);
+      }
     }
 
     if (payload.localId) {
       const existing = await Receipt.findOne({ 
         localId: payload.localId,
-        userId: userId 
+        userId: targetUserId 
       });
       if (existing) return res.status(200).json(existing);
     }
@@ -30,10 +42,11 @@ router.post('/', async (req, res) => {
       receiptNumber: payload.receiptNumber,
       saleData: payload.saleData,
       localId: payload.localId,
-      userId: userId
+      userId: targetUserId // ✅ Usar el userId correcto
     });
 
     await r.save();
+    console.log('✅ Recibo guardado con userId:', targetUserId);
     res.status(201).json(r);
   } catch (err) {
     console.error('Error guardando recibo:', err);

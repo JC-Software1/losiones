@@ -1373,35 +1373,33 @@ function generateReceipt(saleData) {
     showReceiptOptionsModal(receiptData);
 }
 
+// Busca esta función en categories.js y reemplázala:
+
 async function saveReceiptToMongo(receiptData) {
     try {
         const token = getToken();
         
-        // ✅ Extraer userId del token JWT
-        let userId;
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            userId = payload.id || payload.userId;
-        } catch (e) {
-            console.warn("No se pudo extraer userId del token");
-        }
+        // ✅ Detectar modo admin
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorIdAdmin = sessionStorage.getItem('vendedorId');
         
-        // ✅ Enviar con userId explícito
         const dataToSend = {
             receiptNumber: receiptData.receiptNumber,
             saleData: receiptData.saleData,
             localId: receiptData.id
         };
         
-        // Solo agregar userId si se pudo extraer
-        if (userId) {
-            dataToSend.userId = userId;
+        // ✅ Si es admin, enviar el userId del vendedor que está administrando
+        if (adminMode && vendedorIdAdmin) {
+            dataToSend.userId = vendedorIdAdmin;
+            console.log('📝 Admin creando recibo para vendedor:', vendedorIdAdmin);
         }
+        // Si no es admin, el backend usará el userId del token automáticamente
         
         await apiFetch("/receipts", "POST", dataToSend, token);
         console.log("✅ Recibo guardado en MongoDB");
     } catch (err) {
-        console.warn("❌ No se pudo guardar el recibo en MongoDB:", err);
+        console.warn("⚠ No se pudo guardar el recibo en MongoDB:", err);
     }
 }
 
