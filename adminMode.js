@@ -185,6 +185,19 @@ if (url.includes('/api/liquidation') && !url.includes('/vendedor/')) {
     }
 }
 
+if (url.includes('/api/receipts') && !url.includes('userId=')) {
+    const baseUrl = url.split('/api/receipts')[0];
+    const pathAfter = url.split('/api/receipts')[1] || '';
+    
+    // Solo interceptar GET (lectura de recibos)
+    const method = options?.method || 'GET';
+    if (method === 'GET' && (!pathAfter || pathAfter === '' || pathAfter === '/')) {
+        // Agregar userId como query parameter
+        url = `${baseUrl}/api/receipts?userId=${vendedorId}`;
+        console.log('🧾 Redirigiendo recibos del vendedor:', url);
+    }
+}
+
         }
 
         return originalFetch(url, options);

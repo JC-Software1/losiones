@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Receipt = require('../models/receipt');
 const auth = require('../middleware/auth');
+const mongoose = require('mongoose'); // ✅ Importar mongoose
 
 // Aplicar middleware a todas las rutas
 router.use(auth);
@@ -57,13 +58,18 @@ router.get('/', async (req, res) => {
     
     // Si es admin (tipo 1) y se envió userId, buscar por ese usuario
     if (userTipo === 1 && targetUserId) {
-      query.userId = targetUserId;
+      // ✅ Convertir string a ObjectId
+      query.userId = mongoose.Types.ObjectId(targetUserId);
+      console.log('🔍 Admin buscando recibos de:', targetUserId);
     } else {
       // Usuario normal: solo sus propios recibos
       query.userId = userId;
+      console.log('🔍 Vendedor buscando sus propios recibos');
     }
     
     const receipts = await Receipt.find(query).sort({ createdAt: -1 });
+    console.log('📊 Recibos encontrados:', receipts.length);
+    
     res.json(receipts);
   } catch (err) {
     console.error('Error obteniendo recibos:', err);

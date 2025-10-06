@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recibos - Sistema de Ventas</title>
+            <script src="adminMode.js"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
          :root {
@@ -621,72 +623,48 @@ async function loadReceipts() {
         const vendedorId = sessionStorage.getItem('vendedorId');
         const token = getToken();
         
-        let userIdToFilter;
-        let endpoint = "/receipts";
-        
-        if (adminMode && vendedorId) {
-            // 🔑 Modo admin: usar el token del jefe + query param con userId del vendedor
-            console.log('🔍 Modo admin: cargando recibos del vendedor', vendedorId);
-            userIdToFilter = vendedorId;
-            endpoint = `/receipts?userId=${vendedorId}`; // 👈 Query param para el backend
-        } else {
-            // Modo normal: token propio
-            if (!token) {
-                console.warn('⚠️ No hay token: solo recibos locales');
-                const locales = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-                currentReceipts = locales.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                renderReceipts(currentReceipts);
-                return;
-            }
-            
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            userIdToFilter = payload.id || payload.userId;
+        if (!token) {
+            console.warn('No hay token');
+            return;
         }
         
-        // Cargar recibos de MongoDB con el endpoint correcto
-        console.log('📡 Endpoint:', endpoint);
-        console.log('🔑 Token:', token ? 'Presente' : 'Ausente');
+        let endpoint = "/receipts";
+        
+        // Modo admin: agregar query param con userId del vendedor
+        if (adminMode && vendedorId) {
+            console.log('Modo admin: viendo recibos del vendedor', vendedorId);
+            endpoint = `/receipts?userId=${vendedorId}`;
+        } else {
+            // Modo normal: el backend ya filtra por el userId del token
+            console.log('Modo normal: viendo mis propios recibos');
+        }
+        
+        console.log('Endpoint:', endpoint);
         
         const mongoReceipts = await apiFetch(endpoint, "GET", null, token);
-        console.log('📦 Recibos de MongoDB:', mongoReceipts.length);
+        console.log('Recibos recibidos:', mongoReceipts.length);
         
-        // Ya vienen filtrados del backend, no filtrar nuevamente
-        const filteredMongoReceipts = mongoReceipts;
+        // Ya vienen filtrados del backend, solo ordenar
+        currentReceipts = mongoReceipts
+            .map(mr => ({
+                id: mr.localId || mr._id,
+                receiptNumber: mr.receiptNumber,
+                saleData: mr.saleData,
+                createdAt: mr.createdAt,
+                fromMongo: true,
+                mongoId: mr._id,
+                userId: mr.userId
+            }))
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
-        // Cargar recibos de localStorage
-        const localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-        const filteredLocalReceipts = localReceipts.filter(r => r.userId === userIdToFilter);
-        
-        // Combinar y renderizar
-        const merged = [...filteredLocalReceipts];
-        filteredMongoReceipts.forEach(mr => {
-            if (!merged.some(r => r.id === mr.localId)) {
-                merged.push({
-                    id: mr.localId || mr._id,
-                    receiptNumber: mr.receiptNumber,
-                    saleData: mr.saleData,
-                    createdAt: mr.createdAt,
-                    fromMongo: true,
-                    mongoId: mr._id,
-                    userId: mr.userId
-                });
-            }
-        });
-
-        currentReceipts = merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        console.log('✅ Total recibos cargados:', currentReceipts.length);
+        console.log('Total recibos a mostrar:', currentReceipts.length);
         renderReceipts(currentReceipts);
         
     } catch (err) {
-        console.error("❌ Error cargando recibos:", err);
-        
-        // Fallback a localStorage
-        const locales = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-        currentReceipts = locales.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        renderReceipts(currentReceipts);
+        console.error("Error cargando recibos:", err);
+        renderReceipts([]);
     }
-}    
-
+}
 function renderReceipts(receipts) {
         const grid = document.getElementById('receiptsGrid');
         if (receipts.length === 0) {
