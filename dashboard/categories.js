@@ -1536,3 +1536,56 @@ function showBarcodeSuccess(message) {
         setTimeout(() => notification.remove(), 300);
     }, 3500);
 }
+
+/* =========================================================
+   FUNCIÓN PARA MOSTRAR RECIBO
+   ========================================================= */
+function showReceiptModal(saleData) {
+    // Crear modal de recibo
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center;
+        z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: white; border-radius: 15px; padding: 30px;
+            max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        ">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #27ae60; margin: 0;">
+                    <i class="fas fa-check-circle"></i> Venta Guardada
+                </h2>
+                <p style="color: #666; margin: 10px 0;">Recibo de venta generado</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 5px 0;"><strong>Cliente:</strong> ${saleData.clientName}</p>
+                <p style="margin: 5px 0;"><strong>Producto:</strong> ${saleData.productName}</p>
+                <p style="margin: 5px 0;"><strong>Fecha:</strong> ${new Date(saleData.saleDate).toLocaleDateString('es-CO')}</p>
+                <p style="margin: 5px 0;"><strong>Total:</strong> $${Number(saleData.price).toLocaleString('es-CO')}</p>
+                ${saleData.advancePayment > 0 ? `<p style="margin: 5px 0;"><strong>Anticipo:</strong> $${Number(saleData.advancePayment).toLocaleString('es-CO')}</p>` : ''}
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="this.closest('.modal').remove(); window.open('recibos.html', '_blank');" 
+                        style="flex: 1; background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">
+                    <i class="fas fa-file-alt"></i> Ver Recibos
+                </button>
+                <button onclick="this.closest('.modal').remove()" 
+                        style="flex: 1; background: #95a5a6; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Cerrar al hacer clic fuera
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
