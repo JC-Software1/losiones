@@ -159,6 +159,7 @@ const list = document.getElementById("salesList");
 const searchInput = document.getElementById("searchInput");
 const dayFilterInput = document.getElementById("dayFilterInput");
 /* ---------- carga de ventas (adaptada al nuevo estilo) ---------- */
+/* ---------- carga de ventas (100 % funcional) ---------- */
 async function loadSales(query = "", filterDay = "") {
     try {
         const token = getToken();
@@ -178,10 +179,8 @@ async function loadSales(query = "", filterDay = "") {
         list.innerHTML = '';
 
         const filteredSales = sales.filter(sale => {
-            // ✅ CRÍTICO: Excluir ventas liquidadas
-            if (sale.settled === true) {
-                return false;
-            }
+            // Excluir liquidadas
+            if (sale.settled === true) return false;
 
             const clientMatch = sale.clientName.toLowerCase().includes(query.toLowerCase());
             const productMatch = sale.productName.toLowerCase().includes(query.toLowerCase());
@@ -189,36 +188,25 @@ async function loadSales(query = "", filterDay = "") {
 
 let dayMatch = true;
 if (filterDay) {
-    const filterDayNum = parseInt(filterDay);
-    const today = new Date().getDate(); // Día actual del mes (1-31)
-    
-    if (sale.paymentDays) {
-        const paymentDaysArray = sale.paymentDays.split(',').map(d => parseInt(d.trim()));
-        
-        // ✅ Verificar si tiene el día programado
-        const hasDayScheduled = paymentDaysArray.includes(filterDayNum);
-        
-        // ✅ CORREGIDO: Solo mostrar atrasados si el día de pago YA PASÓ
-        const hasMissedPayments = paymentDaysArray.some(scheduledDay => {
-            // Solo considerar días que YA PASARON (menores al día actual)
-            if (scheduledDay < today) {
-                // Verificar si existe un pago en ese día específico
-                const hasPaymentOnDay = sale.payments.some(payment => {
-                    const paymentDate = new Date(payment.date);
-                    return paymentDate.getDate() === scheduledDay;
-                });
-                // Si NO hay pago en ese día QUE YA PASÓ, está atrasado
-                return !hasPaymentOnDay;
-            }
-            return false;
-        });
-        
-        // ✅ Mostrar si: tiene el día programado O tiene días atrasados REALES
-        dayMatch = hasDayScheduled || hasMissedPayments;
-    } else {
-        dayMatch = false;
-    }
+    // Normalizamos el tipo de plan seleccionado
+    const planType = document.getElementById('dayFilterType').value; // "semanal", "quincenal", "mensual"
+
+    // Normalizamos los días de la venta
+    const rawDays = (() => {
+        if (typeof sale.paymentDays === 'string') return sale.paymentDays.split(',').map(d => d.trim());
+        if (Array.isArray(sale.paymentDays)) return sale.paymentDays.map(d => String(d).trim());
+        return [];
+    })();
+
+    // Verificamos frecuencia exacta
+    const freqMatch = (sale.paymentFrequency || '').toLowerCase() === planType;
+
+    // Verificamos que el día esté en la lista
+    const dayIncluded = rawDays.includes(filterDay.trim());
+
+    dayMatch = freqMatch && dayIncluded;
 }
+
             return searchMatch && dayMatch;
         });
 
@@ -230,7 +218,7 @@ if (filterDay) {
             return;
         }
 
-        filteredSales.forEach((sale) => {
+        filteredSales.forEach(sale => {
             const totalPaid = sale.payments.reduce((sum, p) => sum + p.amount, 0);
             const remainingDebt = sale.price - totalPaid;
             const paymentPercentage = (totalPaid / sale.price) * 100;
@@ -239,46 +227,39 @@ if (filterDay) {
             card.className = 'sale-card';
             card.setAttribute('data-sale-id', sale._id);
 
-            // ✅ NUEVO: Indicador de atraso mejorado
-// ✅ NUEVO: Indicador de atraso con días exactos
-// ✅ NUEVO: Indicador de atraso con días exactos (basado en día actual)
-let statusBadge = '';
-if (filterDay) {
-    const filterDayNum = parseInt(filterDay);
-    const today = new Date().getDate(); // Día actual
-    const paymentDaysArray = sale.paymentDays ? sale.paymentDays.split(',').map(d => parseInt(d.trim())) : [];
-    
-    // Encontrar días que YA PASARON sin pagar
-    const missedDays = paymentDaysArray.filter(scheduledDay => {
-        // Solo días que YA PASARON (menores al día actual)
-        if (scheduledDay < today) {
-            const hasPaymentOnDay = sale.payments.some(payment => {
-                const paymentDate = new Date(payment.date);
-                return paymentDate.getDate() === scheduledDay;
-            });
-            return !hasPaymentOnDay;
-        }
-        return false;
-    });
-    
-    if (missedDays.length > 0) {
-        // Ordenar los días atrasados y tomar el más antiguo
-        const oldestMissedDay = Math.min(...missedDays);
-        
-        // Calcular días exactos de atraso
-        const daysOverdue = filterDayNum - oldestMissedDay;
-        
-        // Mostrar días específicos que debe y cuántos días lleva atrasado
-        const missedDaysText = missedDays.sort((a, b) => a - b).join(', ');
-        statusBadge = `<span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">⚠️ DEBE DÍA(S): ${missedDaysText} | ${daysOverdue} día(s) atrasado</span>`;
-    }
-}
+            // Indicador de atraso
+            let statusBadge = '';
+            if (filterDay) {
+                const filterDayNum = parseInt(filterDay);
+                const today = new Date().getDate();
 
-const freq = sale.paymentFrequency || 'mensual';
-const daysText = sale.paymentDaysText || sale.paymentDays.join(', ');
-const paymentDaysInfo = daysText
-    ? `<p><i class="fas fa-calendar-check"></i> ${freq} – ${daysText}${statusBadge}</p>`
-    : '';
+                const rawDays = (() => {
+                    if (typeof sale.paymentDays === 'string') return sale.paymentDays.split(',');
+                    if (Array.isArray(sale.paymentDays)) return sale.paymentDays;
+                    return [];
+                })();
+                const paymentDaysArray = rawDays
+                    .map(d => parseInt(String(d).trim()))
+                    .filter(n => !isNaN(n));
+
+                const missedDays = paymentDaysArray
+                    .filter(d => d < today)
+                    .filter(d => !sale.payments.some(p => new Date(p.date).getDate() === d));
+
+                if (missedDays.length) {
+                    const oldest = Math.min(...missedDays);
+                    const daysOverdue = filterDayNum - oldest;
+                    const missedText = missedDays.sort((a, b) => a - b).join(', ');
+                    statusBadge = `<span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px;">⚠️ DEBE DÍA(S): ${missedText} | ${daysOverdue} día(s) atrasado</span>`;
+                }
+            }
+
+            const freq = sale.paymentFrequency || 'mensual';
+            const daysText = sale.paymentDaysText || (Array.isArray(sale.paymentDays) ? sale.paymentDays.join(', ') : sale.paymentDays || '');
+            const paymentDaysInfo = daysText
+                ? `<p><i class="fas fa-calendar-check"></i> ${freq} – ${daysText}${statusBadge}</p>`
+                : '';
+
             card.innerHTML = `
                 <div class="sale-header">
                     <div class="sale-info">
@@ -311,10 +292,58 @@ const paymentDaysInfo = daysText
             list.appendChild(card);
         });
 
+        buildSmartDayFilter(sales);
+
     } catch (error) {
         console.error('Error al cargar ventas:', error);
         list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar ventas</h3><p>${error.message}</p></div>`;
     }
+}
+
+/* ----------  FILTRO INTELIGENTE DE DÍAS  ---------- */
+function buildSmartDayFilter(sales) {
+  const semana = new Set();   // Lunes, Martes…
+  const quin   = new Set();   // "1 y 15", "2 y 16"…
+  const mens   = new Set();   // 1, 2, 3…
+
+  sales.forEach(s => {
+    const freq = s.paymentFrequency || 'mensual';
+    const days = (s.paymentDays || []).map(d => String(d).trim());
+
+    if (freq === 'semanal') {
+      days.forEach(d => semana.add(d));
+    } else if (freq === 'quincenal') {
+      days.forEach(d => quin.add(d));
+    } else {
+      days.forEach(d => mens.add(d));
+    }
+  });
+
+  // Guardamos para usar después
+  window.availableFilters = {
+    semanal: Array.from(semana).sort(),
+    quincenal: Array.from(quin).sort(),
+    mensual: Array.from(mens).sort((a, b) => a - b)
+  };
+
+  // Poblamos el segundo select apenas cambie el primero
+  const typeSel = document.getElementById('dayFilterType');
+  const daySel  = document.getElementById('dayFilterInput');
+
+  typeSel.onchange = () => {
+    daySel.innerHTML = '<option value="">Elegí un día</option>';
+    daySel.disabled  = false;
+    const tipo = typeSel.value;
+    if (!tipo) { daySel.disabled = true; return; }
+
+    const opciones = window.availableFilters[tipo] || [];
+    opciones.forEach(d => {
+      const opt       = document.createElement('option');
+      opt.value       = d;
+      opt.textContent = d;
+      daySel.appendChild(opt);
+    });
+  };
 }
 
 // ✅ NUEVA FUNCIÓN: Limpiar filtro de día
@@ -438,7 +467,9 @@ async function saveSale() {
             paymentFrequency: 'mensual', 
             paymentDays: [], 
             paymentDaysText: '' 
-        })
+        }),
+          paymentDays: selectedPaymentPlan.days.join(', ') // "Miércoles, Viernes"
+
     };
 
     // ---------- Log para depurar ----------
@@ -538,6 +569,14 @@ async function addPayment() {
         const response = await apiFetch(`/sales/${id}/payment`, "POST", { amount, date }, token);
         const formattedAmount = amount.toLocaleString('es-CO');
         alert(`Abono de $${formattedAmount} registrado correctamente.`);
+
+        /* ---- nuevo ---- */
+const sale = JSON.parse(localStorage.getItem('saleDetails'));
+sale.payments.push({ amount, date });
+localStorage.setItem('saleDetails', JSON.stringify(sale));
+window.dispatchEvent(new Event('saleUpdated'));
+/* --------------- */
+
         if (response.justSettled || response.settled) {
             alert("¡Venta liquidada automáticamente!");
             if (confirm("¿Deseas ir a la sección de ventas liquidadas?")) {
@@ -1537,55 +1576,332 @@ function showBarcodeSuccess(message) {
     }, 3500);
 }
 
-/* =========================================================
-   FUNCIÓN PARA MOSTRAR RECIBO
-   ========================================================= */
 function showReceiptModal(saleData) {
-    // Crear modal de recibo
+    const receiptNumber = generateReceiptNumber();
+    const receiptId = 'receipt_' + Date.now();
+    
+    // Crear canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 600;
+    canvas.height = 800;
+    
+    // Fondo blanco
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Header con gradiente
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 120);
+    gradient.addColorStop(0, '#2c3e50');
+    gradient.addColorStop(1, '#3498db');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, 120);
+    
+    // Título principal
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('RECIBO DE VENTA', canvas.width / 2, 50);
+    
+    // Número de recibo
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText(`Recibo #${receiptNumber}`, canvas.width / 2, 80);
+    
+    // Fecha de generación
+    ctx.font = '16px Arial';
+    ctx.fillText(`Fecha: ${new Date().toLocaleDateString('es-CO')}`, canvas.width / 2, 105);
+    
+    // Línea decorativa
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(50, 130);
+    ctx.lineTo(canvas.width - 50, 130);
+    ctx.stroke();
+    
+    // Sección cliente
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('INFORMACIÓN DEL CLIENTE', 50, 170);
+    
+    ctx.font = '18px Arial';
+    ctx.fillStyle = '#34495e';
+    ctx.fillText(`Nombre: ${saleData.clientName}`, 50, 210);
+    ctx.fillText(`Dirección: ${saleData.clientAddress || 'No especificada'}`, 50, 235);
+    
+    // Sección productos
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('PRODUCTOS VENDIDOS', 50, 310);
+    
+    // Lista de productos
+    let yPosition = 350;
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#34495e';
+    
+    if (saleData.products && saleData.products.length > 0) {
+        saleData.products.forEach((product, index) => {
+            ctx.fillText(`${index + 1}. ${product.name}`, 50, yPosition);
+            ctx.fillText(`   Marca: ${product.brand || 'N/A'}`, 70, yPosition + 20);
+            ctx.fillText(`   Precio: $${product.salePrice.toLocaleString('es-CO')}`, 70, yPosition + 40);
+            yPosition += 70;
+        });
+    } else {
+        ctx.fillText(`• ${saleData.productName}`, 50, yPosition);
+        yPosition += 30;
+    }
+    
+    // Sección financiera
+    yPosition = Math.max(yPosition, 480);
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('INFORMACIÓN FINANCIERA', 50, yPosition);
+    
+    yPosition += 40;
+    ctx.font = '18px Arial';
+    ctx.fillStyle = '#34495e';
+    ctx.fillText(`Fecha de venta: ${new Date(saleData.saleDate).toLocaleDateString('es-CO')}`, 50, yPosition);
+    yPosition += 30;
+    ctx.fillText(`Valor total: $${saleData.price.toLocaleString('es-CO')}`, 50, yPosition);
+    yPosition += 30;
+    ctx.fillText(`Abono inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}`, 50, yPosition);
+    
+    const saldoPendiente = saleData.price - (saleData.advancePayment || 0);
+    if (saldoPendiente > 0) {
+        yPosition += 30;
+        ctx.fillStyle = '#e74c3c';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText(`Saldo pendiente: $${saldoPendiente.toLocaleString('es-CO')}`, 50, yPosition);
+        yPosition += 30;
+        
+        ctx.fillStyle = '#34495e';
+        ctx.font = '18px Arial';
+        ctx.fillText(`Cuotas: ${saleData.installments}`, 50, yPosition);
+        
+        if (saleData.paymentDays) {
+            yPosition += 30;
+            ctx.fillText(`Días de pago: ${saleData.paymentDays}`, 50, yPosition);
+        }
+    } else {
+        ctx.fillStyle = '#27ae60';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText('✓ PAGADO COMPLETAMENTE', 50, yPosition);
+    }
+    
+    // Footer
+    yPosition = canvas.height - 100;
+    ctx.fillStyle = '#95a5a6';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Este recibo fue generado automáticamente', canvas.width / 2, yPosition);
+    ctx.fillText(`Por el programa JC-C - ${new Date().getFullYear()}`, canvas.width / 2, yPosition + 20);
+    
+    // Guardar recibo
+    const receiptData = {
+        id: receiptId,
+        receiptNumber: receiptNumber,
+        saleData: saleData,
+        createdAt: new Date().toISOString(),
+        canvas: canvas.toDataURL('image/png')
+    };
+    
+    saveReceipt(receiptData);
+    showReceiptOptions(receiptData);
+}
+
+// Función auxiliar para generar número de recibo
+function generateReceiptNumber() {
+    const now = new Date();
+    return parseInt(now.getTime().toString().slice(-8));
+}
+
+// Función para guardar recibo
+function saveReceipt(receiptData) {
+  receiptData.createdAt = Date.now();
+
+  let receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+  receipts.unshift(receiptData);
+
+  try {
+    // ✅ Guardar en localStorage
+    localStorage.setItem('salesReceipts', JSON.stringify(receipts));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      receipts.splice(15);
+      localStorage.setItem('salesReceipts', JSON.stringify(receipts));
+      console.warn('🧹 Límite de almacenamiento alcanzado. Se eliminaron recibos antiguos.');
+    } else {
+      console.error('❌ Error al guardar recibo:', e);
+    }
+  }
+
+  // ⏱️ Borrar después de 10 s
+  setTimeout(() => {
+    const list = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+    const idx = list.findIndex(r => r.id === receiptData.id);
+    if (idx !== -1) {
+      list.splice(idx, 1);
+      localStorage.setItem('salesReceipts', JSON.stringify(list));
+      console.log('🧹 Recibo auto-eliminado tras 10 s');
+    }
+  }, 10_000);
+}
+
+// Función para mostrar opciones del recibo
+function showReceiptOptions(receiptData) {
     const modal = document.createElement('div');
+    modal.className = 'receipt-modal';
     modal.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center;
+        background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center;
         z-index: 10000;
     `;
-    
     modal.innerHTML = `
         <div style="
-            background: white; border-radius: 15px; padding: 30px;
-            max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: #fff; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%;
+            box-shadow: 0 10px 30px rgba(0,0,0,.2); text-align: center;
         ">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="color: #27ae60; margin: 0;">
-                    <i class="fas fa-check-circle"></i> Venta Guardada
-                </h2>
-                <p style="color: #666; margin: 10px 0;">Recibo de venta generado</p>
-            </div>
-            
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <p style="margin: 5px 0;"><strong>Cliente:</strong> ${saleData.clientName}</p>
-                <p style="margin: 5px 0;"><strong>Producto:</strong> ${saleData.productName}</p>
-                <p style="margin: 5px 0;"><strong>Fecha:</strong> ${new Date(saleData.saleDate).toLocaleDateString('es-CO')}</p>
-                <p style="margin: 5px 0;"><strong>Total:</strong> $${Number(saleData.price).toLocaleString('es-CO')}</p>
-                ${saleData.advancePayment > 0 ? `<p style="margin: 5px 0;"><strong>Anticipo:</strong> $${Number(saleData.advancePayment).toLocaleString('es-CO')}</p>` : ''}
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <button onclick="this.closest('.modal').remove(); window.open('recibos.html', '_blank');" 
-                        style="flex: 1; background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">
-                    <i class="fas fa-file-alt"></i> Ver Recibos
+            <h3 style="margin-bottom: 20px;">✅ Recibo generado</h3>
+            <img src="${receiptData.canvas}" style="width: 100%; max-width: 300px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.1);">
+            <p><strong>Recibo #${receiptData.receiptNumber}</strong></p>
+            <p>Cliente: ${receiptData.saleData.clientName}</p>
+            <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-primary" onclick="handleReceiptAction('share', '${receiptData.id}')">
+                    <i class="fas fa-share-alt"></i> Compartir
                 </button>
-                <button onclick="this.closest('.modal').remove()" 
-                        style="flex: 1; background: #95a5a6; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer;">
+                <button class="btn btn-secondary" onclick="handleReceiptAction('download', '${receiptData.id}')">
+                    <i class="fas fa-download"></i> Descargar
+                </button>
+                <button class="btn btn-success" onclick="handleReceiptAction('view', '${receiptData.id}')">
+                    <i class="fas fa-eye"></i> Ver todos
+                </button>
+                <button class="btn" onclick="handleReceiptAction('close', '${receiptData.id}')" style="background:#95a5a6;color:#fff">
                     <i class="fas fa-times"></i> Cerrar
                 </button>
             </div>
         </div>
     `;
-    
     document.body.appendChild(modal);
+}
+
+// Funciones para compartir y descargar
+async function shareReceipt(receiptId) {
+  const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+  const receipt = receipts.find(r => r.id === receiptId);
+  if (!receipt) return;
+
+  const blob = await fetch(receipt.canvas).then(r => r.blob());
+  const file = new File([blob], `recibo-${receipt.receiptNumber}.png`, { type: 'image/png' });
+
+  const shareData = {
+    title: `Recibo #${receipt.receiptNumber}`,
+    text: `Recibo de venta para ${receipt.saleData.clientName}`,
+    files: [file]
+  };
+
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    await navigator.share(shareData); // <-- espera a que el usuario termine
+  } else {
+    fallbackShare(receipt);
+  }
+}
+
+function downloadReceipt(receiptId) {
+    const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+    const receipt = receipts.find(r => r.id === receiptId);
+    if (!receipt) return;
+
+    const link = document.createElement('a');
+    link.download = `recibo-${receipt.receiptNumber}.png`;
+    link.href = receipt.canvas;
+    link.click();
+}
+
+function viewAllReceipts() {
+    window.location.href = 'recibos.html';
+}
+
+function fallbackShare(receipt) {
+    const text = `Recibo de Venta #${receipt.receiptNumber}\nCliente: ${receipt.saleData.clientName}\nTotal: $${receipt.saleData.price.toLocaleString('es-CO')}\nFecha: ${new Date(receipt.saleData.saleDate).toLocaleDateString('es-CO')}`;
     
-    // Cerrar al hacer clic fuera
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
+    if (navigator.share) {
+        navigator.share({
+            title: `Recibo #${receipt.receiptNumber}`,
+            text: text
+        });
+    } else {
+        // Fallback: copiar al portapapeles
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Texto del recibo copiado al portapapeles. Pégalo en WhatsApp, email, etc.');
+        });
+    }
+}
+
+// --- hacer globales los botones del modal de recibo ---
+window.shareReceipt     = shareReceipt;
+window.downloadReceipt  = downloadReceipt;
+window.viewAllReceipts  = viewAllReceipts;
+window.handleReceiptAction = handleReceiptAction;
+
+function closeReceiptModal() {
+  const modal = document.querySelector('.receipt-modal');
+  if (modal) modal.remove();
+}
+
+async function saveReceiptToMongo(receiptData) {
+    try {
+        const token = getToken();
+        await apiFetch("/receipts", "POST", {
+            receiptNumber: receiptData.receiptNumber,
+            saleData: receiptData.saleData,
+            localId: receiptData.id
+        }, token);
+        console.log("✅ Recibo guardado en MongoDB");
+    } catch (err) {
+        console.warn("❌ No se pudo guardar el recibo en MongoDB:", err);
+    }
+}
+
+async function handleReceiptAction(action, receiptId) {
+  const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+  const receiptIndex = receipts.findIndex(r => r.id === receiptId);
+  if (receiptIndex === -1) {
+    alert('❌ Recibo no encontrado');
+    return;
+  }
+
+  const receipt = receipts[receiptIndex];
+
+  // 1. Guardar en MongoDB (no crítico)
+  try {
+    await saveReceiptToMongo(receipt);
+  } catch (e) {
+    console.warn('⚠️ No se pudo guardar en MongoDB:', e);
+  }
+
+  // 2. Ejecutar la acción PRIMERO
+  switch (action) {
+    case 'share':
+      await shareReceipt(receiptId); // <-- espera a que termine
+      break;
+    case 'download':
+      downloadReceipt(receiptId);
+      break;
+    case 'view':
+      viewAllReceipts();
+      break;
+    case 'close':
+      break; // nada que hacer
+  }
+
+  // 3. Recién AHORA eliminar de localStorage
+  try {
+   
+    console.log('🧹 Recibo eliminado de localStorage tras acción');
+  } catch (e) {
+    console.warn('⚠️ Error al actualizar localStorage:', e);
+  }
+
+  closeReceiptModal();
 }

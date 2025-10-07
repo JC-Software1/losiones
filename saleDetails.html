@@ -655,6 +655,43 @@
             setupCalendarNavigation();
         });
 
+        // --- Añadir esta función (pegala antes de renderFullCalendar) ---
+function parsePaymentDays(sale) {
+    if (!sale) return [];
+
+    // Priorizar campo explícito paymentDays / paymentDay
+    const raw = sale.paymentDays ?? sale.paymentDay ?? sale.payment_days ?? sale.days;
+
+    let arr = [];
+
+    if (Array.isArray(raw)) {
+        arr = raw.map(Number);
+    } else if (typeof raw === 'string') {
+        // "1,15" o " 1 , 15 "
+        arr = raw.split(',').map(s => s.trim()).filter(s => s !== '').map(Number);
+    } else if (typeof raw === 'number') {
+        arr = [raw];
+    } else {
+        // Si no hay campo explícito, intentar derivarlo de una fecha (firstPaymentDate o saleDate)
+        const fallbackDate = sale.firstPaymentDate ?? sale.first_payment_date ?? sale.saleDate ?? sale.createdAt;
+        if (fallbackDate) {
+            const d = parseDateLocal(fallbackDate);
+            if (!isNaN(d)) arr = [d.getDate()];
+        }
+    }
+
+    // Normalizar: números válidos 1..31, únicos y ordenados
+    const normalized = Array.from(new Set(
+        arr
+        .map(Number)
+        .filter(n => !isNaN(n) && n >= 1 && n <= 31)
+    )).sort((a,b) => a - b);
+
+    // Si quedó vacío, devolver día 1 como último recurso
+    return normalized.length ? normalized : [1];
+}
+
+
         function loadSaleDetails(sale) {
             const totalPaid = sale.totalPaid || (sale.payments ? sale.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) : 0) || 0;
             const remainingDebt = Number(sale.price || 0) - totalPaid;
@@ -766,139 +803,208 @@
             });
         }
 
-        function renderFullCalendar(sale) {
-            const calendarGrid = document.getElementById('calendarGrid');
-            const monthDisplay = document.getElementById('currentMonthDisplay');
-            const breakdown = document.getElementById('installmentsBreakdown');
+function renderFullCalendar(sale) {
+    const calendarGrid = document.getElementById('calendarGrid');
+    const monthDisplay = document.getElementById('currentMonthDisplay');
+    const breakdown = document.getElementById('installmentsBreakdown');
 
-            const year = currentCalendarDate.getFullYear();
-            const month = currentCalendarDate.getMonth();
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
 
-            monthDisplay.textContent = new Date(year, month).toLocaleDateString('es-CO', {
-                month: 'long',
-                year: 'numeric'
-            });
+    monthDisplay.textContent = new Date(year, month).toLocaleDateString('es-CO', {
+        month: 'long',
+        year: 'numeric'
+    });
 
-            // Parsear días de pago programados
-            const scheduledDays = [];
-            if (sale.paymentDays) {
-                const parts = sale.paymentDays.split('|');
-                if (parts.length === 2) {
-                    const days = parts[1].split(',').map(d => parseInt(d.trim())).filter(n => !isNaN(n));
-                    scheduledDays.push(...days);
-                }
+    // 🔧 Obtener días programados (semanal, quincenal, mensual)
+function generatePaymentDates(sale) {
+    const freq   = sale.paymentFrequency || 'mensual';
+    const raw    = sale.paymentDays || [];           // ["Miércoles"]  o ["1 y 15"]  o [1,15]
+    const cuotas = parseInt(sale.installments) || 1;
+    const start  = new Date(sale.saleDate);
+    const dates  = [];
+
+    /* ---------- 1.  SEMANAL  ---------- */
+/* ---------- 1.  SEMANAL (100 % fijo) ---------- */
+if (freq === 'semanal') {
+    const weekMap = {
+        'domingo': 0, 'lunes': 1, 'martes': 2, 'miércoles': 3,
+        'jueves': 4, 'viernes': 5, 'sábado': 6
+    };
+
+    const diasSemana = raw.map(d => String(d).toLowerCase().trim());
+    let cursor = new Date(start); // copia para no mutar start
+
+    for (let i = 0; i < cuotas; i++) {
+        diasSemana.forEach(diaTxt => {
+            const targetDay = (weekMap[diaTxt] - 1 + 7) % 7;
+            if (targetDay === undefined) return;
+
+            const next = new Date(cursor);
+            // Días que faltan (0 = ya estamos en él)
+            let daysUntil = (targetDay - next.getDay() + 7) % 7;
+
+            // Si ya pasó esta semana, ir al mismo día de la próxima
+            if (daysUntil === 0 && next.toDateString() === cursor.toDateString()) {
+                // es el mismo día de partida: usarlo
+            } else if (daysUntil === 0) {
+                // ya pasó el instante de hoy → próxima semana
+                daysUntil = 7;
             }
 
-            // Obtener días con pagos realizados
-            const paidDates = new Set();
-            (sale.payments || []).forEach(p => {
-                const d = parseDateLocal(p.date);
-                if (!isNaN(d)) {
-                    paidDates.add(d.toISOString().slice(0, 10));
-                }
+            next.setDate(next.getDate() + daysUntil);
+            dates.push(next.toISOString().slice(0, 10));
+        });
+        cursor.setDate(cursor.getDate() + 7); // saltar una semana completa
+    }
+    return dates;
+}
+
+    /* ---------- 2.  QUINCENAL  ---------- */
+   /* ---------- 2.  QUINCENAL (sin duplicar) ---------- */
+if (freq === 'quincenal') {
+    // Extraemos los 2 números del texto  "16 y 01" → [16,1]
+    const dias = raw.flatMap(txt =>
+        String(txt).match(/\d+/g)   // solo números
+    ).map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 31);
+
+    let mesCursor = new Date(start.getFullYear(), start.getMonth(), 1);
+
+    for (let i = 0; i < cuotas; i++) {          // ← 1 vuelta por cuota
+        dias.forEach(d => {
+            const fecha = new Date(mesCursor.getFullYear(), mesCursor.getMonth(), d);
+            if (fecha >= start) dates.push(fecha.toISOString().slice(0, 10));
+        });
+        mesCursor.setMonth(mesCursor.getMonth() + 1);
+    }
+    return dates;
+}
+
+    /* ---------- 3.  MENSUAL  ---------- */
+    if (freq === 'mensual') {
+        const dias = raw.map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 31);
+        for (let i = 0; i < cuotas; i++) {
+            dias.forEach(d => {
+                const fecha = new Date(start.getFullYear(), start.getMonth() + i, d);
+                if (fecha >= start) dates.push(fecha.toISOString().slice(0, 10));
             });
+        }
+        return dates;
+    }
 
-            // Obtener primer y último día del mes
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            const firstDayOfWeek = firstDay.getDay();
+    /* ---------- 4.  DIARIO  ---------- */
+    if (freq === 'diario') {
+        let cursor = new Date(start);
+        for (let i = 0; i < cuotas; i++) {
+            dates.push(cursor.toISOString().slice(0, 10));
+            cursor.setDate(cursor.getDate() + 1);
+        }
+        return dates;
+    }
 
-            // Día actual
-            const today = new Date();
-            const todayStr = today.toISOString().slice(0, 10);
+    return [];
+}
 
-            calendarGrid.innerHTML = '';
 
-            // Headers de días de la semana
-            const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-            dayNames.forEach(name => {
-                const header = document.createElement('div');
-                header.className = 'day-header';
-                header.textContent = name;
-                calendarGrid.appendChild(header);
-            });
+    // 🔧 Obtener días con pagos realizados
+    const paidDates = new Set();
+    (sale.payments || []).forEach(p => {
+        const d = parseDateLocal(p.date);
+        if (!isNaN(d)) {
+            paidDates.add(d.toISOString().slice(0, 10));
+        }
+    });
 
-            // Días vacíos antes del primer día
-            for (let i = 0; i < firstDayOfWeek; i++) {
-                const emptyCell = document.createElement('div');
-                emptyCell.className = 'day-cell';
-                calendarGrid.appendChild(emptyCell);
+    // 🔧 Calcular cuántas veces repetir el día según cuotas
+    const installments = parseInt(sale.installments) || 1;
+    const freq = sale.paymentFrequency || 'mensual';
+
+    // 🔧 Generar fechas reales de pago (solo del mes actual)
+/* ---------- FECHAS REALES DE PAGO (nuevo) ---------- */
+const paymentDates = generatePaymentDates(sale);   // <-- usamos la función que ya metiste
+const today = new Date();
+const todayStr = today.toISOString().slice(0, 10);
+
+const firstDay = new Date(year, month, 1);
+const lastDay = new Date(year, month + 1, 0);
+const daysInMonth = lastDay.getDate();
+
+    // 🔧 Limpiar calendario
+    calendarGrid.innerHTML = '';
+
+    // Headers
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    dayNames.forEach(name => {
+        const header = document.createElement('div');
+        header.className = 'day-header';
+        header.textContent = name;
+        calendarGrid.appendChild(header);
+    });
+
+    // Espacios vacíos
+    const firstDayOfWeek = firstDay.getDay();
+    for (let i = 0; i < firstDayOfWeek; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'day-cell';
+        calendarGrid.appendChild(empty);
+    }
+
+    // 🔧 Renderizar días
+    let scheduledCount = 0, paidCount = 0, overdueCount = 0;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const cell = document.createElement('div');
+        cell.className = 'day-cell current-month';
+        cell.textContent = day;
+
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const cellDate = new Date(year, month, day);
+
+        const isScheduled = paymentDates.includes(dateStr);
+        const hasPaid = paidDates.has(dateStr);
+        const isToday = dateStr === todayStr;
+
+        // 🔧 Colores
+        if (hasPaid) {
+            cell.classList.add('paid', 'has-payment');
+            paidCount++;
+        } else if (isScheduled) {
+            cell.classList.add('scheduled');
+            scheduledCount++;
+            if (cellDate < today) {
+                cell.classList.remove('scheduled');
+                cell.classList.add('overdue');
+                overdueCount++;
             }
-
-            // Contador de estados
-            let scheduledCount = 0;
-            let paidCount = 0;
-            let overdueCount = 0;
-
-            // Renderizar días del mes
-            for (let day = 1; day <= daysInMonth; day++) {
-                const cell = document.createElement('div');
-                cell.className = 'day-cell current-month';
-                cell.textContent = day;
-
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const cellDate = new Date(year, month, day);
-
-                // Verificar si es día programado
-                const isScheduled = scheduledDays.includes(day);
-                
-                // Verificar si tiene pago
-                const hasPaid = paidDates.has(dateStr);
-
-                // Verificar si es hoy
-                const isToday = dateStr === todayStr;
-
-                // Lógica de colores
-                if (hasPaid) {
-                    // VERDE: Tiene pago
-                    cell.classList.add('paid');
-                    cell.classList.add('has-payment');
-                    paidCount++;
-                } else if (isScheduled) {
-                    // MORADO: Día programado
-                    cell.classList.add('scheduled');
-                    scheduledCount++;
-                    
-                    // ROJO: Si ya pasó y no hay pago (atrasado)
-                    if (cellDate < today) {
-                        cell.classList.remove('scheduled');
-                        cell.classList.add('overdue');
-                        overdueCount++;
-                        scheduledCount--;
-                    }
-                } 
-
-                // AZUL: Si es hoy (borde azul)
-                if (isToday) {
-                    cell.classList.add('today');
-                }
-
-                calendarGrid.appendChild(cell);
-            }
-
-            // Resumen
-            breakdown.innerHTML = `
-                <div class="breakdown-title"><i class="fas fa-calculator"></i> Resumen del mes</div>
-                <div class="breakdown-grid">
-                    <div class="breakdown-item">
-                        <div class="breakdown-value" style="color: var(--purple);">${scheduledCount}</div>
-                        <div class="breakdown-label">Programados</div>
-                    </div><div class="breakdown-item">
-                        <div class="breakdown-value" style="color: var(--success);">${paidCount}</div>
-                        <div class="breakdown-label">Pagados</div>
-                    </div>
-                    <div class="breakdown-item">
-                        <div class="breakdown-value" style="color: var(--danger);">${overdueCount}</div>
-                        <div class="breakdown-label">Atrasados</div>
-                    </div>
-                    <div class="breakdown-item">
-                        <div class="breakdown-value">${daysInMonth}</div>
-                        <div class="breakdown-label">Días totales</div>
-                    </div>
-                </div>`;
+            if (isToday) cell.classList.add('today');
         }
 
+        calendarGrid.appendChild(cell);
+    }
+
+    // 🔧 Resumen
+    breakdown.innerHTML = `
+        <div class="breakdown-title"><i class="fas fa-calculator"></i> Resumen del mes</div>
+        <div class="breakdown-grid">
+            <div class="breakdown-item">
+                <div class="breakdown-value" style="color: var(--purple);">${scheduledCount}</div>
+                <div class="breakdown-label">Programados</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value" style="color: var(--success);">${paidCount}</div>
+                <div class="breakdown-label">Pagados</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value" style="color: var(--danger);">${overdueCount}</div>
+                <div class="breakdown-label">Atrasados</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value">${daysInMonth}</div>
+                <div class="breakdown-label">Días totales</div>
+            </div>
+        </div>
+    `;
+}
         function renderPaymentsHistory(sale) {
             const container = document.getElementById('paymentsTableContainer');
             
@@ -1092,6 +1198,34 @@
             sale.totalPaid = (sale.payments || []).reduce((s,p)=> s + Number(p.amount || 0), 0);
             saveSaleToStorage(sale);
         }
+
+        // 🔧 Marcar como pagado el día del calendario que corresponda
+function markDayAsPaid(paymentDateStr) {
+    const paidDay = new Date(paymentDateStr).getDate(); // 1..31
+    const cell = Array.from(document.querySelectorAll('.day-cell.current-month'))
+                      .find(c => parseInt(c.textContent) === paidDay);
+
+    if (!cell) return;
+
+    // Quitar clases previas
+    cell.classList.remove('scheduled', 'overdue', 'today');
+    // Agregar verde
+    cell.classList.add('paid', 'has-payment');
+
+    // Actualizar contadores (sin recargar todo)
+    const breakdown = document.getElementById('installmentsBreakdown');
+    const paidEl   = breakdown.querySelector('.breakdown-value');
+    const schedEl  = breakdown.querySelector('.breakdown-value[style*="purple"]');
+
+    let paid   = parseInt(paidEl?.textContent   || 0);
+    let sched  = parseInt(schedEl?.textContent  || 0);
+
+    if (cell.classList.contains('scheduled')) sched--;
+    paid++;
+
+    if (paidEl)   paidEl.textContent   = paid;
+    if (schedEl)  schedEl.textContent  = sched;
+}
     </script>
 </body>
 </html>
