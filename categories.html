@@ -998,7 +998,147 @@
   .dropdown-panel { left: 10px; right: 10px; max-height: 55vh; }
 }
 
+/* Estilos para el nuevo sistema de selección de días */
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--white);
+    font-size: 16px;
+    transition: var(--transition);
+}
 
+.form-control:focus {
+    outline: 0;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(52,152,219,.1);
+}
+
+.form-control[multiple] {
+    min-height: 150px;
+    padding: 8px;
+}
+
+.form-control option {
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin: 2px 0;
+    cursor: pointer;
+}
+
+.form-control option:hover {
+    background: var(--light-gray);
+}
+
+.form-control option:checked {
+    background: var(--accent) !important;
+    color: white;
+}
+
+#selectedDaysDisplay {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px;
+    background: var(--light-gray);
+    border-radius: var(--radius);
+}
+
+#selectedDaysDisplay:empty::before {
+    content: "No hay días seleccionados";
+    color: var(--medium-gray);
+    font-size: 14px;
+}
+
+.day-pill {
+    background: var(--accent);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+.day-pill .remove-day {
+    background: rgba(255,255,255,0.3);
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.day-pill .remove-day:hover {
+    background: rgba(255,255,255,0.5);
+}
+
+/* Estilos mejorados para selección múltiple */
+.form-control[multiple] {
+    min-height: 200px; /* Aumentado para ver más opciones */
+    padding: 8px;
+    cursor: pointer;
+}
+
+.form-control option {
+    padding: 10px 12px; /* Más padding para mejor táctil */
+    border-radius: 4px;
+    margin: 3px 0;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.form-control option:hover {
+    background: rgba(52, 152, 219, 0.1);
+}
+
+.form-control option:checked {
+    background: var(--accent) !important;
+    color: white !important;
+    font-weight: 600;
+}
+
+/* Mensaje de ayuda más visible */
+#paymentDaysContainer small {
+    color: var(--accent);
+    font-weight: 500;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+#paymentDaysContainer small::before {
+    content: "💡";
+    font-size: 16px;
+}
+
+/* Responsive: En móviles mostrar instrucción más clara */
+@media (max-width: 768px) {
+    .form-control[multiple] {
+        min-height: 250px;
+    }
+    
+    #paymentDaysContainer small {
+        background: rgba(52, 152, 219, 0.1);
+        padding: 10px;
+        border-radius: 6px;
+        border-left: 3px solid var(--accent);
+        font-size: 12px;
+    }
+}
 
     </style>
 </head>
@@ -1140,13 +1280,31 @@
                         <input type="text" id="installments" placeholder="Ej: 12 cuotas mensuales">
                     </div>
 
-                    <div class="form-group full-width">
-                        <label>Días de pago</label>
-                        <button type="button" id="btnOpenCalendar" class="btn btn-secondary">
-                            <i class="fas fa-calendar-alt"></i> Seleccionar días
-                        </button>
-                        <div id="selectedDaysPills" class="days-pills"></div>
-                    </div>
+                  <!-- Dentro del formulario, reemplazar la sección de días de pago -->
+<div class="form-group full-width">
+    <label>Plan de Pago</label>
+    <select id="paymentPlanType" class="form-control">
+        <option value="">Selecciona un plan</option>
+        <option value="diario">Diario</option>
+        <option value="semanal">Semanal</option>
+        <option value="quincenal">Quincenal</option>
+        <option value="mensual">Mensual</option>
+    </select>
+</div>
+
+<div class="form-group full-width" id="paymentDaysContainer" style="display: none;">
+
+    
+    <label id="paymentDaysLabel">Días de pago</label>
+    <select id="paymentDaysSelect" class="form-control" multiple size="5">
+        <!-- Se llenará dinámicamente -->
+    </select>
+    <small style="color: #7f8c8d; margin-top: 8px; display: block;">
+        Mantén presionado Ctrl (o Cmd en Mac) para seleccionar múltiples días
+    </small>
+</div>
+
+<div id="selectedDaysDisplay" class="days-pills" style="margin-top: 12px;"></div>
 
                     <div class="form-group full-width">
                         <label for="advancePayment">Pago Inicial</label>

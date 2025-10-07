@@ -274,10 +274,11 @@ if (filterDay) {
     }
 }
 
-            const paymentDaysInfo = sale.paymentDays
-                ? `<p><i class="fas fa-calendar-check"></i> Días de pago: ${sale.paymentDays}${statusBadge}</p>`
-                : '';
-
+const freq = sale.paymentFrequency || 'mensual';
+const daysText = sale.paymentDaysText || sale.paymentDays.join(', ');
+const paymentDaysInfo = daysText
+    ? `<p><i class="fas fa-calendar-check"></i> ${freq} – ${daysText}${statusBadge}</p>`
+    : '';
             card.innerHTML = `
                 <div class="sale-header">
                     <div class="sale-info">
@@ -353,15 +354,17 @@ function editSale(sale) {
     inputInstallments.value = sale.installments;
     if (document.getElementById("clientAddress")) {
         document.getElementById("clientAddress").value = sale.clientAddress || '';
-
-        selectedDays = sale.paymentDays ? sale.paymentDays.split(',').map(Number) : [];
-        renderPills();
-        renderCalendar();
     }
 
-    selectedDays = sale.paymentDays ? sale.paymentDays.split(',').map(Number) : [];
-    renderPills();
-    renderCalendar();
+    // ✅ NUEVO: Cargar días de pago con el nuevo sistema
+    if (sale.paymentDays) {
+        loadPaymentDaysFromString(sale.paymentDays);
+    } else {
+        selectedPaymentPlan = { type: '', days: [] };
+        paymentPlanType.value = '';
+        paymentDaysContainer.style.display = 'none';
+        updateSelectedDaysDisplay();
+    }
 
     document.getElementById("paymentSection").style.display = "block";
     inputPaymentDate.value = new Date().toISOString().split('T')[0];
@@ -369,11 +372,10 @@ function editSale(sale) {
     btnSave.classList.add("hidden");
     btnUpdate.classList.remove("hidden");
     btnCancel.classList.remove("hidden");
-    btnDelete.classList.remove("hidden");   // <- ahora sí se ve
+    btnDelete.classList.remove("hidden");
     btnAddPayment.classList.remove("hidden");
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // ⬅️ lleva al usuario arriba
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
 async function loadProductsForSelect() {
     try {
         const token = getToken();
@@ -413,7 +415,6 @@ async function saveSale() {
     const saleDate      = inputDate.value; // yyyy-mm-dd
     const price         = Number(inputPrice.value);
     const installments  = String(inputInstallments.value.trim() || "Sin cuotas");
-    const paymentDays   = String(collectPaymentDays()   || "Sin días");
     const advance       = Number(inputAdvance.value)    || 0;
     const address       = String(document.getElementById("clientAddress").value.trim() || "Sin dirección");
 
@@ -430,9 +431,14 @@ async function saveSale() {
         saleDate,
         price,
         installments,
-        paymentDays,
         advancePayment: advance,
-        clientAddress: address
+        clientAddress: address,
+        // ✅ NUEVO: Guardar plan de pago en campos separados
+        ...(collectPaymentPlan() || { 
+            paymentFrequency: 'mensual', 
+            paymentDays: [], 
+            paymentDaysText: '' 
+        })
     };
 
     // ---------- Log para depurar ----------
@@ -467,6 +473,12 @@ async function saveSale() {
         renderSelectedProducts();
         updateTotalPrice();
 
+        // ✅ NUEVO: Limpiar selección de días
+        selectedPaymentPlan = { type: '', days: [] };
+        paymentPlanType.value = '';
+        paymentDaysContainer.style.display = 'none';
+        updateSelectedDaysDisplay();
+
         // Recargar y mostrar recibo
         await loadSales();
         await loadProductsForDropdown();
@@ -481,6 +493,10 @@ async function saveSale() {
 /* ---------- actualizar ---------- */
 async function updateSale() {
     const id = inputId.value;
+    
+    // ---------- Recolección del plan de pago ----------
+    const plan = collectPaymentPlan();
+    
     const saleData = {
         clientName: inputClient.value.trim(),
         clientAddress: document.getElementById("clientAddress").value.trim(),
@@ -488,7 +504,12 @@ async function updateSale() {
         saleDate: inputDate.value,
         price: parseFloat(inputPrice.value),
         installments: inputInstallments.value.trim(),
-        paymentDays: collectPaymentDays() // ✅ Agregar esta línea
+        // ✅ NUEVO: Guardar plan de pago en campos separados
+        ...(plan || { 
+            paymentFrequency: 'mensual', 
+            paymentDays: [], 
+            paymentDaysText: '' 
+        })
     };
     
     try {
@@ -537,9 +558,16 @@ function cancelUpdate() {
     btnSave.classList.remove("hidden");
     btnUpdate.classList.add("hidden");
     btnCancel.classList.add("hidden");
-    btnDelete.classList.add("hidden");   // <- se oculta de nuevo
+    btnDelete.classList.add("hidden");
     btnAddPayment.classList.add("hidden");
     document.getElementById("paymentSection").style.display = "none";
+    
+    // ✅ NUEVO: Limpiar selección de días
+    selectedPaymentPlan = { type: '', days: [] };
+    paymentPlanType.value = '';
+    paymentDaysContainer.style.display = 'none';
+    updateSelectedDaysDisplay();
+    
     form.reset();
 }
 
@@ -819,992 +847,202 @@ btnConf.addEventListener("click", () => {
 btnCerr.addEventListener("click", () => modal.classList.remove("show"));
 btnX.addEventListener("click",   () => modal.classList.remove("show"));
 
-/* ---------- Estado ---------- */
-let selectedDays = []; // números 1-31
 
-/* ---------- Nodos ---------- */
-const btnOpen   = document.getElementById('btnOpenCalendar');
-const modalCal  = document.getElementById('calendarModal');
-const closeBtn  = document.getElementById('closeCalendar');
-const confirmBtn= document.getElementById('confirmDays');
-const pillsBox  = document.getElementById('selectedDaysPills');
-const calendar  = document.getElementById('calendarBody');
+/* ---------- NUEVO SISTEMA DE SELECCIÃ"N DE DÃAS DE PAGO ---------- */
 
-/* ---------- Abrir / Cerrar ---------- */
-btnOpen.addEventListener('click', () => {
-    renderCalendar();
-    modalCal.classList.add('show');
-});
-closeBtn.addEventListener('click', () => modalCal.classList.remove('show'));
-confirmBtn.addEventListener('click', () => {
-    renderPills();
-    modalCal.classList.remove('show');
-});
+let selectedPaymentPlan = {
+    type: '', // diario, semanal, quincenal, mensual
+    days: []  // días seleccionados
+};
 
-/* ---------- Renderizar calendario ---------- */
-/* ---------- Renderizar calendario REAL con días de la semana ---------- */
-function renderCalendar(){
-    calendar.innerHTML = '';
+const paymentPlanType = document.getElementById('paymentPlanType');
+const paymentDaysContainer = document.getElementById('paymentDaysContainer');
+const paymentDaysSelect = document.getElementById('paymentDaysSelect');
+const paymentDaysLabel = document.getElementById('paymentDaysLabel');
+const selectedDaysDisplay = document.getElementById('selectedDaysDisplay');
+
+// Opciones para cada tipo de plan
+const paymentOptions = {
+    diario: ['Todos los días'],
+    semanal: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+    quincenal: ["16 y 01", "17 y 02", "18 y 03", "19 y 04", "20 y 05", "21 y 06", "22 y 07", "23 y 08", "24 y 09", "25 y 10", "26 y 11", "27 y 12", "28 y 13", "29 y 14", "30 y 15"],
+    mensual: Array.from({length: 31}, (_, i) => `Día ${i + 1}`)
+};
+
+// Listener para cambio de tipo de plan
+// Listener para cambio de tipo de plan
+paymentPlanType.addEventListener('change', (e) => {
+    const planType = e.target.value;
     
-    // Obtener el mes y año actual
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0-11
+    if (!planType) {
+        paymentDaysContainer.style.display = 'none';
+        selectedPaymentPlan = { type: '', days: [] };
+        updateSelectedDaysDisplay();
+        return;
+    }
     
-    // Obtener el primer día del mes (0=Domingo, 1=Lunes, etc.)
-    const firstDay = new Date(year, month, 1).getDay();
+    selectedPaymentPlan.type = planType;
+    selectedPaymentPlan.days = [];
     
-    // Obtener el número de días del mes
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // Actualizar label según el tipo
+    const labels = {
+        diario: 'Confirmación',
+        semanal: 'Selecciona los días de la semana (mantén Ctrl/Cmd presionado)',
+        quincenal: 'Selecciona las quincenas (mantén Ctrl/Cmd presionado)',
+        mensual: 'Selecciona los días del mes (mantén Ctrl/Cmd presionado)'
+    };
+    paymentDaysLabel.textContent = labels[planType];
     
-    // Configurar grid para incluir encabezados de días
-    calendar.style.gridTemplateColumns = 'repeat(7, 1fr)';
+    // ✅ NUEVO: Configurar si permite múltiple selección
+    if (planType === 'diario') {
+        paymentDaysSelect.removeAttribute('multiple');
+        paymentDaysSelect.setAttribute('size', '1');
+    } else {
+        paymentDaysSelect.setAttribute('multiple', 'multiple');
+        paymentDaysSelect.setAttribute('size', '7'); // Mostrar más opciones
+    }
     
-    // Agregar encabezados de días de la semana
-    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    dayNames.forEach(dayName => {
-        const header = document.createElement('div');
-        header.style.cssText = `
-            text-align: center;
-            font-weight: 700;
-            color: var(--primary);
-            padding: 8px 0;
-            font-size: 12px;
-            background: var(--light-gray);
-            border-radius: 4px;
-        `;
-        header.textContent = dayName;
-        calendar.appendChild(header);
+    // Llenar el select con las opciones
+    paymentDaysSelect.innerHTML = '';
+    const options = paymentOptions[planType];
+    
+    options.forEach((option, index) => {
+        const opt = document.createElement('option');
+        opt.value = planType === 'diario' ? 'diario' : 
+                    planType === 'semanal' ? option :
+                    planType === 'quincenal' ? option :
+                    (index + 1).toString(); // Para mensual, usar el número
+        opt.textContent = option;
+        paymentDaysSelect.appendChild(opt);
     });
     
-    // Agregar espacios vacíos antes del primer día
-    for(let i = 0; i < firstDay; i++){
-        const empty = document.createElement('div');
-        empty.style.visibility = 'hidden';
-        calendar.appendChild(empty);
+    // Si es diario, autoseleccionar
+    if (planType === 'diario') {
+        paymentDaysSelect.options[0].selected = true;
+        selectedPaymentPlan.days = ['diario'];
+        updateSelectedDaysDisplay();
     }
     
-    // Agregar los días del mes
-    for(let d = 1; d <= daysInMonth; d++){
-        const day = document.createElement('div');
-        day.className = 'day-cell';
-        day.textContent = d;
-        
-        // Marcar día actual con estilo especial
-        if(d === now.getDate()){
-            day.style.cssText = `
-                border: 2px solid var(--accent);
-                font-weight: 700;
-                background: rgba(52, 152, 219, 0.1);
-            `;
-        }
-        
-        if(selectedDays.includes(d)) day.classList.add('selected');
-        
-        day.addEventListener('click', () => {
-            day.classList.toggle('selected');
-            if(day.classList.contains('selected')){
-                if(!selectedDays.includes(d)) selectedDays.push(d);
-            }else{
-                selectedDays = selectedDays.filter(n => n !== d);
-            }
-            selectedDays.sort((a,b)=>a-b);
-        });
-        
-        calendar.appendChild(day);
-    }
-}
+    paymentDaysContainer.style.display = 'block';
+});
 
-/* ---------- Mostrar pastillas ---------- */
-function renderPills(){
-    pillsBox.innerHTML = '';
-    selectedDays.forEach(d => {
+// Listener para selección de días
+paymentDaysSelect.addEventListener('change', () => {
+    const selected = Array.from(paymentDaysSelect.selectedOptions).map(opt => opt.value);
+    selectedPaymentPlan.days = selected;
+    updateSelectedDaysDisplay();
+});
+
+// Actualizar visualización de días seleccionados
+function updateSelectedDaysDisplay() {
+    selectedDaysDisplay.innerHTML = '';
+    
+    if (selectedPaymentPlan.days.length === 0) {
+        return;
+    }
+    
+    // Crear etiquetas visuales
+    selectedPaymentPlan.days.forEach(day => {
         const pill = document.createElement('span');
         pill.className = 'day-pill';
-        pill.innerHTML = `${d} <button class="remove-day" data-day="${d}">×</button>`;
-        pillsBox.appendChild(pill);
-    });
-    // Delegar evento para quitar
-    pillsBox.addEventListener('click', e => {
-        if(e.target.classList.contains('remove-day')){
-            const day = Number(e.target.dataset.day);
-            selectedDays = selectedDays.filter(n => n !== day);
-            renderPills();
+        
+        let displayText = day;
+        if (selectedPaymentPlan.type === 'diario') {
+            displayText = '📅 Todos los días';
+        } else if (selectedPaymentPlan.type === 'semanal') {
+            displayText = day;
+        } else if (selectedPaymentPlan.type === 'quincenal') {
+            displayText = `Días ${day}`;
+        } else if (selectedPaymentPlan.type === 'mensual') {
+            displayText = `Día ${day}`;
         }
+        
+        pill.innerHTML = `
+            ${displayText}
+            <button class="remove-day" data-day="${day}" type="button">×</button>
+        `;
+        
+        selectedDaysDisplay.appendChild(pill);
+    });
+    
+    // Agregar listeners para remover
+    selectedDaysDisplay.querySelectorAll('.remove-day').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const dayToRemove = e.target.dataset.day;
+            selectedPaymentPlan.days = selectedPaymentPlan.days.filter(d => d !== dayToRemove);
+            
+            // Desmarcar en el select
+            Array.from(paymentDaysSelect.options).forEach(opt => {
+                if (opt.value === dayToRemove) {
+                    opt.selected = false;
+                }
+            });
+            
+            updateSelectedDaysDisplay();
+        });
     });
 }
 
-/* ---------- Al guardar la venta incluir los días ---------- */
-function collectPaymentDays(){
-    return selectedDays.join(','); // "5,10,15,20"
-}
-
-// Agregar estas funciones al final de tu archivo categories.js
-
-/* ---------- SISTEMA DE RECIBOS ---------- */
-
-/* ---------- SISTEMA DE RECIBOS (CORREGIDO) ---------- */
-
-// Variable global para almacenar los datos de la venta
-let currentSaleForReceipt = null;
-
-// Generar número de recibo único
-function generateReceiptNumber() {
-    const now = new Date();
-    const timestamp = now.getTime();
-    // Usa solo los últimos 8 dígitos del timestamp para que quepa en un Number
-    return parseInt(timestamp.toString().slice(-8));
-}
-
-// Mostrar modal de confirmación para generar recibo
-function showReceiptModal(saleData) {
-    console.log("Datos recibidos en showReceiptModal:", saleData); // Debug
-    
-    // Guardar datos globalmente
-    currentSaleForReceipt = saleData;
-    
-    // Crear modal dinámicamente
-    const modal = document.createElement('div');
-    modal.id = 'receiptConfirmModal';
-    modal.className = 'receipt-modal';
-    modal.innerHTML = `
-        <div class="receipt-modal-content">
-            <div class="receipt-modal-header">
-                <h2><i class="fas fa-receipt"></i> ¿Generar Recibo?</h2>
-                <button class="close-btn" onclick="closeReceiptConfirmModal()">×</button>
-            </div>
-            <div class="receipt-modal-body">
-                <p>¿Deseas generar un recibo para esta venta?</p>
-                <div class="sale-summary">
-                    <h3>Resumen de la venta:</h3>
-                    <p><strong>Cliente:</strong> ${saleData.clientName || 'Sin nombre'}</p>
-                    <p><strong>Producto:</strong> ${saleData.productName || 'Sin productos'}</p>
-                    <p><strong>Total:</strong> $${(saleData.price || 0).toLocaleString('es-CO')}</p>
-                    <p><strong>Abono inicial:</strong> $${(saleData.advancePayment || 0).toLocaleString('es-CO')}</p>
-                </div>
-            </div>
-            <div class="receipt-modal-actions">
-                <button class="btn btn-secondary" onclick="closeReceiptConfirmModal()">
-                    <i class="fas fa-times"></i> No, gracias
-                </button>
-                <button class="btn btn-primary" onclick="generateReceiptFromModal()">
-                    <i class="fas fa-receipt"></i> Sí, generar recibo
-                </button>
-            </div>
-        </div>
-    `;
-
-    // Agregar estilos CSS (solo si no existen)
-    if (!document.querySelector('#receiptModalStyles')) {
-        const styles = document.createElement('style');
-        styles.id = 'receiptModalStyles';
-        styles.innerHTML = `
-            .receipt-modal {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 10000;
-                animation: fadeIn 0.3s ease;
-            }
-
-            .receipt-modal-content {
-                background: white;
-                border-radius: 15px;
-                padding: 30px;
-                max-width: 500px;
-                width: 90%;
-                max-height: 80%;
-                overflow-y: auto;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-                animation: slideIn 0.3s ease;
-            }
-
-            .receipt-modal-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-                border-bottom: 2px solid #ecf0f1;
-            }
-
-            .receipt-modal-header h2 {
-                color: #2c3e50;
-                margin: 0;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-
-            .receipt-modal-body p {
-                font-size: 1.1rem;
-                margin-bottom: 20px;
-                color: #34495e;
-            }
-
-            .sale-summary {
-                background: #f8f9fa;
-                padding: 20px;
-                border-radius: 10px;
-                border-left: 4px solid #3498db;
-            }
-
-            .sale-summary h3 {
-                color: #2c3e50;
-                margin-bottom: 15px;
-                font-size: 1.2rem;
-            }
-
-            .sale-summary p {
-                margin-bottom: 10px;
-                color: #2c3e50;
-            }
-
-            .receipt-modal-actions {
-                display: flex;
-                gap: 15px;
-                justify-content: flex-end;
-                margin-top: 30px;
-            }
-
-            .btn {
-                padding: 12px 24px;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 1rem;
-                font-weight: 600;
-                transition: all 0.3s ease;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-
-            .btn-primary {
-                background: #3498db;
-                color: white;
-            }
-
-            .btn-secondary {
-                background: #95a5a6;
-                color: white;
-            }
-
-            .btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            }
-
-            .close-btn {
-                background: none;
-                border: none;
-                font-size: 1.5rem;
-                cursor: pointer;
-                color: #7f8c8d;
-                padding: 5px;
-                border-radius: 50%;
-                width: 35px;
-                height: 35px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.3s ease;
-            }
-
-            .close-btn:hover {
-                background: #ecf0f1;
-                color: #e74c3c;
-            }
-
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-
-            @keyframes slideIn {
-                from { transform: translateY(-50px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(styles);
+// Función para recolectar días en formato para guardar
+function collectPaymentDays() {
+    if (!selectedPaymentPlan.type || selectedPaymentPlan.days.length === 0) {
+        return '';
     }
-
-    document.body.appendChild(modal);
+    
+    // Formato: tipo|dias
+    // Ejemplo: "semanal|Lunes,Miércoles,Viernes"
+    // Ejemplo: "mensual|1,15,30"
+    // Ejemplo: "diario|diario"
+    return `${selectedPaymentPlan.type}|${selectedPaymentPlan.days.join(',')}`;
 }
 
-function generateReceiptFromModal() {
-    console.log("Datos en generateReceiptFromModal:", currentSaleForReceipt); // Debug
-    
-    if (!currentSaleForReceipt) {
-        alert("Error: No hay datos de la venta disponibles");
+function collectPaymentPlan() {
+    if (!selectedPaymentPlan.type) return null;
+    return {
+        paymentFrequency: selectedPaymentPlan.type,
+        paymentDays: selectedPaymentPlan.days,
+        paymentDaysText: selectedPaymentPlan.days.join(', ')
+    };
+}
+
+// Función para cargar días desde formato guardado
+function loadPaymentDaysFromString(paymentDaysString) {
+    if (!paymentDaysString || paymentDaysString === 'Sin días') {
+        selectedPaymentPlan = { type: '', days: [] };
+        paymentPlanType.value = '';
+        paymentDaysContainer.style.display = 'none';
+        updateSelectedDaysDisplay();
         return;
     }
     
-    // Crear una copia profunda de los datos antes de hacer cualquier cosa
-    const dataForReceipt = {
-        clientName: currentSaleForReceipt.clientName,
-        clientAddress: currentSaleForReceipt.clientAddress,
-        products: currentSaleForReceipt.products ? [...currentSaleForReceipt.products] : [],
-        productName: currentSaleForReceipt.productName,
-        saleDate: currentSaleForReceipt.saleDate,
-        price: currentSaleForReceipt.price,
-        installments: currentSaleForReceipt.installments,
-        advancePayment: currentSaleForReceipt.advancePayment,
-        paymentDays: currentSaleForReceipt.paymentDays
-    };
+    const [type, daysStr] = paymentDaysString.split('|');
     
-    console.log("Copia de datos para recibo:", dataForReceipt); // Debug
-    
-    // Cerrar modal
-    closeReceiptConfirmModal();
-    
-    // Generar recibo con la copia
-    generateReceipt(dataForReceipt);
-}
-
-function closeReceiptConfirmModal() {
-    const modal = document.getElementById('receiptConfirmModal');
-    if (modal) {
-        modal.remove();
+    if (!type || !daysStr) {
+        console.warn('Formato de días inválido:', paymentDaysString);
+        return;
     }
-    // Limpiar la variable después de un pequeño delay para asegurar que se use la copia
+    
+    const days = daysStr.split(',').map(d => d.trim());
+    
+    selectedPaymentPlan = { type, days };
+    paymentPlanType.value = type;
+    
+    // Disparar el evento change para llenar el select
+    paymentPlanType.dispatchEvent(new Event('change'));
+    
+    // Esperar un momento para que se llene el select
     setTimeout(() => {
-        currentSaleForReceipt = null;
+        // Seleccionar las opciones correspondientes
+        Array.from(paymentDaysSelect.options).forEach(opt => {
+            if (days.includes(opt.value)) {
+                opt.selected = true;
+            }
+        });
+        
+        selectedPaymentPlan.days = days;
+        updateSelectedDaysDisplay();
     }, 100);
 }
-
-// Generar recibo con canvas
-function generateReceipt(saleData) {
-    console.log("Datos en generateReceipt:", saleData); // Debug
-    
-    // Validación más robusta
-    if (!saleData || typeof saleData !== 'object') {
-        console.error("Error: saleData no es un objeto válido:", saleData);
-        alert("Error: No se pudieron obtener los datos de la venta");
-        return;
-    }
-
-    if (!saleData.clientName) {
-        console.error("Error: falta clientName en saleData:", saleData);
-        alert("Error: Faltan datos del cliente");
-        return;
-    }
-
-    const receiptNumber = generateReceiptNumber();
-    const receiptId = 'receipt_' + Date.now();
-    
-    // Crear canvas
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 600;
-    canvas.height = 800;
-    
-    // Fondo blanco
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Header con gradiente
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 120);
-    gradient.addColorStop(0, '#2c3e50');
-    gradient.addColorStop(1, '#3498db');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, 120);
-    
-    // Título principal
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('RECIBO DE VENTA', canvas.width / 2, 50);
-    
-    // Número de recibo
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText(`Recibo #${receiptNumber}`, canvas.width / 2, 80);
-    
-    // Fecha de generación
-    ctx.font = '16px Arial';
-    ctx.fillText(`Fecha: ${new Date().toLocaleDateString('es-CO', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })}`, canvas.width / 2, 105);
-    
-    // Línea decorativa
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(50, 130);
-    ctx.lineTo(canvas.width - 50, 130);
-    ctx.stroke();
-    
-    // Sección cliente
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText('INFORMACIÓN DEL CLIENTE', 50, 170);
-    
-    // Línea bajo título
-    ctx.strokeStyle = '#3498db';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(50, 180);
-    ctx.lineTo(350, 180);
-    ctx.stroke();
-    
-    ctx.font = '18px Arial';
-    ctx.fillStyle = '#34495e';
-    ctx.fillText(`Nombre: ${saleData.clientName || 'No especificado'}`, 50, 210);
-    ctx.fillText(`Dirección: ${saleData.clientAddress || 'No especificada'}`, 50, 235);
-    ctx.fillText(`Teléfono: ${saleData.clientPhone || 'No especificado'}`, 50, 260);
-    
-    // Sección productos
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText('PRODUCTOS VENDIDOS', 50, 310);
-    
-    ctx.strokeStyle = '#3498db';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(50, 320);
-    ctx.lineTo(320, 320);
-    ctx.stroke();
-    
-    // Lista de productos
-    let yPosition = 350;
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#34495e';
-    
-    if (saleData.products && saleData.products.length > 0) {
-        saleData.products.forEach((product, index) => {
-            ctx.fillText(`${index + 1}. ${product.name}`, 50, yPosition);
-            ctx.fillText(`   Marca: ${product.brand || 'N/A'}`, 70, yPosition + 20);
-            ctx.fillText(`   Precio: $${product.salePrice.toLocaleString('es-CO')}`, 70, yPosition + 40);
-            yPosition += 70;
-        });
-    } else {
-        ctx.fillText(`• ${saleData.productName || 'Producto no especificado'}`, 50, yPosition);
-        yPosition += 30;
-    }
-    
-    // Ajustar posición si hay muchos productos
-    yPosition = Math.max(yPosition, 480);
-    
-    // Sección financiera
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText('INFORMACIÓN FINANCIERA', 50, yPosition);
-    
-    ctx.strokeStyle = '#3498db';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(50, yPosition + 10);
-    ctx.lineTo(350, yPosition + 10);
-    ctx.stroke();
-    
-    yPosition += 40;
-    ctx.font = '18px Arial';
-    ctx.fillStyle = '#34495e';
-    ctx.fillText(`Fecha de venta: ${new Date(saleData.saleDate).toLocaleDateString('es-CO')}`, 50, yPosition);
-    yPosition += 30;
-    ctx.fillText(`Valor total: $${(saleData.price || 0).toLocaleString('es-CO')}`, 50, yPosition);
-    yPosition += 30;
-    ctx.fillText(`Abono inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}`, 50, yPosition);
-    yPosition += 30;
-    
-    const saldoPendiente = (saleData.price || 0) - (saleData.advancePayment || 0);
-    if (saldoPendiente > 0) {
-        ctx.fillStyle = '#e74c3c';
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText(`Saldo pendiente: $${saldoPendiente.toLocaleString('es-CO')}`, 50, yPosition);
-        yPosition += 30;
-        
-        ctx.fillStyle = '#34495e';
-        ctx.font = '18px Arial';
-        ctx.fillText(`Cuotas: ${saleData.installments || 'No especificado'}`, 50, yPosition);
-        
-        if (saleData.paymentDays) {
-            yPosition += 30;
-            const days = saleData.paymentDays.split(',').map(d => d.trim()).join(', ');
-            ctx.fillText(`Días de pago: ${days}`, 50, yPosition);
-        }
-    } else {
-        ctx.fillStyle = '#27ae60';
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText('✓ PAGADO COMPLETAMENTE', 50, yPosition);
-    }
-    
-    // Footer
-    yPosition = canvas.height - 100;
-    ctx.fillStyle = '#95a5a6';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Este recibo fue generado automáticamente', canvas.width / 2, yPosition);
-    ctx.fillText(`Por el programa JC-C - ${new Date().getFullYear()}`, canvas.width / 2, yPosition + 20);
-    
-    // Línea final decorativa
-    ctx.strokeStyle = '#bdc3c7';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(50, yPosition - 20);
-    ctx.lineTo(canvas.width - 50, yPosition - 20);
-    ctx.stroke();
-    
-    // Guardar recibo
-    const receiptData = {
-        id: receiptId,
-        receiptNumber: receiptNumber,
-        saleData: saleData,
-        createdAt: new Date().toISOString(),
-        canvas: canvas.toDataURL('image/png')
-    };
-    
-    console.log("Recibo generado exitosamente:", receiptData.receiptNumber); // Debug
-    
-    saveReceipt(receiptData);
-    
-    // Mostrar modal de opciones
-    showReceiptOptionsModal(receiptData);
-}
-
-// Busca esta función en categories.js y reemplázala:
-
-async function saveReceiptToMongo(receiptData) {
-    try {
-        const token = getToken();
-        
-        // ✅ Detectar modo admin
-        const adminMode = sessionStorage.getItem('adminMode') === 'true';
-        const vendedorIdAdmin = sessionStorage.getItem('vendedorId');
-        
-        const dataToSend = {
-            receiptNumber: receiptData.receiptNumber,
-            saleData: receiptData.saleData,
-            localId: receiptData.id
-        };
-        
-        // ✅ Si es admin, enviar el userId del vendedor que está administrando
-        if (adminMode && vendedorIdAdmin) {
-            dataToSend.userId = vendedorIdAdmin;
-            console.log('📝 Admin creando recibo para vendedor:', vendedorIdAdmin);
-        }
-        // Si no es admin, el backend usará el userId del token automáticamente
-        
-        await apiFetch("/receipts", "POST", dataToSend, token);
-        console.log("✅ Recibo guardado en MongoDB");
-    } catch (err) {
-        console.warn("⚠ No se pudo guardar el recibo en MongoDB:", err);
-    }
-}
-
-// Resto de funciones permanecen igual...
-function saveReceipt(receiptData) {
-    // Solo guardar en MongoDB, no usar localStorage
-    saveReceiptToMongo(receiptData);
-    console.log('✅ Recibo guardado en MongoDB');
-}
-// REEMPLAZA la función showReceiptOptionsModal en tu categories.js:
-
-function showReceiptOptionsModal(receiptData) {
-    const modal = document.createElement('div');
-    modal.id = 'receiptOptionsModal';
-    modal.className = 'receipt-modal';
-    modal.innerHTML = `
-        <div class="receipt-modal-content" style="max-width: 700px;">
-            <div class="receipt-modal-header">
-                <h2><i class="fas fa-check-circle" style="color: #27ae60;"></i> ¡Recibo Generado!</h2>
-                <button class="close-btn" onclick="closeReceiptOptionsModal()">×</button>
-            </div>
-            <div class="receipt-modal-body">
-                <div class="receipt-preview">
-                    <img src="${receiptData.canvas}" alt="Recibo" style="width: 100%; max-width: 400px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px;">
-                </div>
-                <p style="text-align: center; color: #27ae60; font-weight: 600; margin-bottom: 15px;">
-                    <i class="fas fa-save"></i> El recibo ha sido guardado automáticamente
-                </p>
-                <div style="text-align: center; margin: 20px 0;">
-                    <strong>Recibo #${receiptData.receiptNumber}</strong><br>
-                    <span style="color: #7f8c8d;">Cliente: ${receiptData.saleData.clientName}</span>
-                </div>
-                
-                <!-- Botón de compartir prominente -->
-                <div style="text-align: center; margin: 25px 0;">
-                    <button class="btn btn-share-prominent" onclick="shareReceiptFromModal('${receiptData.id}')" style="
-                        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-                        color: white;
-                        border: none;
-                        border-radius: 12px;
-                        padding: 15px 30px;
-                        font-size: 18px;
-                        font-weight: 700;
-                        cursor: pointer;
-                        box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
-                        transition: all 0.3s ease;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 12px;
-                        text-transform: uppercase;
-                        letter-spacing: 1px;
-                    " onmouseover="
-                        this.style.transform = 'translateY(-3px)';
-                        this.style.boxShadow = '0 8px 25px rgba(37, 211, 102, 0.4)';
-                    " onmouseout="
-                        this.style.transform = 'translateY(0)';
-                        this.style.boxShadow = '0 4px 15px rgba(37, 211, 102, 0.3)';
-                    ">
-                        <i class="fas fa-share-alt" style="font-size: 20px;"></i>
-                        Compartir Recibo
-                    </button>
-                </div>
-
-                <p style="text-align: center; color: #7f8c8d; font-size: 14px; margin-top: 10px;">
-                    Comparte por WhatsApp, email o cualquier app
-                </p>
-            </div>
-            
-            <div class="receipt-modal-actions" style="border-top: 1px solid #ecf0f1; padding-top: 20px;">
-                <button class="btn btn-secondary" onclick="closeReceiptOptionsModal()">
-                    <i class="fas fa-times"></i> Cerrar
-                </button>
-                <button class="btn btn-primary" onclick="downloadReceiptFromModal('${receiptData.id}')">
-                    <i class="fas fa-download"></i> Descargar
-                </button>
-                <button class="btn" style="background: #9b59b6; color: white;" onclick="viewReceiptsPage()">
-                    <i class="fas fa-eye"></i> Ver todos
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-function closeReceiptOptionsModal() {
-    const modal = document.getElementById('receiptOptionsModal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// REEMPLAZA la función shareReceiptFromModal en tu categories.js:
-
-function shareReceiptFromModal(receiptId) {
-    const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-    const receipt = receipts.find(r => r.id === receiptId);
-    
-    if (!receipt) {
-        alert("Error: No se encontró el recibo");
-        return;
-    }
-
-    // Mostrar indicador de carga
-    const shareBtn = document.querySelector('.btn-share-prominent');
-    const originalContent = shareBtn.innerHTML;
-    shareBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparando...';
-    shareBtn.disabled = true;
-
-    // Convertir dataURL a blob
-    fetch(receipt.canvas)
-        .then(res => res.blob())
-        .then(blob => {
-            const file = new File([blob], `recibo-${receipt.receiptNumber}.png`, { type: 'image/png' });
-            
-            // Verificar si el dispositivo soporta compartir archivos
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                // Usar API nativa de compartir (funciona en móviles)
-                return navigator.share({
-                    title: `Recibo de Venta #${receipt.receiptNumber}`,
-                    text: `Recibo de venta para ${receipt.saleData.clientName} - Total: $${receipt.saleData.price.toLocaleString('es-CO')}`,
-                    files: [file]
-                }).then(() => {
-                    // Éxito al compartir
-                    showShareSuccess();
-                }).catch((error) => {
-                    if (error.name !== 'AbortError') {
-                        // Error que no sea cancelación del usuario
-                        console.error('Error al compartir:', error);
-                        fallbackShare(file, receipt);
-                    }
-                });
-            } else {
-                // Fallback para dispositivos que no soportan la API nativa
-                fallbackShare(file, receipt);
-            }
-        })
-        .catch(error => {
-            console.error('Error al procesar el recibo:', error);
-            alert('Error al preparar el recibo para compartir');
-        })
-        .finally(() => {
-            // Restaurar el botón
-            shareBtn.innerHTML = originalContent;
-            shareBtn.disabled = false;
-        });
-}
-
-// Función auxiliar para mostrar éxito al compartir
-function showShareSuccess() {
-    const successMsg = document.createElement('div');
-    successMsg.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #27ae60;
-        color: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 20px rgba(39, 174, 96, 0.3);
-        z-index: 10001;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 600;
-        animation: slideInRight 0.3s ease;
-    `;
-    successMsg.innerHTML = `
-        <i class="fas fa-check-circle"></i>
-        ¡Recibo compartido exitosamente!
-    `;
-    
-    document.body.appendChild(successMsg);
-    
-    setTimeout(() => {
-        successMsg.remove();
-    }, 3000);
-}
-
-// Función auxiliar para compartir en dispositivos que no soportan la API nativa
-function fallbackShare(file, receipt) {
-    // Crear URL del archivo
-    const url = URL.createObjectURL(file);
-    
-    // Detectar si es móvil
-    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-        // En móviles, mostrar opciones de compartir
-        showMobileShareOptions(url, file, receipt);
-    } else {
-        // En desktop, descargar directamente
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `recibo-${receipt.receiptNumber}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        // Mostrar mensaje personalizado
-        showDesktopShareMessage();
-    }
-}
-
-// Mostrar opciones de compartir en móviles
-function showMobileShareOptions(url, file, receipt) {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        justify-content: center;
-        align-items: flex-end;
-        z-index: 10002;
-        padding: 20px;
-    `;
-    
-    modal.innerHTML = `
-        <div style="
-            background: white;
-            border-radius: 20px 20px 0 0;
-            padding: 30px;
-            width: 100%;
-            max-width: 400px;
-            animation: slideUpFromBottom 0.3s ease;
-        ">
-            <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">
-                <i class="fas fa-share-alt"></i> Compartir Recibo
-            </h3>
-            
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <button onclick="openWhatsApp('${receipt.receiptNumber}', '${receipt.saleData.clientName}')" style="
-                    background: #25D366;
-                    color: white;
-                    border: none;
-                    border-radius: 12px;
-                    padding: 15px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                    cursor: pointer;
-                ">
-                    <i class="fab fa-whatsapp" style="font-size: 24px;"></i>
-                    Compartir por WhatsApp
-                </button>
-                
-                <button onclick="downloadReceiptDirect('${url}', '${receipt.receiptNumber}')" style="
-                    background: #3498db;
-                    color: white;
-                    border: none;
-                    border-radius: 12px;
-                    padding: 15px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                    cursor: pointer;
-                ">
-                    <i class="fas fa-download" style="font-size: 20px;"></i>
-                    Descargar y compartir manualmente
-                </button>
-                
-                <button onclick="this.parentElement.parentElement.parentElement.remove()" style="
-                    background: #95a5a6;
-                    color: white;
-                    border: none;
-                    border-radius: 12px;
-                    padding: 15px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    cursor: pointer;
-                ">
-                    Cancelar
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-// Función para abrir WhatsApp con el texto del recibo
-function openWhatsApp(receiptNumber, clientName) {
-    const text = `¡Hola! Te envío el recibo de tu compra.\n\n📋 *Recibo #${receiptNumber}*\n👤 Cliente: ${clientName}\n\n¡Gracias por tu compra!`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(whatsappUrl, '_blank');
-    
-    // Cerrar modal
-    document.querySelector('[style*="z-index: 10002"]')?.remove();
-}
-
-// Función para descargar directamente
-function downloadReceiptDirect(url, receiptNumber) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `recibo-${receiptNumber}.png`;
-    a.click();
-    
-    // Cerrar modal y mostrar mensaje
-    document.querySelector('[style*="z-index: 10002"]')?.remove();
-    showShareSuccess();
-}
-
-// Mensaje para desktop
-function showDesktopShareMessage() {
-    const msg = document.createElement('div');
-    msg.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        border-radius: 15px;
-        padding: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        z-index: 10001;
-        text-align: center;
-        max-width: 400px;
-    `;
-    msg.innerHTML = `
-        <i class="fas fa-download" style="font-size: 48px; color: #3498db; margin-bottom: 20px;"></i>
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">¡Recibo descargado!</h3>
-        <p style="color: #7f8c8d; margin-bottom: 20px;">
-            El archivo se guardó en tu carpeta de descargas. 
-            Ahora puedes compartirlo por email, WhatsApp o cualquier aplicación.
-        </p>
-        <button onclick="this.parentElement.remove()" style="
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 20px;
-            cursor: pointer;
-        ">Entendido</button>
-    `;
-    
-    document.body.appendChild(msg);
-    
-    setTimeout(() => {
-        msg.remove();
-    }, 5000);
-}
-
-// Agregar estilos para las animaciones (si no existen)
-if (!document.querySelector('#shareAnimationStyles')) {
-    const styles = document.createElement('style');
-    styles.id = 'shareAnimationStyles';
-    styles.innerHTML = `
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        @keyframes slideUpFromBottom {
-            from { transform: translateY(100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-    `;
-    document.head.appendChild(styles);
-}
-
-function downloadReceiptFromModal(receiptId) {
-    const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-    const receipt = receipts.find(r => r.id === receiptId);
-    
-    if (!receipt) return;
-    
-    const link = document.createElement('a');
-    link.download = `recibo-${receipt.receiptNumber}.png`;
-    link.href = receipt.canvas;
-    link.click();
-}
-
-function viewReceiptsPage() {
-    closeReceiptOptionsModal();
-    window.location.href = 'recibos.html';
-}
-
-// Event listeners globales
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeReceiptConfirmModal();
-        closeReceiptOptionsModal();
-    }
-});
-
-// Hacer las funciones globales (ACTUALIZADO)
-window.closeReceiptConfirmModal = closeReceiptConfirmModal;
-window.generateReceiptFromModal = generateReceiptFromModal;
-window.closeReceiptOptionsModal = closeReceiptOptionsModal;
-window.shareReceiptFromModal = shareReceiptFromModal;
-window.downloadReceiptFromModal = downloadReceiptFromModal;
-window.viewReceiptsPage = viewReceiptsPage;
-
-// Nuevas funciones globales para compartir
-window.openWhatsApp = openWhatsApp;
-window.downloadReceiptDirect = downloadReceiptDirect;
 
 /* =========================================================
    LECTOR DE CÓDIGOS DE BARRAS CORREGIDO

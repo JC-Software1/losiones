@@ -130,6 +130,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+
+    
+
     function renderDaysRibbon(paymentDaysStr, payments) {
         const container = document.getElementById('daysRibbon');
         container.innerHTML = '';

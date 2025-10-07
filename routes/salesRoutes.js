@@ -90,7 +90,9 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             installments,
             advancePayment: advancePayment || 0,
             clientAddress,
-            paymentDays,
+            paymentFrequency: req.body.paymentFrequency || 'mensual',
+paymentDays: req.body.paymentDays || [],
+paymentDaysText: req.body.paymentDaysText || '',
             user: req.user.id,
             settled: false
         });
@@ -139,7 +141,9 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             installments,
             advancePayment: advancePayment || 0,
             clientAddress,
-            paymentDays,
+            paymentFrequency: req.body.paymentFrequency || 'mensual',
+paymentDays: req.body.paymentDays || [],
+paymentDaysText: req.body.paymentDaysText || '',
             user: vendedorId,
             settled: false
         });
@@ -286,9 +290,9 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         sale.installments = installments;
         sale.clientAddress = clientAddress;
         
-        if (paymentDays !== undefined) {
-            sale.paymentDays = paymentDays;
-        }
+sale.paymentFrequency = req.body.paymentFrequency || sale.paymentFrequency;
+sale.paymentDays      = req.body.paymentDays      || sale.paymentDays;
+sale.paymentDaysText  = req.body.paymentDaysText  || sale.paymentDaysText;
 
         const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
         

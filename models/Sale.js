@@ -37,8 +37,15 @@ const SaleSchema = new mongoose.Schema({
     settled: { type: Boolean, default: false },
     settledDate: { type: Date, default: null },
     clientAddress: { type: String, required: false, trim: true },
-    paymentDays: { type: String, default: '' },
-    liquidatedDay: { type: Boolean, default: false } // Nuevo campo
+    paymentFrequency: { 
+    type: String, 
+    enum: ['diario','semanal','quincenal','mensual'], 
+    default: 'mensual' 
+},
+paymentDays: [{ type: mongoose.Schema.Types.Mixed }],
+paymentDaysText: { type: String, default: '' },
+    liquidatedDay: { type: Boolean, default: false },
+     // Nuevo campo
 }, { timestamps: true });
 
 SaleSchema.virtual('totalPaid').get(function() {
