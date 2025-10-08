@@ -472,14 +472,21 @@ async function saveSale() {
     const saleDate      = inputDate.value; // yyyy-mm-dd
     const price         = Number(inputPrice.value);
     const installments  = String(inputInstallments.value.trim() || "Sin cuotas");
-    const advance       = Number(inputAdvance.value)    || 0;
+    const advance       = Number(inputAdvance.value) || 0;
     const address       = String(document.getElementById("clientAddress").value.trim() || "Sin dirección");
 
     // ---------- Validación FINAL ----------
     if (!clientName || !productName || !saleDate || !price) {
-        alert("❗ Faltan datos obligatorios:\nCliente, Producto, Fecha o Precio.");
+        alert("⚠ Faltan datos obligatorios:\nCliente, Producto, Fecha o Precio.");
         return;
     }
+
+    // ---------- Extraer número de cuotas y calcular valor por cuota ----------
+    const cuotasMatch = installments.match(/^\d+/);
+    const numberOfInstallments = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
+    
+    const remaining = price - advance;
+    const paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
 
     // ---------- Construcción del objeto limpio ----------
     const saleData = {
@@ -490,14 +497,15 @@ async function saveSale() {
         installments,
         advancePayment: advance,
         clientAddress: address,
+        numberOfInstallments,        // ⭐ NUEVO
+        paymentPerInstallment,       // ⭐ NUEVO
         // ✅ NUEVO: Guardar plan de pago en campos separados
         ...(collectPaymentPlan() || { 
             paymentFrequency: 'mensual', 
             paymentDays: [], 
             paymentDaysText: '' 
         }),
-          paymentDays: selectedPaymentPlan.days.join(', ') // "Miércoles, Viernes"
-
+        paymentDays: selectedPaymentPlan.days.join(', ') // "Miércoles, Viernes"
     };
 
     // ---------- Log para depurar ----------
@@ -552,18 +560,29 @@ async function saveSale() {
 /* ---------- actualizar ---------- */
 async function updateSale() {
     const id = inputId.value;
-    
-    // ---------- Recolección del plan de pago ----------
     const plan = collectPaymentPlan();
+    
+    const installments = inputInstallments.value.trim();
+    const price = parseFloat(inputPrice.value);
+    const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
+    
+    // Extraer número de cuotas
+    const cuotasMatch = installments.match(/^\d+/);
+    const numberOfInstallments = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
+    
+    // Calcular valor por cuota
+    const remaining = price - advance;
+    const paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
     
     const saleData = {
         clientName: inputClient.value.trim(),
         clientAddress: document.getElementById("clientAddress").value.trim(),
         productName: inputProduct.value.trim(),
         saleDate: inputDate.value,
-        price: parseFloat(inputPrice.value),
-        installments: inputInstallments.value.trim(),
-        // ✅ NUEVO: Guardar plan de pago en campos separados
+        price: price,
+        installments: installments,
+        numberOfInstallments,        // ⭐ NUEVO
+        paymentPerInstallment,       // ⭐ NUEVO
         ...(plan || { 
             paymentFrequency: 'mensual', 
             paymentDays: [], 
@@ -639,12 +658,30 @@ function cancelUpdate() {
 }
 
 /* ---------- modal de pago (si lo usás) ---------- */
+/* ---------- modal de pago (con autollenado) ---------- */
 function openPaymentModal(saleId) {
-    // Si usás el modal del HTML nuevo, mostralo acá
-    document.getElementById("paymentModal")?.classList.add("show");
-    document.getElementById("paymentAmount").value = "";
-    document.getElementById("paymentDate").value = new Date().toISOString().split("T")[0];
-    document.getElementById("paymentModal").dataset.saleId = saleId;
+    // 1. Buscar la venta en el listado actual
+    const cards = document.querySelectorAll('.sale-card');
+    let sale = null;
+
+    cards.forEach(card => {
+        if (card.dataset.saleId === saleId) {
+            // Extraemos los datos del card
+            const cuotaText = card.querySelector('.sale-amount div:last-child')?.textContent || ''; // "Cuota: $xxxxx"
+            const match = cuotaText.match(/[\d,.]+/);
+            sale = {
+                _id: saleId,
+                paymentPerInstallment: match ? parseInt(match[0].replace(/\D/g, '')) : 0
+            };
+        }
+    });
+
+    // 2. Abrir modal y autollenar
+    const modal = document.getElementById('paymentModal');
+    modal?.classList.add('show');
+    document.getElementById('paymentAmount').value = sale?.paymentPerInstallment || '';
+    document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+    modal.dataset.saleId = saleId;
 }
 
 /* ---------- listeners (sin cambios) ---------- */
@@ -839,14 +876,23 @@ function updateTotalPrice() {
     const total = selectedProducts.reduce((sum, p) => sum + p.salePrice, 0);
     document.getElementById("price").value = total;
 
-    /* >>> NUEVO: mostrar valor de cada cuota <<< */
-    const advance   = parseFloat(document.getElementById('advancePayment').value) || 0;
-    const cuotas    = parseInt(document.getElementById('numberOfInstallments').value) || 1;
+    // Obtener valores
+    const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
+    const installmentsText = document.getElementById('installments').value.trim();
+    
+    // Extraer el número de cuotas del texto (ej: "8 cuotas semanales" -> 8)
+    const cuotasMatch = installmentsText.match(/^\d+/);
+    const cuotas = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
+    
     const remaining = total - advance;
     const perInstallment = cuotas <= 0 ? 0 : Math.ceil(remaining / cuotas);
-    document.getElementById('installmentAmount').value =
-        `$${perInstallment.toLocaleString('es-CO')}`;
+    
+    document.getElementById('installmentAmount').value = `$${perInstallment.toLocaleString('es-CO')}`;
 }
+
+// Listeners para recalcular cuota cuando cambien valores relevantes
+document.getElementById('advancePayment').addEventListener('input', updateTotalPrice);
+document.getElementById('installments').addEventListener('input', updateTotalPrice);
 
 function removeSelectedProduct(index) {
     selectedProducts.splice(index, 1);
