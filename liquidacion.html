@@ -394,7 +394,7 @@
             border-color: var(--accent);
         }
 
-        /* Fondo oscuro semi-transparente */
+        /* ---------- Modal Control de Caja ---------- */
 .modal-cc {
   display: none;
   position: fixed;
@@ -403,24 +403,34 @@
   top: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,.45);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease;
 }
 
-/* Caja blanca centrada */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .modal-cc-content {
   background: var(--white);
-  margin: 10% auto;
-  padding: 0;
+  margin: 5% auto;
   width: 90%;
-  max-width: 420px;
+  max-width: 480px;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-hover);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   overflow: hidden;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .modal-cc-header {
-  background: var(--primary);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 18px 22px;
   display: flex;
@@ -433,18 +443,124 @@
 .modal-cc-close {
   font-size: 24px;
   cursor: pointer;
-  user-select: none;
+  transition: transform 0.2s ease;
 }
+
+.modal-cc-close:hover { transform: scale(1.2); }
 
 .modal-cc-body { padding: 22px; }
 
-.modal-cc-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 18px;
+/* Caja actual */
+.caja-actual-box {
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  color: white;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  text-align: center;
+  margin-bottom: 22px;
 }
 
-.modal-cc-actions .btn { flex: 1; justify-content: center; }
+.caja-actual-label {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 6px;
+}
+
+.caja-actual-value {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+/* Formulario */
+.movimiento-form {
+  background: var(--light-gray);
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 22px;
+}
+
+.movimiento-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.movimiento-actions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+/* Historial */
+.historial-box h5 {
+  margin-bottom: 12px;
+  font-size: 16px;
+  color: var(--primary);
+}
+
+.historial-lista {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* Item de movimiento */
+.movimiento-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: var(--radius);
+  background: white;
+  box-shadow: var(--shadow);
+  animation: fadeIn 0.3s ease;
+}
+
+.movimiento-item.ingreso {
+  border-left: 5px solid var(--success);
+}
+
+.movimiento-item.retiro {
+  border-left: 5px solid var(--danger);
+}
+
+.movimiento-item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.movimiento-item-type {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.movimiento-item-date {
+  font-size: 12px;
+  color: var(--medium-gray);
+}
+
+.movimiento-item-amount {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.movimiento-item.ingreso .movimiento-item-amount {
+  color: var(--success);
+}
+
+.movimiento-item.retiro .movimiento-item-amount {
+  color: var(--danger);
+}
+
+/* Scroll personalizado */
+.historial-lista::-webkit-scrollbar {
+  width: 6px;
+}
+.historial-lista::-webkit-scrollbar-thumb {
+  background: var(--medium-gray);
+  border-radius: 4px;
+}
+        
     </style>
 </head>
 <body>
@@ -464,20 +580,9 @@
             <p>Cargando datos...</p>
         </div>
 
-        <!-- Contenido principal (oculto inicialmente) -->
-        <div id="mainContent" style="display: none;">
-            <!-- Configuración inicial -->
-            <div class="section-card">
-                <div class="section-header">
-                    <div class="section-icon icon-cash">
-                        <i class="fas fa-wallet"></i>
-                    </div>
-                    <h3>Configuración Inicial</h3>
-                </div>
-
-                <!-- Botón que dispara el modal -->
+        <!-- Botón que dispara el modal -->
 <div style="margin-bottom: 12px;">
-  <button id="btnControlCaja" class="btn btn-secondary">
+  <button id="btnControlCaja" class="btn btn-gradient">
     <i class="fas fa-cash-register"></i> Control de Caja
   </button>
 </div>
@@ -491,33 +596,52 @@
     </div>
 
     <div class="modal-cc-body">
-      <div class="data-field">
-        <div class="data-label">Caja Actual</div>
-        <div class="data-value" id="cajaActual">$0</div>
+      <!-- Caja actual -->
+      <div class="caja-actual-box">
+        <div class="caja-actual-label">Caja Actual</div>
+        <div class="caja-actual-value" id="cajaActual">$0</div>
       </div>
 
-      <div class="input-group">
-        <label for="valorMovimiento">
-          <i class="fas fa-dollar-sign"></i> Valor
-        </label>
-        <input type="number" id="valorMovimiento" placeholder="0" min="1" step="100">
+      <!-- Formulario de movimiento -->
+      <div class="movimiento-form">
+        <div class="input-group">
+          <label for="valorMovimiento">
+            <i class="fas fa-dollar-sign"></i> Valor
+          </label>
+          <input type="number" id="valorMovimiento" placeholder="0" min="1" step="100">
+        </div>
+
+        <div class="movimiento-actions">
+          <button id="btnIngresar" class="btn btn-success">
+            <i class="fas fa-arrow-down"></i> Ingresar
+          </button>
+          <button id="btnRetirar" class="btn btn-danger">
+            <i class="fas fa-arrow-up"></i> Retirar
+          </button>
+        </div>
       </div>
 
-      <div class="modal-cc-actions">
-        <button id="btnIngresar" class="btn btn-primary">
-          <i class="fas fa-arrow-down"></i> Ingresar
-        </button>
-        <button id="btnRetirar" class="btn btn-danger">
-          <i class="fas fa-arrow-up"></i> Retirar
-        </button>
+      <!-- Historial -->
+      <div class="historial-box">
+        <h5><i class="fas fa-history"></i> Historial de Movimientos</h5>
+        <div id="historialLista" class="historial-lista">
+          <!-- Se llena dinámicamente -->
+        </div>
       </div>
-
-      <small style="color: var(--medium-gray); margin-top: 10px; display: block;">
-        <i class="fas fa-info-circle"></i> El cambio se reflejará inmediatamente en “Caja Final”.
-      </small>
     </div>
   </div>
 </div>
+
+        <!-- Contenido principal (oculto inicialmente) -->
+        <div id="mainContent" style="display: none;">
+            <!-- Configuración inicial -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon icon-cash">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <h3>Configuración Inicial</h3>
+                </div>
                 
                <div class="input-group">
     <label for="initialCash">

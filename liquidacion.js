@@ -393,3 +393,4 @@ async function loadLastLiquidation() {
         document.getElementById("initialCash").value = 0;
     }
 }
+

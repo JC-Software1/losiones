@@ -261,6 +261,9 @@ if (filterDay) {
                 : '';
 
             card.innerHTML = `
+
+            
+
                 <div class="sale-header">
                     <div class="sale-info">
                         <h3>${sale.clientName}</h3>
@@ -268,10 +271,14 @@ if (filterDay) {
                         <p><i class="fas fa-map-marker-alt"></i> ${sale.clientAddress || 'Sin dirección'}</p>
                         ${paymentDaysInfo}
                     </div>
-                    <div class="sale-amount">
-                        <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
-                        <div class="progress-text">${paymentPercentage.toFixed(0)}% pagado</div>
-                    </div>
+<div class="sale-amount">
+  <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
+  <div class="progress-text">${paymentPercentage.toFixed(0)}% pagado</div>
+  <!-- ⭐ NUEVO: valor de cada cuota -->
+  <div style="margin-top:6px;font-size:13px;color:#7f8c8d">
+    Cuota: $${sale.paymentPerInstallment.toLocaleString('es-CO')} ${sale.paymentFrequency}
+  </div>
+</div>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${paymentPercentage}%"></div>
@@ -831,6 +838,14 @@ function renderSelectedProducts() {
 function updateTotalPrice() {
     const total = selectedProducts.reduce((sum, p) => sum + p.salePrice, 0);
     document.getElementById("price").value = total;
+
+    /* >>> NUEVO: mostrar valor de cada cuota <<< */
+    const advance   = parseFloat(document.getElementById('advancePayment').value) || 0;
+    const cuotas    = parseInt(document.getElementById('numberOfInstallments').value) || 1;
+    const remaining = total - advance;
+    const perInstallment = cuotas <= 0 ? 0 : Math.ceil(remaining / cuotas);
+    document.getElementById('installmentAmount').value =
+        `$${perInstallment.toLocaleString('es-CO')}`;
 }
 
 function removeSelectedProduct(index) {
@@ -1063,6 +1078,12 @@ function collectPaymentPlan() {
         paymentDays: selectedPaymentPlan.days,
         paymentDaysText: selectedPaymentPlan.days.join(', ')
     };
+
+    // Recalcular paymentPerInstallment antes de enviar
+const remaining = saleData.price - (saleData.advancePayment || 0);
+const numInst   = parseInt(saleData.installments) || 1;
+saleData.paymentPerInstallment = Math.ceil(remaining / numInst);
+
 }
 
 // Función para cargar días desde formato guardado

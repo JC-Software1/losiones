@@ -4,13 +4,21 @@ const { checkPermission } = require("../middleware/checkPermissions");
 const Sale = require("../models/Sale");
 const router = express.Router();
 
+// ✅ FUNCIÓN AUXILIAR: Calcular pago por cuota
+function calculatePaymentPerInstallment(price, advancePayment, installments) {
+    const remainingDebt = price - (advancePayment || 0);
+    const numInstallments = parseInt(installments) || 1;
+    
+    if (numInstallments <= 0 || remainingDebt <= 0) return 0;
+    
+    return Math.ceil(remainingDebt / numInstallments);
+}
+
 // ✅ FUNCIÓN AUXILIAR: Buscar venta con permisos admin
 async function findSaleWithAdminPermission(saleId, userId, userTipo) {
     if (userTipo === 2 || userTipo === 3) {
-        // Admins pueden ver cualquier venta
         return await Sale.findById(saleId);
     } else {
-        // Vendedores solo sus ventas
         return await Sale.findOne({ _id: saleId, user: userId });
     }
 }
@@ -58,7 +66,7 @@ router.get("/all", auth, checkPermission('verVentas'), async (req, res) => {
     }
 });
 
-// ⭐ OBTENER VENTAS LIQUIDADAS - DEBE IR ANTES QUE /:id
+// Obtener ventas liquidadas
 router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
     try {
         const query = req.user.tipo === 1 
@@ -76,11 +84,18 @@ router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
 // Crear nueva venta
 router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
     try {
-        const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress, paymentDays } = req.body;
+        const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress } = req.body;
 
         if (!clientName || !productName || !price || !saleDate) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
+
+        // ✅ Calcular pago por cuota
+        const paymentPerInstallment = calculatePaymentPerInstallment(
+            price, 
+            advancePayment, 
+            installments
+        );
 
         const sale = new Sale({
             clientName,
@@ -91,8 +106,9 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             advancePayment: advancePayment || 0,
             clientAddress,
             paymentFrequency: req.body.paymentFrequency || 'mensual',
-paymentDays: req.body.paymentDays || [],
-paymentDaysText: req.body.paymentDaysText || '',
+            paymentDays: req.body.paymentDays || [],
+            paymentDaysText: req.body.paymentDaysText || '',
+            paymentPerInstallment, // ✅ NUEVO CAMPO
             user: req.user.id,
             settled: false
         });
@@ -127,11 +143,18 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             return res.status(403).json({ error: 'No tienes permisos para crear ventas para otros usuarios' });
         }
         
-        const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress, paymentDays } = req.body;
+        const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress } = req.body;
 
         if (!clientName || !productName || !price || !saleDate) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
+
+        // ✅ Calcular pago por cuota
+        const paymentPerInstallment = calculatePaymentPerInstallment(
+            price, 
+            advancePayment, 
+            installments
+        );
 
         const sale = new Sale({
             clientName,
@@ -142,8 +165,9 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             advancePayment: advancePayment || 0,
             clientAddress,
             paymentFrequency: req.body.paymentFrequency || 'mensual',
-paymentDays: req.body.paymentDays || [],
-paymentDaysText: req.body.paymentDaysText || '',
+            paymentDays: req.body.paymentDays || [],
+            paymentDaysText: req.body.paymentDaysText || '',
+            paymentPerInstallment, // ✅ NUEVO CAMPO
             user: vendedorId,
             settled: false
         });
@@ -169,7 +193,7 @@ paymentDaysText: req.body.paymentDaysText || '',
     }
 });
 
-// Obtener ventas de un vendedor específico (para administradores)
+// Obtener ventas de un vendedor específico
 router.get('/vendedor/:vendedorId', auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
@@ -186,7 +210,7 @@ router.get('/vendedor/:vendedorId', auth, async (req, res) => {
     }
 });
 
-// Obtener ventas liquidadas de un vendedor específico (para administradores)
+// Obtener ventas liquidadas de un vendedor específico
 router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
@@ -204,7 +228,7 @@ router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
 });
 
 // ========================================
-// RUTAS CON PARÁMETROS DINÁMICOS (AL FINAL)
+// RUTAS CON PARÁMETROS DINÁMICOS
 // ========================================
 
 // Eliminar un abono específico
@@ -274,7 +298,7 @@ router.get("/:id", auth, checkPermission('verVentas'), async (req, res) => {
 
 // Actualizar una venta
 router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
-    const { clientName, productName, saleDate, price, installments, clientAddress, paymentDays } = req.body;
+    const { clientName, productName, saleDate, price, installments, clientAddress, advancePayment } = req.body;
 
     try {
         const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
@@ -283,16 +307,23 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
+        // ✅ Recalcular pago por cuota si cambia precio o cuotas
+        const paymentPerInstallment = calculatePaymentPerInstallment(
+            price, 
+            advancePayment || sale.advancePayment, 
+            installments
+        );
+
         sale.clientName = clientName;
         sale.productName = productName;
         sale.saleDate = saleDate;
         sale.price = price;
         sale.installments = installments;
         sale.clientAddress = clientAddress;
-        
-sale.paymentFrequency = req.body.paymentFrequency || sale.paymentFrequency;
-sale.paymentDays      = req.body.paymentDays      || sale.paymentDays;
-sale.paymentDaysText  = req.body.paymentDaysText  || sale.paymentDaysText;
+        sale.paymentFrequency = req.body.paymentFrequency || sale.paymentFrequency;
+        sale.paymentDays = req.body.paymentDays || sale.paymentDays;
+        sale.paymentDaysText = req.body.paymentDaysText || sale.paymentDaysText;
+        sale.paymentPerInstallment = paymentPerInstallment; // ✅ ACTUALIZAR
 
         const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
         
