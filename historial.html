@@ -425,9 +425,9 @@
         <div class="filters-container">
             <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar cliente o producto...">
             
-            <input type="date" class="date-filter" id="dateFilter" title="Filtrar por fecha de venta">
+            <input style="display: none;" type="date" class="date-filter" id="dateFilter" title="Filtrar por fecha de venta">
             
-            <select class="day-filter-select" id="dayFilter">
+            <select style="display: none;" class="day-filter-select" id="dayFilter">
                 <option value="">📅 Día de pago</option>
                 <option value="1">Día 1</option>
                 <option value="2">Día 2</option>
@@ -462,7 +462,7 @@
                 <option value="31">Día 31</option>
             </select>
 
-            <button class="clear-filters-btn" onclick="clearAllFilters()" title="Limpiar todos los filtros">
+            <button. style="display: none;" class="clear-filters-btn" onclick="clearAllFilters()" title="Limpiar todos los filtros">
                 <i class="fas fa-times-circle"></i>
                 <span>Limpiar</span>
             </button>

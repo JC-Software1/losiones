@@ -10,6 +10,7 @@ const commissionRoutes = require('./routes/commissionRoutes');
 const salesCommissionRoutes = require("./routes/salesCommissionRoutes");
 const liquidationRoutes = require("./routes/liquidationRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
+const cashMovementRoutes = require("./routes/cashMovementRoutes");   // 1) importar
 
 
 
@@ -34,7 +35,7 @@ app.use('/api/receipts', receiptRoutes);
 app.use('/api/commission', commissionRoutes);
 app.use("/api/sales-commission", salesCommissionRoutes);
 app.use("/api/liquidation", liquidationRoutes);
-
+app.use("/api/cash-movement", cashMovementRoutes); 
 app.use("/api/expenses", expenseRoutes);
 
 

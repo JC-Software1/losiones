@@ -15,7 +15,7 @@ let sales = [];
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         const token = getToken();
-        sales = await apiFetch("/sales", "GET", null, token);
+        sales = await apiFetch("/sales/all", "GET", null, token);
 
         // Mostrar solo no liquidadas
         const unsettled = sales.filter(s => !s.settled);

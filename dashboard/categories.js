@@ -374,7 +374,7 @@ async function deleteSale(id) {
 }
 
 /* ---------- editar ---------- */
-function editSale(sale) {
+async function editSale(sale) {
     inputId.value         = sale._id;
     inputClient.value     = sale.clientName;
     inputProduct.value    = sale.productName;
@@ -385,7 +385,7 @@ function editSale(sale) {
         document.getElementById("clientAddress").value = sale.clientAddress || '';
     }
 
-    // ✅ NUEVO: Cargar días de pago con el nuevo sistema
+    // ✅ Cargar días de pago
     if (sale.paymentDays) {
         loadPaymentDaysFromString(sale.paymentDays);
     } else {
@@ -394,6 +394,25 @@ function editSale(sale) {
         paymentDaysContainer.style.display = 'none';
         updateSelectedDaysDisplay();
     }
+
+    // ✅ Autorellenar productos originales
+    selectedProducts = []; // limpiar antes
+
+    const productNames = sale.productName
+        .split(',')
+        .map(p => p.trim())
+        .filter(Boolean);
+
+    const token = getToken();
+    const products = await apiFetch('/products', 'GET', null, token);
+
+    productNames.forEach(name => {
+        const found = products.find(p => p.name.trim() === name && !p.sold);
+        if (found) selectedProducts.push(found);
+    });
+
+    renderSelectedProducts();
+    updateTotalPrice();
 
     document.getElementById("paymentSection").style.display = "block";
     inputPaymentDate.value = new Date().toISOString().split('T')[0];
@@ -405,6 +424,8 @@ function editSale(sale) {
     btnAddPayment.classList.remove("hidden");
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+
 async function loadProductsForSelect() {
     try {
         const token = getToken();
@@ -1046,38 +1067,34 @@ function collectPaymentPlan() {
 
 // Función para cargar días desde formato guardado
 function loadPaymentDaysFromString(paymentDaysString) {
-    if (!paymentDaysString || paymentDaysString === 'Sin días') {
+    // 1. Si no es string o no tiene "|", limpiar y salir
+    if (typeof paymentDaysString !== 'string' || !paymentDaysString.includes('|')) {
         selectedPaymentPlan = { type: '', days: [] };
         paymentPlanType.value = '';
         paymentDaysContainer.style.display = 'none';
         updateSelectedDaysDisplay();
         return;
     }
-    
+
+    // 2. Separar tipo y días
     const [type, daysStr] = paymentDaysString.split('|');
-    
     if (!type || !daysStr) {
-        console.warn('Formato de días inválido:', paymentDaysString);
+        console.warn('Formato inválido:', paymentDaysString);
         return;
     }
-    
+
     const days = daysStr.split(',').map(d => d.trim());
-    
+
     selectedPaymentPlan = { type, days };
     paymentPlanType.value = type;
-    
-    // Disparar el evento change para llenar el select
+
+    // 3. Rellenar el select
     paymentPlanType.dispatchEvent(new Event('change'));
-    
-    // Esperar un momento para que se llene el select
+
     setTimeout(() => {
-        // Seleccionar las opciones correspondientes
         Array.from(paymentDaysSelect.options).forEach(opt => {
-            if (days.includes(opt.value)) {
-                opt.selected = true;
-            }
+            if (days.includes(opt.value)) opt.selected = true;
         });
-        
         selectedPaymentPlan.days = days;
         updateSelectedDaysDisplay();
     }, 100);

@@ -6,7 +6,6 @@
     <title>Inspección de Liquidación</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Copiar TODOS los estilos de liquidacion.html aquí */
         :root {
             --primary: #2c3e50;
             --secondary: #34495e;
@@ -46,7 +45,6 @@
             margin: 0 auto;
         }
 
-        /* Header */
         .header {
             background: var(--white);
             border-radius: var(--radius-lg);
@@ -84,7 +82,6 @@
             margin-top: 10px;
         }
 
-        /* Resto de estilos igual que liquidacion.html */
         .main-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -353,7 +350,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
             <h1>
                 <i class="fas fa-search"></i>
@@ -365,15 +361,13 @@
             </span>
         </div>
 
-        <!-- Loading inicial -->
         <div id="loadingContainer" class="loading">
             <div class="spinner"></div>
             <p>Cargando liquidación...</p>
         </div>
 
-        <!-- Contenido principal -->
         <div id="mainContent" style="display: none;">
-            <!-- ConfiguraciónInicial -->
+            <!-- Configuración Inicial -->
             <div class="section-card">
                 <div class="section-header">
                     <div class="section-icon icon-cash">
@@ -398,7 +392,6 @@
                 </div>
             </div>
 
-            <!-- Grid de secciones (copiar estructura de liquidacion.html) -->
             <div class="main-grid">
                 <!-- Ingresos - Abonos -->
                 <div class="section-card">
@@ -456,11 +449,49 @@
                         <div class="data-value success" id="salesTotal">$0</div>
                     </div>
 
+                    <div class="data-field">
+                        <div class="data-label">Después de Comisión</div>
+                        <div class="data-value warning" id="salesAfterCommission">$0</div>
+                        <div class="sub-data" id="salesCommissionAmount">Comisión: $0</div>
+                    </div>
+
                     <div class="details-toggle" onclick="toggleDetails('salesDetails')">
                         <span>Ver detalles</span>
                         <i class="fas fa-chevron-down"></i>
                     </div>
                     <div class="details-content" id="salesDetails"></div>
+                </div>
+
+                <!-- Seguimiento de Clientes -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-icon icon-tracking">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>Seguimiento de Clientes</h3>
+                    </div>
+
+                    <div class="data-field">
+                        <div class="data-label">Total Clientes Activos</div>
+                        <div class="data-value" id="totalActiveClients">0</div>
+                        <div class="sub-data">Con deudas pendientes</div>
+                    </div>
+
+                    <div class="data-field">
+                        <div class="data-label">Pagaron Hoy</div>
+                        <div class="data-value success" id="clientsPaidToday">0</div>
+                    </div>
+
+                    <div class="data-field">
+                        <div class="data-label">No Pagaron Hoy</div>
+                        <div class="data-value danger" id="clientsDidNotPay">0</div>
+                    </div>
+
+                    <div class="data-field">
+                        <div class="data-label">Efectividad de Cobro</div>
+                        <div class="data-value warning" id="effectivenessPercentage">0%</div>
+                        <div class="sub-data">Porcentaje de clientes que pagaron</div>
+                    </div>
                 </div>
 
                 <!-- Inventario -->
@@ -488,6 +519,32 @@
                     </div>
                     <div class="details-content" id="inventoryDetails"></div>
                 </div>
+            </div>
+
+            <!-- Gastos Operacionales -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <h3>Gastos Operacionales</h3>
+                </div>
+
+                <div class="data-field">
+                    <div class="data-label">Cantidad de Gastos</div>
+                    <div class="data-value" id="expensesCount">0</div>
+                </div>
+
+                <div class="data-field">
+                    <div class="data-label">Total Gastos</div>
+                    <div class="data-value danger" id="expensesTotal">$0</div>
+                </div>
+
+                <div class="details-toggle" onclick="toggleDetails('expensesDetails')">
+                    <span>Ver detalles</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="details-content" id="expensesDetails"></div>
             </div>
 
             <!-- Resumen Final -->
@@ -529,7 +586,6 @@
                 </div>
             </div>
 
-            <!-- Botones de acción -->
             <div class="action-buttons">
                 <a href="historial-liquidaciones.html" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i>

@@ -196,41 +196,43 @@ document.getElementById("expensesDetails").innerHTML = expensesDetailsHTML || '<
 
 // Actualizar resumen
 // Actualizar resumen
+// Actualizar resumen
 function updateSummary() {
     if (!pendingData) return;
 
     const initialCash = parseFloat(document.getElementById("initialCash").value) || 0;
     const paymentsCommission = parseFloat(document.getElementById("paymentsCommission").value) || 0;
-    // ✅ Ya no necesitamos salesCommission para cálculos
 
     const { sales, payments, inventory } = pendingData;
 
-    // ✅ CAMBIO: Solo calcular comisión para abonos
-// Calcular comisión para abonos
-// ✅ CAMBIO: Solo calcular comisión para abonos (REDONDEADO)
-const paymentsAfterComm = Math.round(payments.total - (payments.total * (paymentsCommission / 100)));
-const paymentsCommAmount = payments.total - paymentsAfterComm;
+    // ✅ NUEVO: Calcular total de abonos SIN señas
+    const initialPayments = payments.totalInitialPayments || 0;
+    const regularPayments = payments.total - initialPayments; // Abonos regulares sin señas
 
-const initialPayments = payments.totalInitialPayments || 0;
+    // ✅ Calcular comisión SOLO sobre abonos regulares (sin señas)
+    const paymentsCommAmount = Math.round(regularPayments * (paymentsCommission / 100));
+    const paymentsAfterComm = Math.round(regularPayments - paymentsCommAmount);
 
-// ✅ Calcular comisión para ventas (SOLO INFORMATIVO, no se suma a ingresos)
-const salesCommission = parseFloat(document.getElementById("salesCommission").value) || 0;
-const salesAfterComm = Math.round(sales.total - (sales.total * (salesCommission / 100)));
-const salesCommAmount = sales.total - salesAfterComm;
+    // ✅ Calcular comisión para ventas (SOLO INFORMATIVO)
+    const salesCommission = parseFloat(document.getElementById("salesCommission").value) || 0;
+    const salesAfterComm = Math.round(sales.total - (sales.total * (salesCommission / 100)));
+    const salesCommAmount = sales.total - salesAfterComm;
 
-// Actualizar campos de comisión de abonos
-document.getElementById("paymentsAfterCommission").textContent = `$${paymentsAfterComm.toLocaleString('es-CO')}`;
-document.getElementById("paymentsCommissionAmount").textContent = `Comisión: $${paymentsCommAmount.toLocaleString('es-CO')}`;
+    // Actualizar campos de comisión de abonos
+    document.getElementById("paymentsAfterCommission").textContent = `$${paymentsAfterComm.toLocaleString('es-CO')}`;
+    document.getElementById("paymentsCommissionAmount").textContent = `Comisión: $${paymentsCommAmount.toLocaleString('es-CO')} (sobre $${regularPayments.toLocaleString('es-CO')})`;
 
-// ✅ Actualizar campos de comisión de ventas (INFORMATIVO)
-document.getElementById("salesAfterCommission").textContent = `$${salesAfterComm.toLocaleString('es-CO')}`;
-document.getElementById("salesCommissionAmount").textContent = `Comisión: $${salesCommAmount.toLocaleString('es-CO')} (no se suma a ingresos)`;
+    // ✅ Actualizar campos de comisión de ventas (INFORMATIVO)
+    document.getElementById("salesAfterCommission").textContent = `$${salesAfterComm.toLocaleString('es-CO')}`;
+    document.getElementById("salesCommissionAmount").textContent = `Comisión: $${salesCommAmount.toLocaleString('es-CO')} (no se suma a ingresos)`;
 
-// ✅ Calcular totales - REDONDEADO
-const totalIncome = Math.round(paymentsAfterComm + initialPayments);
-const expensesTotal = pendingData.expenses?.total || 0;
-const totalExpenses = Math.round(inventory.totalCost + expensesTotal);
-const finalCash = Math.round(initialCash + totalIncome - totalExpenses);
+    // ✅ Calcular totales - REDONDEADO
+    // Los ingresos son: abonos regulares después de comisión + señas completas (sin comisión)
+    const totalIncome = Math.round(paymentsAfterComm + initialPayments);
+    const expensesTotal = pendingData.expenses?.total || 0;
+    const totalExpenses = Math.round(inventory.totalCost + expensesTotal);
+    const finalCash = Math.round(initialCash + totalIncome - totalExpenses);
+
     // Actualizar resumen
     document.getElementById("summaryInitial").textContent = `$${initialCash.toLocaleString('es-CO')}`;
     document.getElementById("summaryIncome").textContent = `$${totalIncome.toLocaleString('es-CO')}`;
@@ -238,6 +240,50 @@ const finalCash = Math.round(initialCash + totalIncome - totalExpenses);
     document.getElementById("summaryFinal").textContent = `$${finalCash.toLocaleString('es-CO')}`;
 }
 
+/* ---------- Control de Caja ---------- */
+const modal = document.getElementById('modalControlCaja');
+const btnAbrir = document.getElementById('btnControlCaja');
+const btnCerrar = document.getElementById('cerrarModal');
+const cajaActualTxt = document.getElementById('cajaActual');
+const inputValor = document.getElementById('valorMovimiento');
+
+function refrescarCajaActual() {
+  // Tomamos la caja que ya está pintada en el resumen
+  const texto = document.getElementById('summaryFinal').textContent;
+  cajaActualTxt.textContent = texto;
+}
+
+btnAbrir.onclick = () => { modal.style.display = 'block'; refrescarCajaActual(); };
+btnCerrar.onclick = () => { modal.style.display = 'none'; };
+window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+
+async function enviarMovimiento(tipo) {
+  const valor = parseInt(inputValor.value);
+  if (!valor || valor <= 0) return alert('Ingresa un valor válido');
+
+  const token = getToken();
+  const vendedorId = window.adminModeUtils?.isActive()
+                   ? window.adminModeUtils.getVendedorId()
+                   : null;
+  const body = { tipo, valor, vendedorId };
+
+  try {
+    const endpoint = '/cash-movement';
+    const res = await apiFetch(endpoint, 'POST', body, token);
+
+    // Actualizamos la caja inicial con el nuevo valor
+    document.getElementById('initialCash').value = res.newCash;
+    updateSummary();               // Recalcula todo
+    refrescarCajaActual();         // Actualiza modal
+    inputValor.value = '';
+    alert(`Movimiento registrado: ${tipo} $${valor.toLocaleString('es-CO')}`);
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+document.getElementById('btnIngresar').onclick = () => enviarMovimiento('INGRESO');
+document.getElementById('btnRetirar').onclick = () => enviarMovimiento('RETIRO');
 // Toggle detalles
 window.toggleDetails = function(id) {
     const element = document.getElementById(id);

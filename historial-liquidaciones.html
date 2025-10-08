@@ -325,6 +325,8 @@
             <p>Registro completo de todas las liquidaciones realizadas</p>
         </div>
 
+        
+
         <!-- Estadísticas Globales -->
         <div class="global-stats">
             <div class="stat-card primary">
@@ -419,104 +421,113 @@
         }
     </style>
 
-    <script type="module">
-        import { apiFetch } from "./utils/api.js";
-        import { getToken } from "./utils/auth.js";
+  <script type="module">
+    import { apiFetch } from "./utils/api.js";
+    import { getToken } from "./utils/auth.js";
 
-        let allLiquidations = [];
-        let filteredLiquidations = [];
+    let allLiquidations = [];
+    let filteredLiquidations = [];
 
-        document.addEventListener("DOMContentLoaded", loadHistory);
+    document.addEventListener("DOMContentLoaded", loadHistory);
 
-async function loadHistory() {
-    try {
-        const token = getToken();
-        
-        // ✅ CORRECCIÓN: Detectar modo admin y usar endpoint correcto
-        const vendedorId = window.adminModeUtils?.isActive()
-                         ? window.adminModeUtils.getVendedorId()
-                         : null;
+    async function loadHistory() {
+        try {
+            const token = getToken();
+            
+            const vendedorId = window.adminModeUtils?.isActive()
+                             ? window.adminModeUtils.getVendedorId()
+                             : null;
 
-        const endpoint = vendedorId
-                       ? `/liquidation/vendedor/${vendedorId}/history`
-                       : '/liquidation/history';
+            const endpoint = vendedorId
+                           ? `/liquidation/vendedor/${vendedorId}/history`
+                           : '/liquidation/history';
 
-        allLiquidations = await apiFetch(endpoint, "GET", null, token);
+            allLiquidations = await apiFetch(endpoint, "GET", null, token);
 
-        document.getElementById("loadingContainer").style.display = "none";
+            document.getElementById("loadingContainer").style.display = "none";
 
-        if (allLiquidations.length === 0) {
-            document.getElementById("emptyState").style.display = "block";
-            return;
-        }
-
-        filteredLiquidations = [...allLiquidations];
-        updateGlobalStats(allLiquidations);
-        renderLiquidations(filteredLiquidations);
-        setupFilters();
-
-        document.getElementById("liquidationsContainer").style.display = "grid";
-
-    } catch (error) {
-        console.error("Error:", error);
-        document.getElementById("loadingContainer").innerHTML = `
-            <div style="color: var(--danger);">
-                <i class="fas fa-exclamation-circle" style="font-size: 48px;"></i>
-                <p>Error al cargar el historial</p>
-            </div>
-        `;
-    }
-}
-        
-        function updateGlobalStats(liquidations) {
-            if (liquidations.length === 0) return;
-
-            // Caja final actual (última liquidación)
-            const currentCash = liquidations[0].finalCash;
-            document.getElementById("currentCash").textContent = `$${currentCash.toLocaleString('es-CO')}`;
-
-            // Total ingresos
-            const totalIncome = liquidations.reduce((sum, l) => sum + l.totalIncome, 0);
-            document.getElementById("totalIncome").textContent = `$${totalIncome.toLocaleString('es-CO')}`;
-
-            // Total egresos
-            const totalExpenses = liquidations.reduce((sum, l) => sum + l.totalExpenses, 0);
-            document.getElementById("totalExpenses").textContent = `$${totalExpenses.toLocaleString('es-CO')}`;
-
-            // Total abonos
-            const totalPayments = liquidations.reduce((sum, l) => sum + l.payments.total, 0);
-            document.getElementById("totalPayments").textContent = `$${totalPayments.toLocaleString('es-CO')}`;
-
-            // Total señas
-            const totalInitialPayments = liquidations.reduce((sum, l) => sum + (l.payments.totalInitialPayments || 0), 0);
-            document.getElementById("totalInitialPayments").textContent = `$${totalInitialPayments.toLocaleString('es-CO')}`;
-
-            // Mejor día (mayor caja final)
-            const bestLiquidation = liquidations.reduce((max, l) => 
-                l.finalCash > max.finalCash ? l : max
-            , liquidations[0]);
-
-            const bestDayDate = new Date(bestLiquidation.liquidationDate).toLocaleDateString('es-CO', {
-                day: '2-digit',
-                month: '2-digit'
-            });
-            document.getElementById("bestDay").innerHTML = `${bestDayDate}<br><small style="font-size: 14px;">$${bestLiquidation.finalCash.toLocaleString('es-CO')}</small>`;
-        }
-
-        function renderLiquidations(liquidations) {
-            const container = document.getElementById("liquidationsContainer");
-            const emptyState = document.getElementById("emptyState");
-
-            if (liquidations.length === 0) {
-                container.style.display = "none";
-                emptyState.style.display = "block";
+            if (allLiquidations.length === 0) {
+                document.getElementById("emptyState").style.display = "block";
                 return;
             }
 
-            container.style.display = "grid";
-            emptyState.style.display = "none";
-            
-            container.innerHTML = liquidations.map(liq => `
+            filteredLiquidations = [...allLiquidations];
+            updateGlobalStats(allLiquidations);
+            renderLiquidations(filteredLiquidations);
+            setupFilters();
+
+            document.getElementById("liquidationsContainer").style.display = "grid";
+
+        } catch (error) {
+            console.error("Error:", error);
+            document.getElementById("loadingContainer").innerHTML = `
+                <div style="color: var(--danger);">
+                    <i class="fas fa-exclamation-circle" style="font-size: 48px;"></i>
+                    <p>Error al cargar el historial</p>
+                </div>
+            `;
+        }
+    }
+    
+    function updateGlobalStats(liquidations) {
+        if (liquidations.length === 0) return;
+
+        const currentCash = liquidations[0].finalCash;
+        document.getElementById("currentCash").textContent = `$${currentCash.toLocaleString('es-CO')}`;
+
+        const totalIncome = liquidations.reduce((sum, liq) => {
+            const initialPayments = liq.payments.totalInitialPayments || 0;
+            const regularPayments = liq.payments.total - initialPayments;
+            const commission = liq.payments.commissionPercentage || 0;
+            const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
+            const paymentsAfterComm = regularPayments - paymentsCommAmount;
+            const realIncome = Math.round(paymentsAfterComm + initialPayments);
+            return sum + realIncome;
+        }, 0);
+        document.getElementById("totalIncome").textContent = `$${totalIncome.toLocaleString('es-CO')}`;
+
+        const totalExpenses = liquidations.reduce((sum, l) => sum + l.totalExpenses, 0);
+        document.getElementById("totalExpenses").textContent = `$${totalExpenses.toLocaleString('es-CO')}`;
+
+        const totalPayments = liquidations.reduce((sum, l) => sum + l.payments.total, 0);
+        document.getElementById("totalPayments").textContent = `$${totalPayments.toLocaleString('es-CO')}`;
+
+        const totalInitialPayments = liquidations.reduce((sum, l) => sum + (l.payments.totalInitialPayments || 0), 0);
+        document.getElementById("totalInitialPayments").textContent = `$${totalInitialPayments.toLocaleString('es-CO')}`;
+
+        const bestLiquidation = liquidations.reduce((max, l) => 
+            l.finalCash > max.finalCash ? l : max
+        , liquidations[0]);
+
+        const bestDayDate = new Date(bestLiquidation.liquidationDate).toLocaleDateString('es-CO', {
+            day: '2-digit',
+            month: '2-digit'
+        });
+        document.getElementById("bestDay").innerHTML = `${bestDayDate}<br><small style="font-size: 14px;">$${bestLiquidation.finalCash.toLocaleString('es-CO')}</small>`;
+    }
+
+    function renderLiquidations(liquidations) {
+        const container = document.getElementById("liquidationsContainer");
+        const emptyState = document.getElementById("emptyState");
+
+        if (liquidations.length === 0) {
+            container.style.display = "none";
+            emptyState.style.display = "block";
+            return;
+        }
+
+        container.style.display = "grid";
+        emptyState.style.display = "none";
+        
+        container.innerHTML = liquidations.map(liq => {
+            const initialPayments = liq.payments.totalInitialPayments || 0;
+            const regularPayments = liq.payments.total - initialPayments;
+            const commission = liq.payments.commissionPercentage || 0;
+            const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
+            const paymentsAfterComm = regularPayments - paymentsCommAmount;
+            const realTotalIncome = Math.round(paymentsAfterComm + initialPayments);
+
+            return `
                 <div class="liquidation-card">
                     <div class="card-header">
                         <div class="card-date">
@@ -537,7 +548,7 @@ async function loadHistory() {
 
                         <div class="stat-item">
                             <div class="stat-item-label">Total Ingresos</div>
-                            <div class="stat-item-value success">$${liq.totalIncome.toLocaleString('es-CO')}</div>
+                            <div class="stat-item-value success">$${realTotalIncome.toLocaleString('es-CO')}</div>
                         </div>
 
                         <div class="stat-item">
@@ -568,59 +579,58 @@ async function loadHistory() {
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `;
+        }).join('');
+    }
+
+    function setupFilters() {
+        const filterDate = document.getElementById("filterDate");
+        const filterNotes = document.getElementById("filterNotes");
+        const clearFilters = document.getElementById("clearFilters");
+
+        filterDate.addEventListener("change", applyFilters);
+        filterNotes.addEventListener("input", applyFilters);
+        clearFilters.addEventListener("click", () => {
+            filterDate.value = "";
+            filterNotes.value = "";
+            applyFilters();
+        });
+    }
+
+    function applyFilters() {
+        const dateValue = document.getElementById("filterDate").value;
+        const notesValue = document.getElementById("filterNotes").value.toLowerCase().trim();
+
+        filteredLiquidations = allLiquidations.filter(liq => {
+            const matchesDate = !dateValue || 
+                new Date(liq.liquidationDate).toISOString().split('T')[0] === dateValue;
+
+            const matchesNotes = !notesValue || 
+                (liq.notes && liq.notes.toLowerCase().includes(notesValue));
+
+            return matchesDate && matchesNotes;
+        });
+
+        renderLiquidations(filteredLiquidations);
+    }
+
+    window.inspectLiquidation = function(id) {
+        sessionStorage.setItem('inspectLiquidationId', id);
+        window.location.href = 'inspeccion-liquidacion.html';
+    };
+
+    window.deleteLiquidation = async function(id) {
+        if (!confirm("¿Estás seguro de eliminar esta liquidación?")) return;
+
+        try {
+            const token = getToken();
+            await apiFetch(`/liquidation/${id}`, "DELETE", null, token);
+            alert("Liquidación eliminada");
+            loadHistory();
+        } catch (error) {
+            alert("Error al eliminar: " + error.message);
         }
-
-        function setupFilters() {
-            const filterDate = document.getElementById("filterDate");
-            const filterNotes = document.getElementById("filterNotes");
-            const clearFilters = document.getElementById("clearFilters");
-
-            filterDate.addEventListener("change", applyFilters);
-            filterNotes.addEventListener("input", applyFilters);
-            clearFilters.addEventListener("click", () => {
-                filterDate.value = "";
-                filterNotes.value = "";
-                applyFilters();
-            });
-        }
-
-        function applyFilters() {
-            const dateValue = document.getElementById("filterDate").value;
-            const notesValue = document.getElementById("filterNotes").value.toLowerCase().trim();
-
-            filteredLiquidations = allLiquidations.filter(liq => {
-                const matchesDate = !dateValue || 
-                    new Date(liq.liquidationDate).toISOString().split('T')[0] === dateValue;
-
-                const matchesNotes = !notesValue || 
-                    (liq.notes && liq.notes.toLowerCase().includes(notesValue));
-
-                return matchesDate && matchesNotes;
-            });
-
-            renderLiquidations(filteredLiquidations);
-        }
-
-        window.inspectLiquidation = function(id) {
-            sessionStorage.setItem('inspectLiquidationId', id);
-            window.location.href = 'inspeccion-liquidacion.html';
-        };
-
-        window.deleteLiquidation = async function(id) {
-            if (!confirm("¿Estás seguro de eliminar esta liquidación?")) return;
-
-            try {
-                const token = getToken();
-                // Nota: El DELETE no necesita cambios porque usa el ID directo
-// El backend valida permisos internamente
-await apiFetch(`/liquidation/${id}`, "DELETE", null, token);
-                alert("Liquidación eliminada");
-                loadHistory();
-            } catch (error) {
-                alert("Error al eliminar: " + error.message);
-            }
-        };
-    </script>
+    };
+</script>
 </body>
 </html>

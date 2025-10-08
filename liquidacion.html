@@ -393,6 +393,58 @@
             outline: none;
             border-color: var(--accent);
         }
+
+        /* Fondo oscuro semi-transparente */
+.modal-cc {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(4px);
+}
+
+/* Caja blanca centrada */
+.modal-cc-content {
+  background: var(--white);
+  margin: 10% auto;
+  padding: 0;
+  width: 90%;
+  max-width: 420px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-hover);
+  overflow: hidden;
+}
+
+.modal-cc-header {
+  background: var(--primary);
+  color: white;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-cc-header h4 { margin: 0; font-size: 18px; }
+
+.modal-cc-close {
+  font-size: 24px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.modal-cc-body { padding: 22px; }
+
+.modal-cc-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.modal-cc-actions .btn { flex: 1; justify-content: center; }
     </style>
 </head>
 <body>
@@ -422,6 +474,50 @@
                     </div>
                     <h3>Configuración Inicial</h3>
                 </div>
+
+                <!-- Botón que dispara el modal -->
+<div style="margin-bottom: 12px;">
+  <button id="btnControlCaja" class="btn btn-secondary">
+    <i class="fas fa-cash-register"></i> Control de Caja
+  </button>
+</div>
+
+<!-- Modal flotante -->
+<div id="modalControlCaja" class="modal-cc">
+  <div class="modal-cc-content">
+    <div class="modal-cc-header">
+      <h4><i class="fas fa-coins"></i> Control de Caja</h4>
+      <span id="cerrarModal" class="modal-cc-close">&times;</span>
+    </div>
+
+    <div class="modal-cc-body">
+      <div class="data-field">
+        <div class="data-label">Caja Actual</div>
+        <div class="data-value" id="cajaActual">$0</div>
+      </div>
+
+      <div class="input-group">
+        <label for="valorMovimiento">
+          <i class="fas fa-dollar-sign"></i> Valor
+        </label>
+        <input type="number" id="valorMovimiento" placeholder="0" min="1" step="100">
+      </div>
+
+      <div class="modal-cc-actions">
+        <button id="btnIngresar" class="btn btn-primary">
+          <i class="fas fa-arrow-down"></i> Ingresar
+        </button>
+        <button id="btnRetirar" class="btn btn-danger">
+          <i class="fas fa-arrow-up"></i> Retirar
+        </button>
+      </div>
+
+      <small style="color: var(--medium-gray); margin-top: 10px; display: block;">
+        <i class="fas fa-info-circle"></i> El cambio se reflejará inmediatamente en “Caja Final”.
+      </small>
+    </div>
+  </div>
+</div>
                 
                <div class="input-group">
     <label for="initialCash">
