@@ -15,17 +15,22 @@ let sales = [];
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         const token = getToken();
-        sales = await apiFetch("/sales/all", "GET", null, token);
 
-        // Mostrar solo no liquidadas
+        /* === MODO ADMIN: ¿estoy inspeccionando un vendedor? === */
+        const adminMode   = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorId  = sessionStorage.getItem('vendedorId');
+
+        let endpoint = '/sales/all';          // default
+        if (adminMode && vendedorId) {
+            endpoint = `/sales/vendedor/${vendedorId}`; // solo ventas de ese vendedor
+        }
+
+        sales = await apiFetch(endpoint, 'GET', null, token);
+
+        // resto igual …
         const unsettled = sales.filter(s => !s.settled);
         renderSales(unsettled);
         updateTotalDebt(unsettled);
-
-        // Filtros
-        searchInput.addEventListener("input", applyFilters);
-        dateInput.addEventListener("change", applyFilters);
-        dayFilter.addEventListener("change", applyFilters);
 
     } catch (error) {
         console.error("Error al cargar el historial:", error);

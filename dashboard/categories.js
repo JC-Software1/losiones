@@ -275,9 +275,13 @@ if (filterDay) {
   <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
   <div class="progress-text">${paymentPercentage.toFixed(0)}% pagado</div>
   <!-- ⭐ NUEVO: valor de cada cuota -->
-  <div style="margin-top:6px;font-size:13px;color:#7f8c8d">
-    Cuota: $${sale.paymentPerInstallment.toLocaleString('es-CO')} ${sale.paymentFrequency}
-  </div>
+${(() => {
+    const installmentValue = sale.paymentPerInstallment || 
+        Math.ceil((sale.price - (sale.advancePayment || 0)) / (parseInt(sale.installments) || 1));
+    return `<div style="margin-top:6px;font-size:13px;color:#7f8c8d">
+        Cuota: $${installmentValue.toLocaleString('es-CO')} ${sale.paymentFrequency}
+    </div>`;
+})()}
 </div>
                 </div>
                 <div class="progress-bar">

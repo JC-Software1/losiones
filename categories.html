@@ -1141,7 +1141,166 @@
 }
 
 
+/* =========================
+  Layout responsivo para pantallas grandes (desktop)
+  ========================= */
 
+/* Limita el ancho máximo para que no se estire demasiado en pantallas enormes */
+.container {
+  max-width: 1200px; /* antes era 920px en algunas reglas */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+  display: grid;
+  grid-template-columns: 1fr; /* por defecto 1 columna; se activa 2 columnas en desktop */
+  gap: 24px;
+  align-items: start;
+}
+
+/* Organización de región principal en desktop:
+   - Columna izquierda: formulario y listado (contenido principal)
+   - Columna derecha: panel lateral (totales, filtros, acciones)
+*/
+@media (min-width: 992px) {
+  .container {
+    grid-template-columns: 1fr 360px;
+  }
+
+  /* Cabecera y búsqueda ocupan ambas columnas */
+  .header,
+  .search-container {
+    grid-column: 1 / -1;
+  }
+
+  /* Formulario: colocar en la columna izquierda y darle width 100% */
+  .form-container {
+    grid-column: 1 / 2;
+    align-self: start;
+  }
+
+  /* Payment section (si existe) también en la columna izquierda */
+  #paymentSection {
+    grid-column: 1 / 2;
+  }
+
+  /* Sales list pasa a la columna derecha o puede ocupar la izquierda según prefieras.
+     Aquí lo dejamos en la columna izquierda *debajo* del formulario para flujo natural,
+     pero lo hacemos más flexible para que no se vea apretado. */
+  .sales-grid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+
+  /* Si quieres que el sales-grid quede a la derecha como panel separado,
+     reemplaza la regla anterior por:
+     .sales-grid { grid-column: 2 / 3; display:grid; grid-auto-rows: minmax(120px, auto); }
+  */
+
+  /* Haz las tarjetas fluidas */
+  .sale-card {
+    width: 100%;
+  }
+
+  /* Panel lateral sticky: si tienes .total-debt u otros widgets, los fijamos */
+  .total-debt {
+    grid-column: 2 / 3;
+    position: sticky;
+    top: 20px;
+    align-self: start;
+  }
+
+  /* Ajustes para el menú flotante para que no tape contenido en desktop */
+  .menu-toggle {
+    right: 24px;
+    top: 18px;
+  }
+}
+
+/* Ajustes visuales para tarjetas y grid en pantallas grandes */
+@media (min-width: 1200px) {
+  .container { max-width: 1400px; gap: 28px; }
+
+  .form-container { padding: 28px; }
+  .sale-card { padding: 22px; border-radius: 14px; }
+}
+
+/* Asegurar que inputs y elementos no provoquen overflow en desktop */
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
+.selected-products,
+.dropdown-panel,
+.sale-card,
+.menu-items {
+  min-width: 0; /* evita romper el grid por un ancho mínimo impuesto */
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Mejora de legibilidad: aumenta el tamaño de textos en desktop */
+@media (min-width: 992px) {
+  .header h1 { font-size: 28px; }
+  .form-title { font-size: 22px; }
+  .sale-info h3 { font-size: 18px; }
+  .debt-amount { font-size: 20px; }
+}
+
+/* Si algún elemento específico se sale, aplica overflow wrap */
+.sale-card,
+.selected-product-tag,
+.menu-link span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Espaciado extra para botones en desktop */
+@media (min-width: 768px) {
+  .button-group { justify-content: flex-start; gap: 12px; }
+}
+
+/* Pequeño helper para centrar el contenido en pantallas muy anchas */
+@media (min-width: 1600px) {
+  .container { padding-left: 28px; padding-right: 28px; }
+}
+
+/* =========================
+   Extender ancho del formulario en pantallas grandes
+   ========================= */
+
+@media (min-width: 992px) {
+  /* Aumentamos el ancho general de la página */
+  .container {
+    grid-template-columns: 70% 30%; /* antes era 1fr 360px */
+  }
+
+  /* Hacemos que el formulario use todo el ancho disponible de su columna */
+  .form-container {
+    width: 100%;
+    max-width: none;  /* elimina límites que pueda tener */
+    grid-column: 1 / 2;
+    padding: 32px;    /* más respiración visual */
+    background-color: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  }
+
+  /* Si hay una sección de resultados o cards, ajustamos su posición */
+  .sales-grid {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+/* Opcional: si quieres que el formulario ocupe casi toda la pantalla */
+@media (min-width: 1400px) {
+  .container {
+    grid-template-columns: 80% 20%;
+  }
+}
 
 
     </style>
@@ -1254,7 +1413,7 @@
 
                     <div class="form-group">
                         <label for="price">Precio Total</label>
-                        <input type="number" id="price" placeholder="0" min="0" step="1000" required>
+                        <input type="number" id="price" placeholder="0" min="0" step="1000" required readonly>
                     </div>
 
                     <div class="form-group full-width">
@@ -1295,7 +1454,7 @@
 
                     <!-- Valor de cada cuota (auto-calculado) -->
 <div class="form-group full-width">
-    <label for="installmentAmount">Valor de cada cuota</label>
+    <label for="installmentAmount">Valor por cuota</label>
     <input type="text" id="installmentAmount" readonly placeholder="Se calculará automáticamente">
 </div>
 
