@@ -4,15 +4,7 @@ const { checkPermission } = require("../middleware/checkPermissions");
 const Sale = require("../models/Sale");
 const router = express.Router();
 
-// ✅ FUNCIÓN AUXILIAR: Calcular pago por cuota
-function calculatePaymentPerInstallment(price, advancePayment, installments) {
-    const remainingDebt = price - (advancePayment || 0);
-    const numInstallments = parseInt(installments) || 1;
-    
-    if (numInstallments <= 0 || remainingDebt <= 0) return 0;
-    
-    return Math.ceil(remainingDebt / numInstallments);
-}
+
 
 // ✅ FUNCIÓN AUXILIAR: Buscar venta con permisos admin
 async function findSaleWithAdminPermission(saleId, userId, userTipo) {
@@ -82,20 +74,23 @@ router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
 });
 
 // Crear nueva venta
+// Crear nueva venta
 router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
     try {
-        const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress } = req.body;
+        const { 
+            clientName, 
+            productName, 
+            saleDate, 
+            price, 
+            installments, 
+            advancePayment, 
+            clientAddress,
+            paymentPerInstallment  // ✅ RECIBIR DESDE EL FRONTEND
+        } = req.body;
 
         if (!clientName || !productName || !price || !saleDate) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
-
-        // ✅ Calcular pago por cuota
-        const paymentPerInstallment = calculatePaymentPerInstallment(
-            price, 
-            advancePayment, 
-            installments
-        );
 
         const sale = new Sale({
             clientName,
@@ -108,7 +103,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             paymentFrequency: req.body.paymentFrequency || 'mensual',
             paymentDays: req.body.paymentDays || [],
             paymentDaysText: req.body.paymentDaysText || '',
-            paymentPerInstallment, // ✅ NUEVO CAMPO
+            paymentPerInstallment: paymentPerInstallment || 0, // ✅ USAR VALOR DEL FRONTEND
+            numberOfInstallments: req.body.numberOfInstallments || 1,
             user: req.user.id,
             settled: false
         });
@@ -134,7 +130,7 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
     }
 });
 
-// Crear nueva venta para vendedor específico (para administradores)
+// Crear nueva venta para vendedor específico
 router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
@@ -143,18 +139,20 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             return res.status(403).json({ error: 'No tienes permisos para crear ventas para otros usuarios' });
         }
         
-        const { clientName, productName, saleDate, price, installments, advancePayment, clientAddress } = req.body;
+        const { 
+            clientName, 
+            productName, 
+            saleDate, 
+            price, 
+            installments, 
+            advancePayment, 
+            clientAddress,
+            paymentPerInstallment  // ✅ RECIBIR DESDE EL FRONTEND
+        } = req.body;
 
         if (!clientName || !productName || !price || !saleDate) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
-
-        // ✅ Calcular pago por cuota
-        const paymentPerInstallment = calculatePaymentPerInstallment(
-            price, 
-            advancePayment, 
-            installments
-        );
 
         const sale = new Sale({
             clientName,
@@ -167,7 +165,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             paymentFrequency: req.body.paymentFrequency || 'mensual',
             paymentDays: req.body.paymentDays || [],
             paymentDaysText: req.body.paymentDaysText || '',
-            paymentPerInstallment, // ✅ NUEVO CAMPO
+            paymentPerInstallment: paymentPerInstallment || 0, // ✅ USAR VALOR DEL FRONTEND
+            numberOfInstallments: req.body.numberOfInstallments || 1,
             user: vendedorId,
             settled: false
         });
@@ -297,8 +296,18 @@ router.get("/:id", auth, checkPermission('verVentas'), async (req, res) => {
 });
 
 // Actualizar una venta
+// Actualizar una venta
 router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
-    const { clientName, productName, saleDate, price, installments, clientAddress, advancePayment } = req.body;
+    const { 
+        clientName, 
+        productName, 
+        saleDate, 
+        price, 
+        installments, 
+        clientAddress, 
+        advancePayment,
+        paymentPerInstallment  // ✅ RECIBIR DESDE EL FRONTEND
+    } = req.body;
 
     try {
         const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
@@ -306,13 +315,6 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         if (!sale) {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
-
-        // ✅ Recalcular pago por cuota si cambia precio o cuotas
-        const paymentPerInstallment = calculatePaymentPerInstallment(
-            price, 
-            advancePayment || sale.advancePayment, 
-            installments
-        );
 
         sale.clientName = clientName;
         sale.productName = productName;
@@ -323,7 +325,12 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         sale.paymentFrequency = req.body.paymentFrequency || sale.paymentFrequency;
         sale.paymentDays = req.body.paymentDays || sale.paymentDays;
         sale.paymentDaysText = req.body.paymentDaysText || sale.paymentDaysText;
-        sale.paymentPerInstallment = paymentPerInstallment; // ✅ ACTUALIZAR
+        sale.numberOfInstallments = req.body.numberOfInstallments || sale.numberOfInstallments;
+        
+        // ✅ USAR VALOR EXACTO DEL FRONTEND
+        if (paymentPerInstallment !== undefined) {
+            sale.paymentPerInstallment = paymentPerInstallment;
+        }
 
         const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
         

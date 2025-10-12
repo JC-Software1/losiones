@@ -695,7 +695,7 @@ function openPaymentModal(saleId) {
     cards.forEach(card => {
         if (card.dataset.saleId === saleId) {
             // Extraemos los datos del card
-            const cuotaText = card.querySelector('.sale-amount div:last-child')?.textContent || ''; // "Cuota: $xxxxx"
+            const cuotaText = card.querySelector('.sale-amount div:last-child')?.textContent || '';
             const match = cuotaText.match(/[\d,.]+/);
             sale = {
                 _id: saleId,
@@ -713,7 +713,38 @@ function openPaymentModal(saleId) {
 }
 
 // ✅ NUEVO: Listener para cambio de valor por cuota
+// Listeners para recalcular cuando cambien valores relevantes
+/* ---------- LISTENERS BIDIRECCIONALES CON CONTROL DE LOOPS ---------- */
+
+// 🔒 Bandera para evitar loops infinitos
+let isUpdating = false;
+
+// ✅ Listener para cambio de número de cuotas
+document.getElementById('installments').addEventListener('input', function() {
+    if (isUpdating) return; // Evitar loop
+    
+    const total = parseFloat(document.getElementById('price').value) || 0;
+    const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
+    const cuotas = parseFloat(this.value) || 0;
+    
+    if (cuotas <= 0) {
+        document.getElementById('installmentAmount').value = '';
+        return;
+    }
+    
+    const remaining = total - advance;
+    const perInstallment = Math.ceil(remaining / cuotas);
+    
+    // Actualizar valor por cuota SIN disparar su listener
+    isUpdating = true;
+    document.getElementById('installmentAmount').value = perInstallment;
+    isUpdating = false;
+});
+
+// ✅ Listener para cambio de valor por cuota
 document.getElementById('installmentAmount').addEventListener('input', function() {
+    if (isUpdating) return; // Evitar loop
+    
     const total = parseFloat(document.getElementById('price').value) || 0;
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     const perInstallment = parseFloat(this.value) || 0;
@@ -726,10 +757,36 @@ document.getElementById('installmentAmount').addEventListener('input', function(
     const remaining = total - advance;
     const newCuotas = Math.ceil(remaining / perInstallment);
     
-    // ✅ CORREGIDO: Solo el número, sin texto adicional
+    // Actualizar número de cuotas SIN disparar su listener
+    isUpdating = true;
     document.getElementById('installments').value = newCuotas.toString();
+    isUpdating = false;
 });
 
+// ✅ Listener para cambio de abono inicial
+document.getElementById('advancePayment').addEventListener('input', () => {
+    if (isUpdating) return; // Evitar loop
+    
+    const installmentValue = parseFloat(document.getElementById('installmentAmount').value);
+    
+    if (installmentValue > 0) {
+        // Si hay valor por cuota manual, recalcular número de cuotas
+        const total = parseFloat(document.getElementById('price').value) || 0;
+        const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
+        const remaining = total - advance;
+        const newCuotas = Math.ceil(remaining / installmentValue);
+        
+        isUpdating = true;
+        document.getElementById('installments').value = newCuotas.toString();
+        isUpdating = false;
+    } else {
+        // Si no, recalcular valor por cuota
+        updateTotalPrice();
+    }
+});
+
+/* ---------- listeners (sin cambios) ---------- */
+searchInput.addEventListener("input", () => loadSales(searchInput.value.trim()));
 /* ---------- listeners (sin cambios) ---------- */
 searchInput.addEventListener("input", () => loadSales(searchInput.value.trim()));
 // ✅ NUEVO: Listener para filtro de día
@@ -918,7 +975,10 @@ function renderSelectedProducts() {
     });
 }
 
+
 function updateTotalPrice() {
+    if (isUpdating) return; // Evitar loops
+    
     const total = selectedProducts.reduce((sum, p) => sum + p.salePrice, 0);
     document.getElementById("price").value = total;
 
@@ -926,23 +986,34 @@ function updateTotalPrice() {
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     const installmentsText = document.getElementById('installments').value.trim();
     
-    // Extraer el número de cuotas del texto (ej: "8" o "8 cuotas semanales" -> 8)
+    // Extraer el número de cuotas
     const cuotasMatch = installmentsText.match(/^\d+/);
-    const cuotas = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
+    const cuotas = cuotasMatch ? parseInt(cuotasMatch[0]) : 0;
     
     const remaining = total - advance;
     
-    // ✅ CORREGIDO: Solo calcular si el campo está vacío o es 0
-    const currentInstallmentValue = parseFloat(document.getElementById('installmentAmount').value);
-    if (!currentInstallmentValue || currentInstallmentValue === 0) {
-        const perInstallment = cuotas <= 0 ? 0 : Math.ceil(remaining / cuotas);
-        document.getElementById('installmentAmount').value = perInstallment;
+    // Solo recalcular si hay cuotas definidas
+    if (cuotas > 0) {
+        const currentInstallmentValue = parseFloat(document.getElementById('installmentAmount').value);
+        
+        isUpdating = true; // Activar bandera
+        
+        // Si no hay valor manual, calcular automáticamente
+        if (!currentInstallmentValue || currentInstallmentValue === 0) {
+            const perInstallment = Math.ceil(remaining / cuotas);
+            document.getElementById('installmentAmount').value = perInstallment;
+        } else {
+            // Si hay valor manual, recalcular cuotas basado en ese valor
+            const newCuotas = Math.ceil(remaining / currentInstallmentValue);
+            document.getElementById('installments').value = newCuotas.toString();
+        }
+        
+        isUpdating = false; // Desactivar bandera
     }
 }
 
 // Listeners para recalcular cuota cuando cambien valores relevantes
 document.getElementById('advancePayment').addEventListener('input', updateTotalPrice);
-document.getElementById('installments').addEventListener('input', updateTotalPrice);
 
 function removeSelectedProduct(index) {
     selectedProducts.splice(index, 1);
