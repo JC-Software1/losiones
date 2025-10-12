@@ -194,9 +194,6 @@ document.getElementById("expensesDetails").innerHTML = expensesDetailsHTML || '<
 
 }
 
-// Actualizar resumen
-// Actualizar resumen
-// Actualizar resumen
 function updateSummary() {
     if (!pendingData) return;
 
@@ -205,15 +202,15 @@ function updateSummary() {
 
     const { sales, payments, inventory } = pendingData;
 
-    // ✅ NUEVO: Calcular total de abonos SIN señas
+    // ✅ Separar señas de abonos regulares
     const initialPayments = payments.totalInitialPayments || 0;
-    const regularPayments = payments.total - initialPayments; // Abonos regulares sin señas
+    const regularPayments = payments.total - initialPayments;
 
     // ✅ Calcular comisión SOLO sobre abonos regulares (sin señas)
     const paymentsCommAmount = Math.round(regularPayments * (paymentsCommission / 100));
     const paymentsAfterComm = Math.round(regularPayments - paymentsCommAmount);
 
-    // ✅ Calcular comisión para ventas (SOLO INFORMATIVO)
+    // Calcular comisión para ventas (SOLO INFORMATIVO)
     const salesCommission = parseFloat(document.getElementById("salesCommission").value) || 0;
     const salesAfterComm = Math.round(sales.total - (sales.total * (salesCommission / 100)));
     const salesCommAmount = sales.total - salesAfterComm;
@@ -222,13 +219,13 @@ function updateSummary() {
     document.getElementById("paymentsAfterCommission").textContent = `$${paymentsAfterComm.toLocaleString('es-CO')}`;
     document.getElementById("paymentsCommissionAmount").textContent = `Comisión: $${paymentsCommAmount.toLocaleString('es-CO')} (sobre $${regularPayments.toLocaleString('es-CO')})`;
 
-    // ✅ Actualizar campos de comisión de ventas (INFORMATIVO)
+    // Actualizar campos de comisión de ventas (INFORMATIVO)
     document.getElementById("salesAfterCommission").textContent = `$${salesAfterComm.toLocaleString('es-CO')}`;
     document.getElementById("salesCommissionAmount").textContent = `Comisión: $${salesCommAmount.toLocaleString('es-CO')} (no se suma a ingresos)`;
 
-    // ✅ Calcular totales - REDONDEADO
-    // Los ingresos son: abonos regulares después de comisión + señas completas (sin comisión)
+    // ✅ INGRESOS = abonos después de comisión + señas completas
     const totalIncome = Math.round(paymentsAfterComm + initialPayments);
+    
     const expensesTotal = pendingData.expenses?.total || 0;
     const totalExpenses = Math.round(inventory.totalCost + expensesTotal);
     const finalCash = Math.round(initialCash + totalIncome - totalExpenses);

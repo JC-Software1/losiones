@@ -342,9 +342,15 @@ const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
 const paymentsCommission = req.body.paymentsCommission || 0;
 const salesCommission = req.body.salesCommission || 0;
 
-const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
+// Calcular abonos regulares sin señas
+const regularPayments = totalPayments - totalInitialPayments;
+
+// Aplicar comisión SOLO a abonos regulares
+const paymentsAfterCommission = Math.round(regularPayments - (regularPayments * (paymentsCommission / 100)));
 const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
-        const totalIncome = paymentsAfterCommission + totalInitialPayments;
+
+// Ingresos = abonos después de comisión + señas completas
+const totalIncome = paymentsAfterCommission + totalInitialPayments;
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         const totalExpenses = totalInventoryCost + totalExpensesAmount;
@@ -514,9 +520,15 @@ const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
 const paymentsCommission = req.body.paymentsCommission || 0;
 const salesCommission = req.body.salesCommission || 0;
 
-const paymentsAfterCommission = Math.round(totalPayments - (totalPayments * (paymentsCommission / 100)));
+// Calcular abonos regulares sin señas
+const regularPayments = totalPayments - totalInitialPayments;
+
+// Aplicar comisión SOLO a abonos regulares
+const paymentsAfterCommission = Math.round(regularPayments - (regularPayments * (paymentsCommission / 100)));
 const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
-        const totalIncome = paymentsAfterCommission + totalInitialPayments;
+
+// Ingresos = abonos después de comisión + señas completas
+const totalIncome = paymentsAfterCommission + totalInitialPayments;
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         const totalExpenses = totalInventoryCost + totalExpensesAmount;
