@@ -393,10 +393,17 @@ async function editSale(sale) {
     inputPrice.value      = sale.price;
     inputInstallments.value = sale.installments;
 
-    // ✅ NUEVO: Cargar valor por cuota si existe
-if (sale.paymentPerInstallment) {
-    document.getElementById('installmentAmount').value = sale.paymentPerInstallment;
-}
+    // ✅ CAMBIO: Cargar valor por cuota si existe
+    if (sale.paymentPerInstallment) {
+        document.getElementById('installmentAmount').value = sale.paymentPerInstallment;
+    }
+
+    // ✅ NUEVO: Habilitar edición de precio total
+    inputPrice.removeAttribute('readonly');
+    
+    if (document.getElementById("clientAddress")) {
+        document.getElementById("clientAddress").value = sale.clientAddress || '';
+    }
 
     if (document.getElementById("clientAddress")) {
         document.getElementById("clientAddress").value = sale.clientAddress || '';
@@ -491,11 +498,9 @@ async function saveSale() {
         return;
     }
 
-    // ---------- Extraer número de cuotas y calcular valor por cuota ----------
-// ---------- Extraer número de cuotas y calcular valor por cuota ----------
-// ---------- Extraer número de cuotas y calcular valor por cuota ----------
-const cuotasMatch = installments.match(/^\d+/);
-const numberOfInstallments = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
+// Extraer número de cuotas (permite decimales con 2 dígitos: 4,44 → 4.44)
+const cuotasMatch = installments.match(/^\d+(?:[.,]\d{1,2})?/);
+const numberOfInstallments = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 1;
 
 // ✅ CORREGIDO: Priorizar el valor manual del usuario
 const manualInstallmentAmount = parseFloat(document.getElementById('installmentAmount').value);
@@ -503,8 +508,12 @@ const remaining = price - advance;
 
 let paymentPerInstallment;
 if (manualInstallmentAmount > 0) {
-    // Si el usuario ingresó un valor manualmente, USAR ESE VALOR EXACTO
+    // Si el usuario ingresó un valor manualmente, calcular cuotas CON DECIMALES
+    const exactCuotas = remaining / manualInstallmentAmount;
     paymentPerInstallment = manualInstallmentAmount;
+    
+    // Actualizar el campo de cuotas con el valor decimal
+    document.getElementById('installments').value = exactCuotas.toFixed(2);
 } else {
     // Si no, calcular automáticamente
     paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
@@ -587,21 +596,23 @@ async function updateSale() {
     const price = parseFloat(inputPrice.value);
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     
-    // Extraer número de cuotas
-// Extraer número de cuotas
-const cuotasMatch = installments.match(/^\d+/);
-const numberOfInstallments = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
+    // Extraer número de cuotas (permite decimales)
+    const cuotasMatch = installments.match(/^\d+(?:[.,]\d{1,2})?/);
+    const numberOfInstallments = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 1;
 
-// ✅ CORREGIDO: Usar valor manual si existe
-const manualInstallmentAmount = parseFloat(document.getElementById('installmentAmount').value);
-const remaining = price - advance;
+    // ✅ CAMBIO CLAVE: Usar valor manual si existe
+    const manualInstallmentAmount = parseFloat(document.getElementById('installmentAmount').value);
+    const remaining = price - advance;
 
-let paymentPerInstallment;
-if (manualInstallmentAmount > 0) {
-    paymentPerInstallment = manualInstallmentAmount;
-} else {
-    paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
-}
+    let paymentPerInstallment;
+    if (manualInstallmentAmount > 0) {
+        const exactCuotas = remaining / manualInstallmentAmount;
+        paymentPerInstallment = manualInstallmentAmount;
+        document.getElementById('installments').value = exactCuotas.toFixed(2);
+    } else {
+        paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
+    }
+    
     const saleData = {
         clientName: inputClient.value.trim(),
         clientAddress: document.getElementById("clientAddress").value.trim(),
@@ -609,8 +620,10 @@ if (manualInstallmentAmount > 0) {
         saleDate: inputDate.value,
         price: price,
         installments: installments,
-        numberOfInstallments,        // ⭐ NUEVO
-        paymentPerInstallment,       // ⭐ NUEVO
+        numberOfInstallments,
+        paymentPerInstallment,
+        // ✅ NUEVO: Enviar lista de productos para actualizar precios
+        updateProductPrices: true,
         ...(plan || { 
             paymentFrequency: 'mensual', 
             paymentDays: [], 
@@ -712,20 +725,16 @@ function openPaymentModal(saleId) {
     modal.dataset.saleId = saleId;
 }
 
-// ✅ NUEVO: Listener para cambio de valor por cuota
-// Listeners para recalcular cuando cambien valores relevantes
-/* ---------- LISTENERS BIDIRECCIONALES CON CONTROL DE LOOPS ---------- */
-
 // 🔒 Bandera para evitar loops infinitos
 let isUpdating = false;
 
 // ✅ Listener para cambio de número de cuotas
 document.getElementById('installments').addEventListener('input', function() {
-    if (isUpdating) return; // Evitar loop
+    if (isUpdating) return;
     
     const total = parseFloat(document.getElementById('price').value) || 0;
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
-    const cuotas = parseFloat(this.value) || 0;
+    const cuotas = parseFloat(this.value.replace(',', '.')) || 0;
     
     if (cuotas <= 0) {
         document.getElementById('installmentAmount').value = '';
@@ -735,15 +744,14 @@ document.getElementById('installments').addEventListener('input', function() {
     const remaining = total - advance;
     const perInstallment = Math.ceil(remaining / cuotas);
     
-    // Actualizar valor por cuota SIN disparar su listener
     isUpdating = true;
     document.getElementById('installmentAmount').value = perInstallment;
     isUpdating = false;
 });
 
-// ✅ Listener para cambio de valor por cuota
+// ✅ Listener para cambio de valor por cuota (CON DECIMALES)
 document.getElementById('installmentAmount').addEventListener('input', function() {
-    if (isUpdating) return; // Evitar loop
+    if (isUpdating) return;
     
     const total = parseFloat(document.getElementById('price').value) || 0;
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
@@ -755,32 +763,31 @@ document.getElementById('installmentAmount').addEventListener('input', function(
     }
     
     const remaining = total - advance;
-    const newCuotas = Math.ceil(remaining / perInstallment);
+    // ✅ CAMBIO CLAVE: No redondear, usar decimales
+    const exactCuotas = remaining / perInstallment;
     
-    // Actualizar número de cuotas SIN disparar su listener
     isUpdating = true;
-    document.getElementById('installments').value = newCuotas.toString();
+    document.getElementById('installments').value = exactCuotas.toFixed(2);
     isUpdating = false;
 });
 
 // ✅ Listener para cambio de abono inicial
 document.getElementById('advancePayment').addEventListener('input', () => {
-    if (isUpdating) return; // Evitar loop
+    if (isUpdating) return;
     
     const installmentValue = parseFloat(document.getElementById('installmentAmount').value);
     
     if (installmentValue > 0) {
-        // Si hay valor por cuota manual, recalcular número de cuotas
         const total = parseFloat(document.getElementById('price').value) || 0;
         const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
         const remaining = total - advance;
-        const newCuotas = Math.ceil(remaining / installmentValue);
+        // ✅ CAMBIO CLAVE: Usar decimales
+        const exactCuotas = remaining / installmentValue;
         
         isUpdating = true;
-        document.getElementById('installments').value = newCuotas.toString();
+        document.getElementById('installments').value = exactCuotas.toFixed(2);
         isUpdating = false;
     } else {
-        // Si no, recalcular valor por cuota
         updateTotalPrice();
     }
 });
@@ -977,38 +984,35 @@ function renderSelectedProducts() {
 
 
 function updateTotalPrice() {
-    if (isUpdating) return; // Evitar loops
+    if (isUpdating) return;
     
     const total = selectedProducts.reduce((sum, p) => sum + p.salePrice, 0);
     document.getElementById("price").value = total;
 
-    // Obtener valores
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     const installmentsText = document.getElementById('installments').value.trim();
     
-    // Extraer el número de cuotas
-    const cuotasMatch = installmentsText.match(/^\d+/);
-    const cuotas = cuotasMatch ? parseInt(cuotasMatch[0]) : 0;
+    // ✅ CAMBIO: Extraer número decimal de cuotas
+    const cuotasMatch = installmentsText.match(/^\d+(?:[.,]\d{1,2})?/);
+    const cuotas = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 0;
     
     const remaining = total - advance;
     
-    // Solo recalcular si hay cuotas definidas
     if (cuotas > 0) {
         const currentInstallmentValue = parseFloat(document.getElementById('installmentAmount').value);
         
-        isUpdating = true; // Activar bandera
+        isUpdating = true;
         
-        // Si no hay valor manual, calcular automáticamente
         if (!currentInstallmentValue || currentInstallmentValue === 0) {
             const perInstallment = Math.ceil(remaining / cuotas);
             document.getElementById('installmentAmount').value = perInstallment;
         } else {
-            // Si hay valor manual, recalcular cuotas basado en ese valor
-            const newCuotas = Math.ceil(remaining / currentInstallmentValue);
-            document.getElementById('installments').value = newCuotas.toString();
+            // ✅ CAMBIO CLAVE: Calcular cuotas exactas con decimales
+            const exactCuotas = remaining / currentInstallmentValue;
+            document.getElementById('installments').value = exactCuotas.toFixed(2);
         }
         
-        isUpdating = false; // Desactivar bandera
+        isUpdating = false;
     }
 }
 
