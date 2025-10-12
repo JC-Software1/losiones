@@ -962,51 +962,35 @@ function selectProduct(product) {
 }
 
 function renderSelectedProducts() {
-    const container = document.getElementById("selectedProducts");
-    container.innerHTML = "";
+  const container = document.getElementById("selectedProducts");
+  container.innerHTML = "";
 
-    selectedProducts.forEach((product, index) => {
-        const tag = document.createElement("div");
-        tag.className = "selected-product-tag";
-        tag.innerHTML = `
-            <span class="product-name">${product.name} (${product.brand}${product.size ? `, ${product.size}` : ''})</span>
-            <span class="product-price" style="margin-left: 8px; font-weight: 700; color: rgba(255,255,255,0.9);">
-                $${product.salePrice.toLocaleString()}
-            </span>
-            <button class="edit-price" data-index="${index}" title="Editar precio" style="
-                background: rgba(255,255,255,0.2);
-                border: none;
-                color: white;
-                border-radius: 4px;
-                width: 24px;
-                height: 24px;
-                cursor: pointer;
-                margin-left: 6px;
-                font-size: 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            ">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button class="remove" data-index="${index}">×</button>
-        `;
+  selectedProducts.forEach((product, index) => {
+    const tag = document.createElement("div");
+    tag.className = "selected-product-tag";
+    tag.innerHTML = `
+      <div class="product-name">${product.name}</div>
+      <div class="product-bottom">
+        <span class="product-price">$${product.salePrice.toLocaleString('es-CO')}</span>
+        <div class="product-buttons">
+          <button class="edit-price"  data-index="${index}" title="Editar precio">✏️</button>
+          <button class="remove"      data-index="${index}" title="Eliminar">🗑️</button>
+        </div>
+      </div>
+    `;
 
-        // Event listener para editar precio
-        tag.querySelector('.edit-price').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const index = parseInt(e.currentTarget.dataset.index);
-            editProductPrice(index);
-        });
-
-        // Event listener para remover
-        tag.querySelector('.remove').addEventListener('click', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            removeSelectedProduct(index);
-        });
-        
-        container.appendChild(tag);
+    // listeners
+    tag.querySelector('.edit-price').addEventListener('click', e => {
+      const idx = parseInt(e.currentTarget.dataset.index);
+      editProductPrice(idx);
     });
+    tag.querySelector('.remove').addEventListener('click', e => {
+      const idx = parseInt(e.currentTarget.dataset.index);
+      removeSelectedProduct(idx);
+    });
+
+    container.appendChild(tag);
+  });
 }
 
 async function editProductPrice(index) {
