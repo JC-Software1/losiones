@@ -178,9 +178,10 @@ router.delete("/:id", auth, checkPermission('eliminarProductos'), async (req, re
 });
 
 // Marcar un producto como vendido
+// Marcar un producto como vendido
 router.put("/:id/sell", auth, checkPermission('marcarVendido'), async (req, res) => {
     try {
-        const { soldTo } = req.body;
+        const { soldTo, saleId } = req.body; // ✅ NUEVO: recibir saleId
         const product = await findProductWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
         if (!product) {
@@ -196,6 +197,16 @@ router.put("/:id/sell", auth, checkPermission('marcarVendido'), async (req, res)
         product.soldTo = soldTo || "Cliente no registrado";
 
         await product.save();
+
+        // ✅ NUEVO: Si hay saleId, agregar el producto a la venta
+        if (saleId) {
+            const Sale = require("../models/Sale");
+            await Sale.findByIdAndUpdate(
+                saleId,
+                { $push: { productIds: product._id } }
+            );
+        }
+
         res.json({ message: "Producto marcado como vendido", product });
     } catch (error) {
         console.error("Error al marcar como vendido:", error);

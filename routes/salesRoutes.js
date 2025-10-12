@@ -417,7 +417,6 @@ router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, 
 });
 
 // Eliminar una venta
-// Eliminar una venta
 router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) => {
     try {
         const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
@@ -426,20 +425,43 @@ router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) 
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
-        // ✅ NUEVO: Reactivar productos vendidos antes de eliminar la venta
         const Product = require("../models/Product");
-        
-        if (sale.productName) {
-            // Separar los nombres de productos si hay varios
+        let productsReactivated = 0;
+
+        // ✅ MÉTODO 1: Si la venta tiene productIds guardados (nuevo sistema)
+        if (sale.productIds && sale.productIds.length > 0) {
+            for (const productId of sale.productIds) {
+                const result = await Product.updateOne(
+                    { _id: productId },
+                    {
+                        $set: {
+                            sold: false,
+                            soldDate: null,
+                            soldTo: null
+                        }
+                    }
+                );
+                if (result.modifiedCount > 0) productsReactivated++;
+            }
+        } 
+        // ✅ MÉTODO 2: Fallback para ventas antiguas sin productIds
+        else if (sale.productName) {
             const productNames = sale.productName.split(',').map(p => p.trim());
-            
+            const saleDate = new Date(sale.saleDate);
+            const saleDateStart = new Date(saleDate.setHours(0, 0, 0, 0));
+            const saleDateEnd = new Date(saleDate.setHours(23, 59, 59, 999));
+
             for (const productName of productNames) {
-                // Buscar productos que coincidan con el nombre y cliente
-                await Product.updateMany(
+                // Solo reactiva productos vendidos en la MISMA FECHA y al MISMO CLIENTE
+                const result = await Product.updateOne(
                     {
                         name: productName,
                         sold: true,
                         soldTo: sale.clientName,
+                        soldDate: {
+                            $gte: saleDateStart,
+                            $lte: saleDateEnd
+                        },
                         user: sale.user
                     },
                     {
@@ -450,15 +472,18 @@ router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) 
                         }
                     }
                 );
+                if (result.modifiedCount > 0) productsReactivated++;
             }
         }
 
-        // Eliminar la venta
         await Sale.findByIdAndDelete(req.params.id);
         
         res.json({ 
-            message: "Venta eliminada correctamente y productos reactivados",
-            productsReactivated: true
+            message: "Venta eliminada correctamente",
+            productsReactivated,
+            details: productsReactivated > 0 
+                ? `${productsReactivated} producto(s) reactivado(s)`
+                : "Sin productos para reactivar"
         });
     } catch (error) {
         console.error("Error al eliminar la venta:", error);

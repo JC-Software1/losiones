@@ -26,13 +26,14 @@ const SaleSchema = new mongoose.Schema({
         size: String,
         salePrice: Number
     }],
+    // ✅ NUEVO: Guardar IDs de los productos vendidos
+    productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     advancePayment: { type: Number, default: 0 },
     payments: [PaymentSchema],
     saleDate: { type: Date, required: true },
     price: { type: Number, required: true },
     installments: { type: String, default: "1" },
     numberOfInstallments: { type: Number, default: 1 },
-    // ✅ CORREGIDO: Guardar valor EXACTO sin redondeo
     paymentPerInstallment: { 
         type: Number, 
         default: 0
@@ -54,7 +55,6 @@ const SaleSchema = new mongoose.Schema({
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
 });
-
 // Virtual para calcular el total pagado
 SaleSchema.virtual('totalPaid').get(function() {
     return this.payments.reduce((sum, payment) => sum + payment.amount, 0);
