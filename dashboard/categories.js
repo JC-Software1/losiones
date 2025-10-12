@@ -392,6 +392,12 @@ async function editSale(sale) {
     inputDate.value       = new Date(sale.saleDate).toISOString().split('T')[0];
     inputPrice.value      = sale.price;
     inputInstallments.value = sale.installments;
+
+    // ✅ NUEVO: Cargar valor por cuota si existe
+if (sale.paymentPerInstallment) {
+    document.getElementById('installmentAmount').value = sale.paymentPerInstallment;
+}
+
     if (document.getElementById("clientAddress")) {
         document.getElementById("clientAddress").value = sale.clientAddress || '';
     }
@@ -486,12 +492,23 @@ async function saveSale() {
     }
 
     // ---------- Extraer número de cuotas y calcular valor por cuota ----------
-    const cuotasMatch = installments.match(/^\d+/);
-    const numberOfInstallments = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
-    
-    const remaining = price - advance;
-    const paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
+// ---------- Extraer número de cuotas y calcular valor por cuota ----------
+// ---------- Extraer número de cuotas y calcular valor por cuota ----------
+const cuotasMatch = installments.match(/^\d+/);
+const numberOfInstallments = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
 
+// ✅ CORREGIDO: Priorizar el valor manual del usuario
+const manualInstallmentAmount = parseFloat(document.getElementById('installmentAmount').value);
+const remaining = price - advance;
+
+let paymentPerInstallment;
+if (manualInstallmentAmount > 0) {
+    // Si el usuario ingresó un valor manualmente, USAR ESE VALOR EXACTO
+    paymentPerInstallment = manualInstallmentAmount;
+} else {
+    // Si no, calcular automáticamente
+    paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
+}
     // ---------- Construcción del objeto limpio ----------
     const saleData = {
         clientName,
@@ -571,13 +588,20 @@ async function updateSale() {
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     
     // Extraer número de cuotas
-    const cuotasMatch = installments.match(/^\d+/);
-    const numberOfInstallments = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
-    
-    // Calcular valor por cuota
-    const remaining = price - advance;
-    const paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
-    
+// Extraer número de cuotas
+const cuotasMatch = installments.match(/^\d+/);
+const numberOfInstallments = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
+
+// ✅ CORREGIDO: Usar valor manual si existe
+const manualInstallmentAmount = parseFloat(document.getElementById('installmentAmount').value);
+const remaining = price - advance;
+
+let paymentPerInstallment;
+if (manualInstallmentAmount > 0) {
+    paymentPerInstallment = manualInstallmentAmount;
+} else {
+    paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
+}
     const saleData = {
         clientName: inputClient.value.trim(),
         clientAddress: document.getElementById("clientAddress").value.trim(),
@@ -687,6 +711,24 @@ function openPaymentModal(saleId) {
     document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
     modal.dataset.saleId = saleId;
 }
+
+// ✅ NUEVO: Listener para cambio de valor por cuota
+document.getElementById('installmentAmount').addEventListener('input', function() {
+    const total = parseFloat(document.getElementById('price').value) || 0;
+    const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
+    const perInstallment = parseFloat(this.value) || 0;
+    
+    if (perInstallment <= 0) {
+        document.getElementById('installments').value = '';
+        return;
+    }
+    
+    const remaining = total - advance;
+    const newCuotas = Math.ceil(remaining / perInstallment);
+    
+    // ✅ CORREGIDO: Solo el número, sin texto adicional
+    document.getElementById('installments').value = newCuotas.toString();
+});
 
 /* ---------- listeners (sin cambios) ---------- */
 searchInput.addEventListener("input", () => loadSales(searchInput.value.trim()));
@@ -884,14 +926,18 @@ function updateTotalPrice() {
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     const installmentsText = document.getElementById('installments').value.trim();
     
-    // Extraer el número de cuotas del texto (ej: "8 cuotas semanales" -> 8)
+    // Extraer el número de cuotas del texto (ej: "8" o "8 cuotas semanales" -> 8)
     const cuotasMatch = installmentsText.match(/^\d+/);
     const cuotas = cuotasMatch ? parseInt(cuotasMatch[0]) : 1;
     
     const remaining = total - advance;
-    const perInstallment = cuotas <= 0 ? 0 : Math.ceil(remaining / cuotas);
     
-    document.getElementById('installmentAmount').value = perInstallment;
+    // ✅ CORREGIDO: Solo calcular si el campo está vacío o es 0
+    const currentInstallmentValue = parseFloat(document.getElementById('installmentAmount').value);
+    if (!currentInstallmentValue || currentInstallmentValue === 0) {
+        const perInstallment = cuotas <= 0 ? 0 : Math.ceil(remaining / cuotas);
+        document.getElementById('installmentAmount').value = perInstallment;
+    }
 }
 
 // Listeners para recalcular cuota cuando cambien valores relevantes

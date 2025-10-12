@@ -34,7 +34,11 @@ const SaleSchema = new mongoose.Schema({
     // ⭐ NUEVO: Número de cuotas como número
     numberOfInstallments: { type: Number, default: 1 },
     // ⭐ NUEVO: Valor de cada cuota
-    installmentAmount: { type: Number, default: 0 },
+     installmentAmount: { 
+        type: Number, 
+        default: 0,
+        get: v => Math.round(v * 100) / 100 // Redondear a 2 decimales al leer
+    },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     settled: { type: Boolean, default: false },
     settledDate: { type: Date, default: null },
