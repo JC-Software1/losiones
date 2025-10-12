@@ -137,6 +137,7 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
 });
 
 // Update a product
+// Update a product
 router.put("/:id", auth, checkPermission('editarProductos'), async (req, res) => {
     const { name, costPrice, salePrice, category, brand, size } = req.body;
     try {

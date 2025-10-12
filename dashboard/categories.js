@@ -969,17 +969,160 @@ function renderSelectedProducts() {
         const tag = document.createElement("div");
         tag.className = "selected-product-tag";
         tag.innerHTML = `
-            ${product.name} (${product.brand}${product.size ? `, ${product.size}` : ''})
+            <span class="product-name">${product.name} (${product.brand}${product.size ? `, ${product.size}` : ''})</span>
+            <span class="product-price" style="margin-left: 8px; font-weight: 700; color: rgba(255,255,255,0.9);">
+                $${product.salePrice.toLocaleString()}
+            </span>
+            <button class="edit-price" data-index="${index}" title="Editar precio" style="
+                background: rgba(255,255,255,0.2);
+                border: none;
+                color: white;
+                border-radius: 4px;
+                width: 24px;
+                height: 24px;
+                cursor: pointer;
+                margin-left: 6px;
+                font-size: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">
+                <i class="fas fa-edit"></i>
+            </button>
             <button class="remove" data-index="${index}">×</button>
         `;
 
-        // Agregar event listener
+        // Event listener para editar precio
+        tag.querySelector('.edit-price').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(e.currentTarget.dataset.index);
+            editProductPrice(index);
+        });
+
+        // Event listener para remover
         tag.querySelector('.remove').addEventListener('click', (e) => {
             const index = parseInt(e.target.dataset.index);
             removeSelectedProduct(index);
         });
+        
         container.appendChild(tag);
     });
+}
+
+async function editProductPrice(index) {
+    const product = selectedProducts[index];
+    if (!product) return;
+
+    const newPrice = prompt(
+        `📝 Editar precio de: ${product.name}\n\nPrecio actual: $${product.salePrice.toLocaleString()}\n\nIngresa el nuevo precio:`,
+        product.salePrice
+    );
+
+    if (newPrice === null || newPrice.trim() === '') return;
+
+    const parsedPrice = parseFloat(newPrice);
+    
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+        alert('❌ Precio inválido. Debe ser un número mayor a 0.');
+        return;
+    }
+
+    // Actualizar en el array local
+    selectedProducts[index].salePrice = parsedPrice;
+
+    // Actualizar en la base de datos
+    try {
+        const token = getToken();
+        await apiFetch(`/products/${product._id}`, 'PUT', {
+            name: product.name,
+            costPrice: product.costPrice,
+            salePrice: parsedPrice,
+            category: product.category,
+            brand: product.brand,
+            size: product.size
+        }, token);
+
+        // Mostrar notificación de éxito
+        showPriceUpdateNotification(product.name, parsedPrice);
+
+        // Re-renderizar los productos seleccionados
+        renderSelectedProducts();
+        updateTotalPrice();
+
+    } catch (error) {
+        console.error('Error al actualizar precio del producto:', error);
+        alert('❌ No se pudo actualizar el precio en el inventario: ' + error.message);
+        
+        // Revertir el cambio local si falló el guardado
+        selectedProducts[index].salePrice = product.salePrice;
+        renderSelectedProducts();
+    }
+}
+
+function showPriceUpdateNotification(productName, newPrice) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+        color: white;
+        padding: 16px 20px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(39,174,96,0.4);
+        z-index: 10001;
+        font-weight: 600;
+        font-size: 14px;
+        animation: slideInRight 0.3s ease;
+        max-width: 300px;
+    `;
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-check-circle" style="font-size: 20px;"></i>
+            <div>
+                <div style="font-weight: 700; margin-bottom: 4px;">✅ Precio actualizado</div>
+                <div style="font-size: 12px; opacity: 0.9;">${productName}</div>
+                <div style="font-size: 13px; margin-top: 4px;">Nuevo precio: $${newPrice.toLocaleString()}</div>
+            </div>
+        </div>
+    `;
+    
+    // Agregar animación CSS si no existe
+    if (!document.getElementById('priceUpdateAnimation')) {
+        const style = document.createElement('style');
+        style.id = 'priceUpdateAnimation';
+        style.innerHTML = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOutRight {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
 
