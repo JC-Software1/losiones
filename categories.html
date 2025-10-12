@@ -1302,6 +1302,36 @@
   }
 }
 
+/* Botón voltear cámara */
+.btn-warning {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+    transform: translateY(-2px);
+}
+
+.scanner-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+#btnFlipCamera i {
+    animation: none;
+}
+
+#btnFlipCamera:active i {
+    animation: spin 0.5s ease;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 
     </style>
 </head>
@@ -1396,9 +1426,9 @@
                             <div class="dropdown-panel hidden" id="productDropdownPanel">
                                 <div class="dropdown-search-wrapper">
                                     <input type="text" id="productSearchInput" placeholder="Buscar producto..." class="dropdown-search">
-                                    <button type="button" id="btnBarcodeScanner" class="btn-camera" title="Escanear código de barras">
-                                        <i class="fas fa-camera"></i>
-                                    </button>
+<button type="button" id="btnBarcodeScanner" class="btn-camera" title="Escanear código QR">
+    <i class="fas fa-qrcode"></i>
+</button>
                                 </div>
                                 <div id="productDropdownList"></div>
                             </div>
@@ -1453,9 +1483,10 @@
                     </div>
 
                     <!-- Valor de cada cuota (auto-calculado) -->
+<!-- Valor de cada cuota (AHORA EDITABLE) -->
 <div class="form-group full-width">
     <label for="installmentAmount">Valor por cuota</label>
-    <input type="text" id="installmentAmount" readonly placeholder="Se calculará automáticamente">
+    <input type="number" id="installmentAmount" placeholder="Se calculará automáticamente" step="1000">
 </div>
 
                 </div>
@@ -1546,20 +1577,24 @@
     </div>
 
     <!-- Modal scanner -->
-    <div id="scannerModal" class="scanner-modal hidden">
-        <div class="scanner-box">
-            <h3>Enfoca el código de barras</h3>
-            <video id="scannerVideo" playsinline></video>
-            <div class="scanner-actions">
-                <button type="button" id="btnStopScan" class="btn btn-danger">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-            </div>
+   <!-- Modal scanner -->
+<div id="scannerModal" class="scanner-modal hidden">
+   <div class="scanner-box">
+    <h3>Enfoca el código QR</h3>
+        <video id="scannerVideo" playsinline></video>
+        <div class="scanner-actions">
+            <button type="button" id="btnFlipCamera" class="btn btn-warning">
+                <i class="fas fa-sync-alt"></i> Voltear Cámara
+            </button>
+            <button type="button" id="btnStopScan" class="btn btn-danger">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
         </div>
     </div>
+</div>
 
     <!-- Scripts -->
-    <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="loader.js"></script>
     <script src="dashboard/categories.js" type="module"></script>
     <script src="main.js" type="module"></script>

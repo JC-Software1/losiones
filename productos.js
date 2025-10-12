@@ -54,26 +54,24 @@ function ocultarTexto(texto) {
 
 /* 1️⃣  DECLARAR funciones que se usan después */
 function generateBarcodeImage(id, name, price) {
-  // Crear código más corto para mejor lectura
-  const shortId = id.slice(-8); // Últimos 8 caracteres del ID
-  const cleanName = name.replace(/[^\w\s]/g, '').substring(0, 15); // Sin caracteres especiales
-  const code = `${shortId}|${cleanName}|${price}`;
+  const code = `${id}|${name}|${price}`;
   
-  console.log("Generando código personalizado:", code);
+  console.log("Generando código QR personalizado:", code);
   
-  JsBarcode('#barcodeCanvas', code, {
-    format: 'CODE128',
-    width: 3,           // Más ancho para mejor lectura
-    height: 100,        // Más alto
-    displayValue: true,
-    fontSize: 16,       // Texto más grande
-    margin: 10,
-    background: '#ffffff',
-    lineColor: '#000000'
+  // Limpiar canvas anterior
+  const canvas = document.getElementById('barcodeCanvas');
+  canvas.innerHTML = '';
+  
+  // Generar código QR
+  new QRCode(canvas, {
+    text: code,
+    width: 256,
+    height: 256,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
   });
   
-  // Guardamos datos en el canvas para la descarga
-  const canvas = document.getElementById('barcodeCanvas');
   canvas.dataset.productId = id;
   canvas.dataset.name = name;
   canvas.dataset.price = price;
@@ -94,17 +92,21 @@ function closeBarcodeModal(e) {
 }
 
 function downloadBarcode() {
-  const canvas = document.getElementById('barcodeCanvas');
-  canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const a   = document.createElement('a');
-    a.href    = url;
-    a.download = `CB_${canvas.dataset.productId}_${canvas.dataset.name.replace(/[^a-z0-9]/gi,'_')}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+  const container = document.getElementById('barcodeCanvas');
+  const qrCanvas = container.querySelector('canvas');
+  
+  if (qrCanvas) {
+    qrCanvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `QR_${container.dataset.productId}_${container.dataset.name.replace(/[^a-z0-9]/gi,'_')}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
 }
 
 /* 2️⃣  PUBLICARLAS en window para los onclick inline */
@@ -759,3 +761,857 @@ window.exportProductsData = function() {
 window.showBarcode        = showBarcode;
 window.closeBarcodeModal  = closeBarcodeModal;
 window.downloadBarcode    = downloadBarcode;
+
+/* =========================================================
+   GENERACIÓN MASIVA DE CÓDIGOS DE BARRAS (CON CM)
+   ========================================================= */
+
+
+
+// Actualizar preview del layout
+window.updateLayoutPreview = function() {
+    const layout = document.querySelector('input[name="layout"]:checked').value;
+    const previewText = document.getElementById('previewText');
+    
+    const previews = {
+        grid: '3 columnas × N filas - Ideal para hojas A4',
+        list: '1 columna × N filas - Uno debajo del otro',
+        compact: '4-5 columnas × N filas - Máxima densidad'
+    };
+    
+    previewText.textContent = previews[layout] || '';
+};
+
+// Generar códigos de barras masivos CON MEDIDAS EN CM
+window.generateBulkBarcodes = async function() {
+    if (bulkSelectedProducts.length === 0) {
+        showNotification("Selecciona al menos un producto", "warning");
+        return;
+    }
+
+    showNotification("Generando códigos de barras...", "info");
+
+    // Obtener configuración EN CENTÍMETROS
+    const widthCm = parseFloat(document.getElementById('barcodeWidth').value);
+    const heightCm = parseFloat(document.getElementById('barcodeHeight').value);
+    const fontSizeCm = parseFloat(document.getElementById('barcodeFontSize').value);
+    const marginCm = parseFloat(document.getElementById('barcodeMargin').value);
+    const containerWidthCm = parseFloat(document.getElementById('barcodeContainerWidth').value);
+    const containerHeightCm = parseFloat(document.getElementById('barcodeContainerHeight').value);
+    const layout = document.querySelector('input[name="layout"]:checked').value;
+
+    // Convertir a píxeles
+    const width = widthCm * 10; // Factor de escala para JsBarcode
+    const height = cmToPx(heightCm);
+    const fontSize = cmToPx(fontSizeCm);
+    const margin = cmToPx(marginCm);
+    const containerWidth = cmToPx(containerWidthCm);
+    const containerHeight = cmToPx(containerHeightCm);
+
+    // Obtener productos seleccionados
+    const selectedProductsData = allProductsForBulk.filter(p => 
+        bulkSelectedProducts.includes(p._id)
+    );
+
+    // Crear contenedor temporal
+    const container = document.createElement('div');
+    container.style.cssText = `
+        position: fixed;
+        left: -9999px;
+        top: 0;
+        background: white;
+        padding: ${cmToPx(1)}px;
+        width: ${cmToPx(21)}px; /* A4 width: 21cm */
+    `;
+    document.body.appendChild(container);
+
+    // Configurar layout según el tipo
+    const layoutConfigs = {
+        grid: {
+            columns: 3,
+            gap: cmToPx(0.5)
+        },
+        list: {
+            columns: 1,
+            gap: cmToPx(0.3)
+        },
+        compact: {
+            columns: 4,
+            gap: cmToPx(0.2)
+        }
+    };
+
+    const config = layoutConfigs[layout];
+    container.style.display = 'grid';
+    container.style.gridTemplateColumns = `repeat(${config.columns}, 1fr)`;
+    container.style.gap = `${config.gap}px`;
+
+    // Generar cada código
+    for (const product of selectedProductsData) {
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = `
+            border: 1px solid #ddd;
+            padding: ${margin}px;
+            border-radius: 4px;
+            text-align: center;
+            background: white;
+            width: ${containerWidth}px;
+            height: ${containerHeight}px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            overflow: hidden;
+        `;
+
+        // Título del producto
+        const title = document.createElement('div');
+        title.textContent = product.name;
+        title.style.cssText = `
+            font-weight: 600;
+            margin-bottom: ${cmToPx(0.2)}px;
+            font-size: ${fontSize}px;
+            color: #2c3e50;
+            line-height: 1.2;
+            max-height: ${fontSize * 2.4}px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        `;
+
+        // Precio
+        const price = document.createElement('div');
+        price.textContent = `$${product.salePrice.toLocaleString()}`;
+        price.style.cssText = `
+            font-size: ${fontSize * 0.9}px;
+            color: #27ae60;
+            margin-bottom: ${cmToPx(0.1)}px;
+            font-weight: 600;
+        `;
+
+        // Detalles adicionales (categoría, marca, talla)
+        const details = document.createElement('div');
+        const detailsParts = [];
+        if (product.category) detailsParts.push(product.category);
+        if (product.brand) detailsParts.push(product.brand);
+        if (product.size) detailsParts.push(`Talla: ${product.size}`);
+        
+        details.textContent = detailsParts.join(' • ');
+        details.style.cssText = `
+            font-size: ${fontSize * 0.65}px;
+            color: #7f8c8d;
+            margin-bottom: ${cmToPx(0.15)}px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        `;
+
+        // Canvas para el código
+        const canvas = document.createElement('canvas');
+        
+        wrapper.appendChild(title);
+        wrapper.appendChild(details);
+        wrapper.appendChild(price);
+        wrapper.appendChild(canvas);
+        container.appendChild(wrapper);
+
+        // Generar código de barras
+        const shortId = product._id.slice(-8);
+        const cleanName = product.name.replace(/[^\w\s]/g, '').substring(0, 15);
+        const code = `${shortId}|${cleanName}|${product.salePrice}`;
+
+try {
+            // Crear div contenedor para el QR
+            const qrDiv = document.createElement('div');
+            qrDiv.style.cssText = `
+                width: ${cmToPx(containerWidthCm * 0.6)}px;
+                height: ${cmToPx(containerHeightCm * 0.5)}px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            
+            // Generar código QR en el div
+            new QRCode(qrDiv, {
+                text: code,
+                width: cmToPx(containerWidthCm * 0.6),
+                height: cmToPx(containerHeightCm * 0.5),
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // Agregar el div (que contiene el canvas del QR) al wrapper
+            wrapper.appendChild(qrDiv);
+            
+        } catch (error) {
+            console.error('Error generando código QR para:', product.name, error);
+        }
+    }
+
+    // ✅ ESPERAR MÁS TIEMPO para que los QR se rendericen completamente
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Convertir a imagen y descargar
+    try {
+        if (typeof html2canvas !== 'undefined') {
+            const canvas = await html2canvas(container, {
+                scale: 3, // Mayor escala para mejor calidad de impresión
+                backgroundColor: '#ffffff',
+                logging: false,
+                width: cmToPx(21), // A4 width
+                windowWidth: cmToPx(21)
+            });
+
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().slice(0,10);
+                link.href = url;
+                link.download = `codigos_barras_${timestamp}_${bulkSelectedProducts.length}productos.png`;
+                link.click();
+                URL.revokeObjectURL(url);
+                
+                showNotification(`${bulkSelectedProducts.length} códigos generados correctamente`, "success");
+                closeBulkBarcodeModal();
+            }, 'image/png', 1.0);
+        } else {
+            // Método alternativo: ventana de impresión con medidas reales
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Códigos de Barras - ${selectedProductsData.length} productos</title>
+                        <style>
+                            @page {
+                                size: A4;
+                                margin: 1cm;
+                            }
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                padding: 0;
+                                margin: 0;
+                            }
+                            .container {
+                                display: grid;
+                                grid-template-columns: repeat(${config.columns}, 1fr);
+                                gap: ${marginCm}cm;
+                                padding: 0.5cm;
+                            }
+                            .barcode-item {
+                                border: 1px solid #ddd;
+                                padding: ${marginCm}cm;
+                                text-align: center;
+                                width: ${containerWidthCm}cm;
+                                height: ${containerHeightCm}cm;
+                                box-sizing: border-box;
+                                page-break-inside: avoid;
+                            }
+                            .product-name {
+                                font-weight: 600;
+                                font-size: ${fontSizeCm}cm;
+                                margin-bottom: ${marginCm/2}cm;
+                                color: #2c3e50;
+                            }
+                            .product-price {
+                                font-size: ${fontSizeCm*0.9}cm;
+                                color: #27ae60;
+                                font-weight: 600;
+                                margin-bottom: ${marginCm/2}cm;
+                            }
+                            .product-details {
+                                font-size: ${fontSizeCm*0.65}cm;
+                                color: #7f8c8d;
+                                margin-bottom: ${marginCm/2}cm;
+                            }
+                            @media print {
+                                body { margin: 0; }
+                                .container { padding: 0; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            ${container.innerHTML}
+                        </div>
+                        <script>
+                            window.onload = function() {
+                                setTimeout(function() {
+                                    window.print();
+                                }, 500);
+                            };
+                        </script>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            
+            showNotification("Ventana de impresión abierta. Puedes guardar como PDF", "success");
+        }
+    } catch (error) {
+        console.error('Error al generar imagen:', error);
+        showNotification("Error al generar códigos: " + error.message, "error");
+    } finally {
+        // Limpiar
+        document.body.removeChild(container);
+    }
+};
+
+// Inicializar preview al abrir modal
+document.addEventListener('DOMContentLoaded', () => {
+    const layoutInputs = document.querySelectorAll('input[name="layout"]');
+    layoutInputs.forEach(input => {
+        input.addEventListener('change', updateLayoutPreview);
+    });
+    updateLayoutPreview();
+});
+
+/* =========================================================
+   GENERACIÓN MASIVA DE CÓDIGOS DE BARRAS (ALTA CALIDAD)
+   ========================================================= */
+
+let bulkSelectedProducts = [];
+let allProductsForBulk = [];
+
+// Función auxiliar: convertir CM a píxeles (96 DPI estándar)
+function cmToPx(cm) {
+    return Math.round(cm * 37.7952755906); // 1cm = 37.7952755906px a 96 DPI
+}
+
+// Abrir modal
+window.openBulkBarcodeModal = function() {
+    // Filtrar solo productos no vendidos
+    allProductsForBulk = products.filter(p => !p.sold);
+    
+    if (allProductsForBulk.length === 0) {
+        showNotification("No hay productos disponibles para generar códigos", "warning");
+        return;
+    }
+
+    // Llenar filtros
+    populateBulkFilters();
+    
+    // Mostrar todos los productos inicialmente
+    updateBulkSelection();
+    
+    // Inicializar preview
+    updateLayoutPreview();
+    
+    // Mostrar modal
+    document.getElementById('bulkBarcodeModal').classList.add('show');
+};
+
+// Cerrar modal
+window.closeBulkBarcodeModal = function(event) {
+    if (!event || event.target.id === 'bulkBarcodeModal') {
+        document.getElementById('bulkBarcodeModal').classList.remove('show');
+        bulkSelectedProducts = [];
+    }
+};
+
+// Poblar filtros con categorías, marcas y tallas únicas
+function populateBulkFilters() {
+    const categories = [...new Set(allProductsForBulk.map(p => p.category))].sort();
+    const brands = [...new Set(allProductsForBulk.map(p => p.brand))].sort();
+    const sizes = [...new Set(allProductsForBulk.map(p => p.size).filter(Boolean))].sort();
+
+    // Categorías
+    const categorySelect = document.getElementById('bulkCategory');
+    categorySelect.innerHTML = '<option value="">Todas las categorías</option>';
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        categorySelect.appendChild(option);
+    });
+
+    // Marcas
+    const brandSelect = document.getElementById('bulkBrand');
+    brandSelect.innerHTML = '<option value="">Todas las marcas</option>';
+    brands.forEach(brand => {
+        const option = document.createElement('option');
+        option.value = brand;
+        option.textContent = brand;
+        brandSelect.appendChild(option);
+    });
+
+    // Tallas
+    const sizeSelect = document.getElementById('bulkSize');
+    sizeSelect.innerHTML = '<option value="">Todas las tallas</option>';
+    sizes.forEach(size => {
+        const option = document.createElement('option');
+        option.value = size;
+        option.textContent = size;
+        sizeSelect.appendChild(option);
+    });
+}
+
+// Actualizar selección según filtros
+window.updateBulkSelection = function() {
+    const category = document.getElementById('bulkCategory').value;
+    const brand = document.getElementById('bulkBrand').value;
+    const size = document.getElementById('bulkSize').value;
+    const searchText = document.getElementById('bulkSearch').value.toLowerCase();
+
+    const filtered = allProductsForBulk.filter(product => {
+        const matchCategory = !category || product.category === category;
+        const matchBrand = !brand || product.brand === brand;
+        const matchSize = !size || product.size === size;
+        const matchSearch = !searchText || product.name.toLowerCase().includes(searchText);
+
+        return matchCategory && matchBrand && matchSize && matchSearch;
+    });
+
+    renderBulkProductList(filtered);
+};
+
+// Renderizar lista de productos
+function renderBulkProductList(productList) {
+    const container = document.getElementById('bulkProductList');
+    container.innerHTML = '';
+
+    if (productList.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--medium-gray); padding: 20px;">No hay productos que coincidan con los filtros</p>';
+        updateSelectedCount();
+        return;
+    }
+
+    productList.forEach(product => {
+        const isSelected = bulkSelectedProducts.includes(product._id);
+        
+        const item = document.createElement('div');
+        item.className = 'product-item';
+        item.innerHTML = `
+            <input 
+                type="checkbox" 
+                id="bulk_${product._id}" 
+                ${isSelected ? 'checked' : ''}
+                onchange="toggleBulkProduct('${product._id}')"
+            >
+            <div class="product-item-info">
+                <div class="product-item-name">${product.name}</div>
+                <div class="product-item-details">
+                    <span><i class="fas fa-folder"></i> ${product.category}</span>
+                    <span><i class="fas fa-tag"></i> ${product.brand}</span>
+                    ${product.size ? `<span><i class="fas fa-ruler"></i> ${product.size}</span>` : ''}
+                    <span><i class="fas fa-dollar-sign"></i> $${product.salePrice.toLocaleString()}</span>
+                </div>
+            </div>
+        `;
+        container.appendChild(item);
+    });
+
+    updateSelectedCount();
+}
+
+// Toggle selección de producto
+window.toggleBulkProduct = function(productId) {
+    const index = bulkSelectedProducts.indexOf(productId);
+    if (index === -1) {
+        bulkSelectedProducts.push(productId);
+    } else {
+        bulkSelectedProducts.splice(index, 1);
+    }
+    updateSelectedCount();
+};
+
+// Seleccionar todos
+window.selectAllBulk = function() {
+    const checkboxes = document.querySelectorAll('#bulkProductList input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+            checkbox.checked = true;
+            const productId = checkbox.id.replace('bulk_', '');
+            if (!bulkSelectedProducts.includes(productId)) {
+                bulkSelectedProducts.push(productId);
+            }
+        }
+    });
+    updateSelectedCount();
+};
+
+// Deseleccionar todos
+window.deselectAllBulk = function() {
+    const checkboxes = document.querySelectorAll('#bulkProductList input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    bulkSelectedProducts = [];
+    updateSelectedCount();
+};
+
+// Actualizar contador
+function updateSelectedCount() {
+    document.getElementById('selectedCount').textContent = 
+        `${bulkSelectedProducts.length} producto${bulkSelectedProducts.length !== 1 ? 's' : ''} seleccionado${bulkSelectedProducts.length !== 1 ? 's' : ''}`;
+}
+
+// Actualizar preview del layout
+window.updateLayoutPreview = function() {
+    const layout = document.querySelector('input[name="layout"]:checked').value;
+    const previewText = document.getElementById('previewText');
+    
+    const previews = {
+        grid: '3 columnas × N filas - Ideal para hojas A4',
+        list: '1 columna × N filas - Uno debajo del otro',
+        compact: '4-5 columnas × N filas - Máxima densidad'
+    };
+    
+    if (previewText) {
+        previewText.textContent = previews[layout] || '';
+    }
+};
+
+// Aplicar configuraciones predefinidas (✅ MEJORADO CON VALORES DE ALTA CALIDAD)
+window.applyPreset = function(presetName) {
+    const presets = {
+        standard: {
+            width: 0.06,      // ✅ Aumentado para líneas más gruesas
+            height: 2.2,      // ✅ Aumentado para mejor escaneo
+            fontSize: 0.45,   // ✅ Aumentado para mejor legibilidad
+            margin: 0.5,
+            containerWidth: 6.5,  // ✅ Más espacio
+            containerHeight: 4.5  // ✅ Más espacio
+        },
+        small: {
+            width: 0.05,
+            height: 1.8,
+            fontSize: 0.35,
+            margin: 0.3,
+            containerWidth: 4.5,
+            containerHeight: 3.5
+        },
+        large: {
+            width: 0.08,      // ✅ Mucho más grueso
+            height: 3,        // ✅ Mucho más alto
+            fontSize: 0.6,    // ✅ Fuente grande
+            margin: 0.7,
+            containerWidth: 9,
+            containerHeight: 6
+        },
+        thermal: {
+            width: 0.05,
+            height: 2,
+            fontSize: 0.4,
+            margin: 0.2,
+            containerWidth: 5.5,
+            containerHeight: 3.5
+        }
+    };
+
+    const preset = presets[presetName];
+    if (preset) {
+        document.getElementById('barcodeWidth').value = preset.width;
+        document.getElementById('barcodeHeight').value = preset.height;
+        document.getElementById('barcodeFontSize').value = preset.fontSize;
+        document.getElementById('barcodeMargin').value = preset.margin;
+        document.getElementById('barcodeContainerWidth').value = preset.containerWidth;
+        document.getElementById('barcodeContainerHeight').value = preset.containerHeight;
+        
+        showNotification(`✅ Preset HD "${presetName}" aplicado`, "success");
+    }
+};
+
+// ✅ GENERAR CÓDIGOS DE BARRAS CON MÁXIMA CALIDAD
+// ✅ GENERAR CÓDIGOS DE BARRAS EN ALTA CALIDAD CON PAGINACIÓN
+// ✅ GENERAR CÓDIGOS DE BARRAS EN ALTA CALIDAD CON PAGINACIÓN Y ESCALA REAL
+window.generateBulkBarcodes = async function() {
+    if (bulkSelectedProducts.length === 0) {
+        showNotification("Selecciona al menos un producto", "warning");
+        return;
+    }
+
+    showNotification("Generando códigos de barras en alta calidad...", "info");
+
+    // Obtener configuración EN CENTÍMETROS (valores del usuario)
+    const widthCm = parseFloat(document.getElementById('barcodeWidth').value);
+    const heightCm = parseFloat(document.getElementById('barcodeHeight').value);
+    const fontSizeCm = parseFloat(document.getElementById('barcodeFontSize').value);
+    const marginCm = parseFloat(document.getElementById('barcodeMargin').value);
+    const containerWidthCm = parseFloat(document.getElementById('barcodeContainerWidth').value);
+    const containerHeightCm = parseFloat(document.getElementById('barcodeContainerHeight').value);
+    const layout = document.querySelector('input[name="layout"]:checked').value;
+
+    // Obtener productos seleccionados
+    const selectedProductsData = allProductsForBulk.filter(p => 
+        bulkSelectedProducts.includes(p._id)
+    );
+
+    // Configurar layout
+    const layoutConfigs = {
+        grid: { columns: 3 },
+        list: { columns: 1 },
+        compact: { columns: 4 }
+    };
+
+    const config = layoutConfigs[layout];
+    
+    // ✅ CONFIGURACIÓN DE PÁGINA A4 Y DPI
+    const DPI = 300; // Alta calidad para impresión
+    const pageWidthCm = 21; // A4
+    const pageHeightCm = 29.7; // A4
+    const pagePaddingCm = 1;
+    const gapCm = 0.5;
+    
+    // Función auxiliar: convertir CM a píxeles a 300 DPI
+    const cmToPx300 = (cm) => Math.round((cm / 2.54) * DPI);
+    
+    // Calcular dimensiones en píxeles
+    const pageWidthPx = cmToPx300(pageWidthCm);
+    const pageHeightPx = cmToPx300(pageHeightCm);
+    const pagePaddingPx = cmToPx300(pagePaddingCm);
+    const gapPx = cmToPx300(gapCm);
+    const containerWidthPx = cmToPx300(containerWidthCm);
+    const containerHeightPx = cmToPx300(containerHeightCm);
+    
+    // ✅ CALCULAR CUÁNTOS PRODUCTOS CABEN POR PÁGINA
+    const usableWidthCm = pageWidthCm - (2 * pagePaddingCm);
+    const usableHeightCm = pageHeightCm - (2 * pagePaddingCm);
+    
+    const itemsPerRow = config.columns;
+    const rowsPerPage = Math.floor(usableHeightCm / (containerHeightCm + gapCm));
+    const itemsPerPage = itemsPerRow * rowsPerPage;
+    
+    console.log(`📄 Configuración:`);
+    console.log(`   - ${itemsPerPage} códigos por página`);
+    console.log(`   - ${itemsPerRow} columnas × ${rowsPerPage} filas`);
+    console.log(`   - Tamaño código: ${containerWidthCm}cm × ${containerHeightCm}cm`);
+    
+    // ✅ DIVIDIR PRODUCTOS EN PÁGINAS
+    const pages = [];
+    for (let i = 0; i < selectedProductsData.length; i += itemsPerPage) {
+        pages.push(selectedProductsData.slice(i, i + itemsPerPage));
+    }
+    
+    console.log(`📑 Total de páginas: ${pages.length}`);
+    
+    // ✅ GENERAR CADA PÁGINA COMO IMAGEN SEPARADA
+    const images = [];
+    
+    for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+        const pageProducts = pages[pageIndex];
+        
+        showNotification(`Generando página ${pageIndex + 1}/${pages.length}...`, "info");
+        
+        // Crear contenedor para esta página
+        const container = document.createElement('div');
+        container.style.cssText = `
+            position: fixed;
+            left: -99999px;
+            top: 0;
+            width: ${pageWidthPx}px;
+            height: ${pageHeightPx}px;
+            background: white;
+            padding: ${pagePaddingPx}px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: repeat(${itemsPerRow}, 1fr);
+            gap: ${gapPx}px;
+            align-content: start;
+        `;
+        document.body.appendChild(container);
+        
+        // ✅ GENERAR CADA CÓDIGO CON MEDIDAS EXACTAS
+        for (const product of pageProducts) {
+            const wrapper = document.createElement('div');
+            
+            wrapper.style.cssText = `
+                border: ${cmToPx300(0.05)}px solid #000;
+                padding: ${cmToPx300(marginCm)}px;
+                border-radius: ${cmToPx300(0.2)}px;
+                text-align: center;
+                background: white;
+                width: ${containerWidthPx}px;
+                height: ${containerHeightPx}px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-evenly;
+                align-items: center;
+                box-sizing: border-box;
+                overflow: hidden;
+            `;
+
+            // ✅ TÍTULO DEL PRODUCTO (usando tamaño de fuente exacto)
+            const title = document.createElement('div');
+            const productName = product.name.length > 35 ? product.name.substring(0, 32) + '...' : product.name;
+            title.textContent = productName;
+            title.style.cssText = `
+                font-weight: 700;
+                font-size: ${cmToPx300(fontSizeCm)}px;
+                color: #000;
+                line-height: 1.1;
+                font-family: Arial, sans-serif;
+                width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                margin-bottom: ${cmToPx300(0.15)}px;
+            `;
+
+            // ✅ DETALLES (categoría, marca, talla)
+            const details = document.createElement('div');
+            const detailsParts = [];
+            if (product.category) detailsParts.push(product.category);
+            if (product.brand) detailsParts.push(product.brand);
+            if (product.size) detailsParts.push(`T:${product.size}`);
+            details.textContent = detailsParts.join(' • ');
+            details.style.cssText = `
+                font-size: ${cmToPx300(fontSizeCm * 0.7)}px;
+                color: #333;
+                font-family: Arial, sans-serif;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
+                margin-bottom: ${cmToPx300(0.1)}px;
+            `;
+
+            // ✅ PRECIO
+            const price = document.createElement('div');
+            price.textContent = `$${product.salePrice.toLocaleString()}`;
+            price.style.cssText = `
+                font-size: ${cmToPx300(fontSizeCm * 0.95)}px;
+                color: #27ae60;
+                font-weight: 700;
+                font-family: Arial, sans-serif;
+                margin-bottom: ${cmToPx300(0.15)}px;
+            `;
+
+            // ✅ CANVAS PARA CÓDIGO DE BARRAS (con escala proporcional)
+            const canvas = document.createElement('canvas');
+            
+            wrapper.appendChild(title);
+            wrapper.appendChild(details);
+            wrapper.appendChild(price);
+            wrapper.appendChild(canvas);
+            container.appendChild(wrapper);
+
+            // ✅ GENERAR CÓDIGO DE BARRAS CON PROPORCIONES REALES
+            const shortId = product._id.slice(-8);
+            const cleanName = product.name.replace(/[^\w\s]/g, '').substring(0, 15);
+            const code = `${shortId}|${cleanName}|${product.salePrice}`;
+
+try {
+                // Crear div contenedor para el QR en alta resolución
+                const qrDiv = document.createElement('div');
+                qrDiv.style.cssText = `
+                    width: ${cmToPx300(containerWidthCm * 0.5)}px;
+                    height: ${cmToPx300(containerHeightCm * 0.4)}px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                `;
+                
+                // Generar código QR en el div
+                new QRCode(qrDiv, {
+                    text: code,
+                    width: cmToPx300(containerWidthCm * 0.5),
+                    height: cmToPx300(containerHeightCm * 0.4),
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+                // Agregar el div completo al wrapper
+                wrapper.appendChild(qrDiv);
+                
+            } catch (error) {
+                console.error('Error generando código QR para:', product.name, error);
+            }
+        }
+
+        // ✅ AUMENTAR TIEMPO DE ESPERA para renderizado completo
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        // ✅ CAPTURAR ESTA PÁGINA CON html2canvas
+        try {
+            const canvas = await html2canvas(container, {
+                scale: 1, // Ya usamos 300 DPI en el tamaño
+                backgroundColor: '#ffffff',
+                logging: false,
+                width: pageWidthPx,
+                height: pageHeightPx,
+                windowWidth: pageWidthPx,
+                windowHeight: pageHeightPx,
+                useCORS: true,
+                allowTaint: false
+            });
+
+            // Convertir a blob
+            const blob = await new Promise(resolve => {
+                canvas.toBlob(resolve, 'image/png', 1.0);
+            });
+            
+            images.push({
+                blob: blob,
+                pageNumber: pageIndex + 1,
+                totalPages: pages.length
+            });
+            
+            console.log(`✅ Página ${pageIndex + 1}/${pages.length} generada (${pageProducts.length} códigos)`);
+            
+        } catch (error) {
+            console.error(`❌ Error en página ${pageIndex + 1}:`, error);
+            showNotification(`Error en página ${pageIndex + 1}: ${error.message}`, "error");
+        } finally {
+            // Limpiar contenedor
+            document.body.removeChild(container);
+        }
+    }
+    
+    // ✅ DESCARGAR TODAS LAS IMÁGENES
+    if (images.length > 0) {
+        const timestamp = new Date().toISOString().slice(0, 10);
+        const categoryFilter = document.getElementById('bulkCategory').value;
+        const brandFilter = document.getElementById('bulkBrand').value;
+        
+        for (const img of images) {
+            const url = URL.createObjectURL(img.blob);
+            const link = document.createElement('a');
+            
+            let filename = `codigos_barras_HD_${timestamp}`;
+            if (categoryFilter) filename += `_${categoryFilter}`;
+            if (brandFilter) filename += `_${brandFilter}`;
+            
+            // Si hay múltiples páginas, agregar número
+            if (img.totalPages > 1) {
+                filename += `_pag${img.pageNumber}de${img.totalPages}`;
+            }
+            filename += '.png';
+            
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            // Pequeña pausa entre descargas
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+        
+        showNotification(
+            `✅ ${images.length} archivo(s) descargado(s) con ${bulkSelectedProducts.length} códigos en total - CALIDAD HD 300 DPI`, 
+            "success"
+        );
+        closeBulkBarcodeModal();
+    } else {
+        showNotification("❌ No se pudo generar ninguna imagen", "error");
+    }
+};
+
+// Inicializar listeners cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    // Verificar si los elementos existen antes de agregar listeners
+    const layoutInputs = document.querySelectorAll('input[name="layout"]');
+    if (layoutInputs.length > 0) {
+        layoutInputs.forEach(input => {
+            input.addEventListener('change', updateLayoutPreview);
+        });
+    }
+});

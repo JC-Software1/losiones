@@ -891,7 +891,7 @@ function updateTotalPrice() {
     const remaining = total - advance;
     const perInstallment = cuotas <= 0 ? 0 : Math.ceil(remaining / cuotas);
     
-    document.getElementById('installmentAmount').value = `$${perInstallment.toLocaleString('es-CO')}`;
+    document.getElementById('installmentAmount').value = perInstallment;
 }
 
 // Listeners para recalcular cuota cuando cambien valores relevantes
@@ -1175,57 +1175,65 @@ function loadPaymentDaysFromString(paymentDaysString) {
    LECTOR DE CÓDIGOS DE BARRAS CORREGIDO
    ========================================================= */
 
+/* =========================================================
+   LECTOR DE CÓDIGOS DE BARRAS CON FLIP DE CÁMARA
+   ========================================================= */
+
 const btnCamera   = document.getElementById('btnBarcodeScanner');
 const btnStopScan = document.getElementById('btnStopScan');
+const btnFlipCamera = document.getElementById('btnFlipCamera');
 const modalScan   = document.getElementById('scannerModal');
 const video       = document.getElementById('scannerVideo');
 
-let codeReader = null;
+let qrScanner = null;
 let scanning   = false;
 let scanCount  = 0;
+let availableCameras = [];
+let currentCameraIndex = 0;
 
 // Abrir modal y arrancar cámara
 btnCamera.addEventListener('click', startScanner);
 btnStopScan.addEventListener('click', stopScanner);
+btnFlipCamera.addEventListener('click', flipCamera);
 
 async function startScanner() {
     modalScan.classList.remove('hidden');
     scanning = true;
     scanCount = 0;
     
-    // Crear lector sin configuraciones avanzadas para mejor compatibilidad
-    codeReader = new ZXing.BrowserBarcodeReader();
-
     try {
-        const devices = await codeReader.listVideoInputDevices();
-        console.log("Cámaras disponibles:", devices.map(d => d.label));
+        // Obtener cámaras disponibles
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        availableCameras = devices.filter(d => d.kind === 'videoinput');
         
-        // Buscar cámara trasera
-        const rearCamera = devices.find(d => {
+        console.log("📷 Cámaras disponibles:", availableCameras.map(d => d.label));
+        
+        if (availableCameras.length === 0) {
+            throw new Error("No se encontraron cámaras disponibles");
+        }
+
+        // Mostrar/ocultar botón de voltear según cantidad de cámaras
+        if (availableCameras.length > 1) {
+            btnFlipCamera.style.display = 'inline-flex';
+        } else {
+            btnFlipCamera.style.display = 'none';
+        }
+        
+        // Buscar cámara trasera como predeterminada
+        currentCameraIndex = availableCameras.findIndex(d => {
             const label = d.label.toLowerCase();
             return label.includes('back') || 
                    label.includes('rear') || 
                    label.includes('environment') ||
                    label.includes('camera2') ||
                    (!label.includes('front') && !label.includes('user'));
-        }) || devices[0];
+        });
         
-        if (!rearCamera) {
-            throw new Error("No se encontraron cámaras disponibles");
+        if (currentCameraIndex === -1) {
+            currentCameraIndex = 0;
         }
         
-        console.log("Usando cámara:", rearCamera.label);
-
-        // Usar el método más simple y compatible
-        await codeReader.decodeFromVideoDevice(rearCamera.deviceId, video, (result, err) => {
-            if (result && scanning && scanCount === 0) {
-                console.log("¡Código detectado!", result.text);
-                handleSuccessfulScan(result.text);
-            }
-            if (err && !(err instanceof ZXing.NotFoundException)) {
-                console.debug("Error de escaneo:", err.message);
-            }
-        });
+        await activateCamera(currentCameraIndex);
 
     } catch (e) {
         console.error("Error al iniciar escáner:", e);
@@ -1234,16 +1242,143 @@ async function startScanner() {
     }
 }
 
+async function activateCamera(cameraIndex) {
+    if (!availableCameras[cameraIndex]) {
+        console.error("❌ Índice de cámara inválido");
+        return;
+    }
+
+    const selectedCamera = availableCameras[cameraIndex];
+    console.log("🔹 Activando cámara:", selectedCamera.label);
+
+    try {
+        // Detener stream anterior si existe
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+
+        // Iniciar nueva cámara
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                deviceId: selectedCamera.deviceId,
+                facingMode: selectedCamera.label.toLowerCase().includes('back') ? 'environment' : 'user'
+            }
+        });
+        
+        video.srcObject = stream;
+        await video.play();
+        
+        // Iniciar escaneo de QR con canvas
+        scanQRCode();
+
+        // Mostrar feedback visual de cámara activa
+        showCameraFeedback(selectedCamera.label);
+
+    } catch (error) {
+        console.error("Error al activar cámara:", error);
+        alert('Error al cambiar de cámara: ' + error.message);
+    }
+}
+
+// Nueva función para escanear QR desde el video
+function scanQRCode() {
+    if (!scanning) return;
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const scan = () => {
+        if (!scanning) return;
+        
+        try {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Usar jsQR para detectar códigos QR
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert",
+            });
+            
+            if (code && scanCount === 0) {
+                console.log("✅ ¡Código QR detectado!", code.data);
+                handleSuccessfulScan(code.data);
+            } else {
+                requestAnimationFrame(scan);
+            }
+        } catch (e) {
+            console.debug("Error en frame:", e);
+            requestAnimationFrame(scan);
+        }
+    };
+    
+    requestAnimationFrame(scan);
+}
+
+async function flipCamera() {
+    if (availableCameras.length <= 1) {
+        alert('Solo hay una cámara disponible');
+        return;
+    }
+
+    // Animar el botón
+    btnFlipCamera.style.transform = 'scale(0.9)';
+    setTimeout(() => {
+        btnFlipCamera.style.transform = 'scale(1)';
+    }, 150);
+
+    // Cambiar al siguiente índice (circular)
+    currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+    
+    await activateCamera(currentCameraIndex);
+}
+
+function showCameraFeedback(cameraLabel) {
+    // Crear indicador temporal
+    const indicator = document.createElement('div');
+    indicator.style.cssText = `
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(52, 152, 219, 0.9);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 1000;
+        animation: fadeInOut 2s ease;
+    `;
+    indicator.textContent = `📹 ${cameraLabel}`;
+    
+    // Agregar animación CSS si no existe
+    if (!document.getElementById('cameraFeedbackStyles')) {
+        const styles = document.createElement('style');
+        styles.id = 'cameraFeedbackStyles';
+        styles.innerHTML = `
+            @keyframes fadeInOut {
+                0%, 100% { opacity: 0; }
+                10%, 90% { opacity: 1; }
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+    
+    const scannerBox = document.querySelector('.scanner-box');
+    scannerBox.style.position = 'relative';
+    scannerBox.appendChild(indicator);
+    
+    setTimeout(() => indicator.remove(), 2000);
+}
+
 function handleSuccessfulScan(code) {
-    if (scanCount > 0) return; // Evitar múltiples lecturas
+    if (scanCount > 0) return;
     scanCount++;
-    
     scanning = false;
-    
-    // Mostrar feedback visual inmediato
     showScanFeedback();
-    
-    // Procesar código después de un pequeño delay
     setTimeout(() => {
         stopScanner();
         handleBarcode(code);
@@ -1251,7 +1386,6 @@ function handleSuccessfulScan(code) {
 }
 
 function showScanFeedback() {
-    // Crear efecto visual de éxito más simple
     const overlay = document.createElement('div');
     overlay.style.cssText = `
         position: absolute;
@@ -1280,7 +1414,6 @@ function showScanFeedback() {
         </div>
     `;
     
-    // Agregar animación CSS básica
     if (!document.getElementById('scanFeedbackStyles')) {
         const styles = document.createElement('style');
         styles.id = 'scanFeedbackStyles';
@@ -1295,86 +1428,43 @@ function showScanFeedback() {
     }
     
     modalScan.appendChild(overlay);
-    
-    // Remover overlay
-    setTimeout(() => {
-        if (overlay.parentNode) {
-            overlay.remove();
-        }
-    }, 600);
+    setTimeout(() => overlay.remove(), 600);
 }
 
 function stopScanner() {
     scanning = false;
     scanCount = 0;
     
-    if (codeReader) {
-        codeReader.reset();
-    }
-    
-    // Detener stream de video
     if (video.srcObject) {
-        video.srcObject.getTracks().forEach(track => {
-            track.stop();
-        });
+        video.srcObject.getTracks().forEach(track => track.stop());
         video.srcObject = null;
     }
     
     modalScan.classList.add('hidden');
+    availableCameras = [];
+    currentCameraIndex = 0;
 }
-
 /* ---------------------------------------------------------
    PROCESAMIENTO DE CÓDIGOS MEJORADO
    --------------------------------------------------------- */
 async function handleBarcode(raw) {
-    console.log("Código raw recibido:", raw);
-    console.log("Longitud:", raw.length);
+    console.log("Código QR raw recibido:", raw);
     
     const cleanCode = raw.trim();
     
-    // PRIORIDAD 1: Código personalizado (ID|NOMBRE|PRECIO)
+    // Verificar formato personalizado (ID|NOMBRE|PRECIO)
     if (cleanCode.includes('|')) {
-        console.log("✅ Detectado código PERSONALIZADO");
-        await handleCustomBarcode(cleanCode);
-        return;
-    }
-    
-    // PRIORIDAD 2: Código estándar (EAN-13, UPC, etc.)
-    if (/^\d{8,13}$/.test(cleanCode)) {
-        console.log("⚠️ Detectado código ESTÁNDAR EAN/UPC");
-        
-        // Mostrar mensaje más claro
-        const useStandard = confirm(`CÓDIGO ESTÁNDAR DETECTADO
-                                   
-Código: ${cleanCode}
-
-❌ Este NO es un código generado por tu app.
-✅ Los códigos de tu app tienen formato: ID|NOMBRE|PRECIO
-
-¿Quieres buscar este producto en tu inventario?
-• SÍ = Buscar producto
-• NO = Cancelar`);
-        
-        if (useStandard) {
-            await handleStandardBarcode(cleanCode);
+        const parts = cleanCode.split('|');
+        if (parts.length >= 3) {
+            console.log("✅ Detectado código QR PERSONALIZADO");
+            await handleCustomBarcode(cleanCode);
+            return;
         }
-        return;
     }
     
-    // CÓDIGO NO RECONOCIDO
-    alert(`❌ CÓDIGO NO VÁLIDO: "${cleanCode}"
-           
-🎯 PARA USAR CÓDIGOS PERSONALIZADOS:
-1. Ve a la sección "Productos"
-2. Busca tu producto
-3. Haz clic en "Ver código de barras"
-4. Descarga/imprime ese código
-5. Escanea el código impreso
-
-📱 CONSEJOS:
-• Buena iluminación
-• Código estable y enfocado
-• Distancia adecuada (15-20 cm)`);
+    // Si no es formato personalizado, buscar en inventario
+    console.log("⚠️ Código QR no reconocido, buscando en inventario...");
+    await handleStandardBarcode(cleanCode);
 }
 
 /* ---------------------------------------------------------
