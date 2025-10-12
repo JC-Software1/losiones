@@ -417,6 +417,7 @@ router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, 
 });
 
 // Eliminar una venta
+// Eliminar una venta
 router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) => {
     try {
         const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
@@ -425,9 +426,42 @@ router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) 
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
+        // ✅ NUEVO: Reactivar productos vendidos antes de eliminar la venta
+        const Product = require("../models/Product");
+        
+        if (sale.productName) {
+            // Separar los nombres de productos si hay varios
+            const productNames = sale.productName.split(',').map(p => p.trim());
+            
+            for (const productName of productNames) {
+                // Buscar productos que coincidan con el nombre y cliente
+                await Product.updateMany(
+                    {
+                        name: productName,
+                        sold: true,
+                        soldTo: sale.clientName,
+                        user: sale.user
+                    },
+                    {
+                        $set: {
+                            sold: false,
+                            soldDate: null,
+                            soldTo: null
+                        }
+                    }
+                );
+            }
+        }
+
+        // Eliminar la venta
         await Sale.findByIdAndDelete(req.params.id);
-        res.json({ message: "Venta eliminada correctamente" });
+        
+        res.json({ 
+            message: "Venta eliminada correctamente y productos reactivados",
+            productsReactivated: true
+        });
     } catch (error) {
+        console.error("Error al eliminar la venta:", error);
         res.status(500).json({ error: "Error al eliminar la venta" });
     }
 });
