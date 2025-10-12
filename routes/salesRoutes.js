@@ -295,8 +295,6 @@ router.get("/:id", auth, checkPermission('verVentas'), async (req, res) => {
     }
 });
 
-// Actualizar una venta
-// Actualizar una venta
 router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
     const { 
         clientName, 
@@ -306,7 +304,8 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         installments, 
         clientAddress, 
         advancePayment,
-        paymentPerInstallment  // ✅ RECIBIR DESDE EL FRONTEND
+        paymentPerInstallment,
+        updateProductPrices  // ✅ NUEVO
     } = req.body;
 
     try {
@@ -314,6 +313,25 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
 
         if (!sale) {
             return res.status(404).json({ error: "Venta no encontrada" });
+        }
+
+        // ✅ NUEVO: Actualizar precio de productos vendidos
+        if (updateProductPrices && productName) {
+            const Product = require("../models/Product");
+            const productNames = productName.split(',').map(p => p.trim());
+            
+            for (const name of productNames) {
+                await Product.updateMany(
+                    { 
+                        name: name, 
+                        sold: true, 
+                        user: sale.user 
+                    },
+                    { 
+                        $set: { salePrice: Math.round(price / productNames.length) }
+                    }
+                );
+            }
         }
 
         sale.clientName = clientName;
@@ -327,7 +345,6 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         sale.paymentDaysText = req.body.paymentDaysText || sale.paymentDaysText;
         sale.numberOfInstallments = req.body.numberOfInstallments || sale.numberOfInstallments;
         
-        // ✅ USAR VALOR EXACTO DEL FRONTEND
         if (paymentPerInstallment !== undefined) {
             sale.paymentPerInstallment = paymentPerInstallment;
         }
@@ -346,10 +363,10 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         await sale.save();
         res.json(sale);
     } catch (error) {
+        console.error("Error al actualizar la venta:", error);
         res.status(500).json({ error: "Error al actualizar la venta" });
     }
 });
-
 // Agregar abono
 router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, res) => {
     const { amount, date } = req.body;
