@@ -6,6 +6,26 @@ const DailyLiquidation = require("../models/DailyLiquidation");
 const Expense = require("../models/Expense");
 const router = express.Router();
 
+// ✅ FUNCIÓN AUXILIAR: Obtener ventas para liquidación (activas + liquidadas hoy)
+async function getSalesForLiquidation(userId) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    // Incluir:
+    // 1. Ventas activas (settled: false)
+    // 2. Ventas liquidadas HOY (settled: true && settledDate >= hoy)
+    return await Sale.find({ 
+        user: userId,
+        $or: [
+            { settled: false },
+            { 
+                settled: true, 
+                settledDate: { $gte: startOfDay }
+            }
+        ]
+    }).lean().select('_id clientName payments advancePayment settled settledDate');
+}
+
 // RUTA PARA ADMINS: Datos pendientes de un vendedor
 router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
     try {
@@ -15,11 +35,11 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
             return res.status(403).json({ error: 'No tienes permisos' });
         }
         
-        // Usar vendedorId en lugar de req.user.id
-const sales = await Sale.find({ 
-    user: vendedorId, 
-    liquidatedDay: false 
-}).lean().select('_id clientName productName price advancePayment payments');
+        const sales = await Sale.find({ 
+            user: vendedorId, 
+            liquidatedDay: false 
+        }).lean().select('_id clientName productName price advancePayment payments');
+        
         const products = await Product.find({ 
             user: vendedorId, 
             liquidatedDay: false,
@@ -31,10 +51,8 @@ const sales = await Sale.find({
             liquidatedDay: false 
         }).lean().select('_id date totalAmount items');
 
-        const allActiveSales = await Sale.find({ 
-            user: vendedorId, 
-            settled: false
-        }).lean().select('_id clientName payments advancePayment');
+        // ✅ CORRECCIÓN: Usar función auxiliar que incluye ventas liquidadas hoy
+        const allActiveSales = await getSalesForLiquidation(vendedorId);
 
         let paymentsData = [];
         let totalPayments = 0;
@@ -78,12 +96,13 @@ const sales = await Sale.find({
             ? ((paidTodayCount / totalActiveClients) * 100).toFixed(1)
             : 0;
 
-const salesData = sales.map(s => ({
-    _id: s._id,
-    clientName: s.clientName,
-    productName: s.productName,
-    price: s.price
-}));
+        const salesData = sales.map(s => ({
+            _id: s._id,
+            clientName: s.clientName,
+            productName: s.productName,
+            price: s.price
+        }));
+        
         const productsData = products.map(p => ({
             _id: p._id,
             name: p.name,
@@ -156,14 +175,14 @@ router.get("/vendedor/:vendedorId/history", auth, async (req, res) => {
 // Obtener datos pendientes de liquidación
 router.get("/pending", auth, async (req, res) => {
     try {
-        const userId = req.user.id; // Simplificado, ya que admins no usan esta ruta para vendedores
+        const userId = req.user.id;
         
-const sales = await Sale.find({ 
-    user: userId, 
-    liquidatedDay: false 
-}).lean().select('_id clientName productName price advancePayment payments'); 
+        const sales = await Sale.find({ 
+            user: userId, 
+            liquidatedDay: false 
+        }).lean().select('_id clientName productName price advancePayment payments'); 
 
-const products = await Product.find({ 
+        const products = await Product.find({ 
             user: userId, 
             liquidatedDay: false,
             sold: false
@@ -174,10 +193,8 @@ const products = await Product.find({
             liquidatedDay: false 
         }).lean().select('_id date totalAmount items');
 
-        const allActiveSales = await Sale.find({ 
-            user: userId, 
-            settled: false
-        }).lean().select('_id clientName payments advancePayment');
+        // ✅ CORRECCIÓN: Usar función auxiliar que incluye ventas liquidadas hoy
+        const allActiveSales = await getSalesForLiquidation(userId);
 
         let paymentsData = [];
         let totalPayments = 0;
@@ -221,12 +238,13 @@ const products = await Product.find({
             ? ((paidTodayCount / totalActiveClients) * 100).toFixed(1)
             : 0;
 
-const salesData = sales.map(s => ({
-    _id: s._id,
-    clientName: s.clientName,
-    productName: s.productName,
-    price: s.price
-}));
+        const salesData = sales.map(s => ({
+            _id: s._id,
+            clientName: s.clientName,
+            productName: s.productName,
+            price: s.price
+        }));
+        
         const productsData = products.map(p => ({
             _id: p._id,
             name: p.name,
@@ -299,10 +317,8 @@ router.post("/new", auth, async (req, res) => {
             liquidatedDay: false 
         }).lean().select('_id date totalAmount items');
 
-        const allActiveSales = await Sale.find({ 
-            user: userId, 
-            settled: false
-        }).lean().select('_id clientName payments advancePayment');
+        // ✅ CORRECCIÓN: Usar función auxiliar que incluye ventas liquidadas hoy
+        const allActiveSales = await getSalesForLiquidation(userId);
 
         let paymentsData = [];
         let paymentUpdates = [];
@@ -336,21 +352,16 @@ router.post("/new", auth, async (req, res) => {
             });
         });
 
-const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
+        const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
 
-// ✅ Usar las comisiones que vienen del frontend
-const paymentsCommission = req.body.paymentsCommission || 0;
-const salesCommission = req.body.salesCommission || 0;
+        const paymentsCommission = req.body.paymentsCommission || 0;
+        const salesCommission = req.body.salesCommission || 0;
 
-// Calcular abonos regulares sin señas
-const regularPayments = totalPayments - totalInitialPayments;
-
-// Aplicar comisión SOLO a abonos regulares
-const paymentsAfterCommission = Math.round(regularPayments - (regularPayments * (paymentsCommission / 100)));
-const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
-
-// Ingresos = abonos después de comisión + señas completas
-const totalIncome = paymentsAfterCommission + totalInitialPayments;
+        const regularPayments = totalPayments - totalInitialPayments;
+        const paymentsAfterCommission = Math.round(regularPayments - (regularPayments * (paymentsCommission / 100)));
+        const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
+        const totalIncome = paymentsAfterCommission + totalInitialPayments;
+        
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         const totalExpenses = totalInventoryCost + totalExpensesAmount;
@@ -367,12 +378,12 @@ const totalIncome = paymentsAfterCommission + totalInitialPayments;
                 afterCommission: paymentsAfterCommission,
                 commissionPercentage: paymentsCommission
             },
-sales: {
-    count: sales.length,
-    total: totalSales,
-    afterCommission: salesAfterCommission,
-    commissionPercentage: salesCommission
-},
+            sales: {
+                count: sales.length,
+                total: totalSales,
+                afterCommission: salesAfterCommission,
+                commissionPercentage: salesCommission
+            },
             totalIncome,
             inventory: {
                 totalCost: totalInventoryCost,
@@ -426,7 +437,7 @@ sales: {
                 _id: { $in: expenses.map(e => e._id) },
                 user: userId 
             },
-            { $set: { liquidatedDay: true } }
+            { $set: { liquidatedDay: false } }
         );
 
         for (const update of paymentUpdates) {
@@ -477,10 +488,8 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
             liquidatedDay: false 
         }).lean().select('_id date totalAmount items');
 
-        const allActiveSales = await Sale.find({ 
-            user: vendedorId, 
-            settled: false
-        }).lean().select('_id clientName payments advancePayment');
+        // ✅ CORRECCIÓN: Usar función auxiliar que incluye ventas liquidadas hoy
+        const allActiveSales = await getSalesForLiquidation(vendedorId);
 
         let paymentsData = [];
         let paymentUpdates = [];
@@ -514,21 +523,16 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
             });
         });
 
-const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
+        const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
 
-// ✅ Usar las comisiones que vienen del frontend
-const paymentsCommission = req.body.paymentsCommission || 0;
-const salesCommission = req.body.salesCommission || 0;
+        const paymentsCommission = req.body.paymentsCommission || 0;
+        const salesCommission = req.body.salesCommission || 0;
 
-// Calcular abonos regulares sin señas
-const regularPayments = totalPayments - totalInitialPayments;
-
-// Aplicar comisión SOLO a abonos regulares
-const paymentsAfterCommission = Math.round(regularPayments - (regularPayments * (paymentsCommission / 100)));
-const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
-
-// Ingresos = abonos después de comisión + señas completas
-const totalIncome = paymentsAfterCommission + totalInitialPayments;
+        const regularPayments = totalPayments - totalInitialPayments;
+        const paymentsAfterCommission = Math.round(regularPayments - (regularPayments * (paymentsCommission / 100)));
+        const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
+        const totalIncome = paymentsAfterCommission + totalInitialPayments;
+        
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         const totalExpenses = totalInventoryCost + totalExpensesAmount;
@@ -545,12 +549,12 @@ const totalIncome = paymentsAfterCommission + totalInitialPayments;
                 afterCommission: paymentsAfterCommission,
                 commissionPercentage: paymentsCommission
             },
-sales: {
-    count: sales.length,
-    total: totalSales,
-    afterCommission: salesAfterCommission,
-    commissionPercentage: salesCommission
-},
+            sales: {
+                count: sales.length,
+                total: totalSales,
+                afterCommission: salesAfterCommission,
+                commissionPercentage: salesCommission
+            },
             totalIncome,
             inventory: {
                 totalCost: totalInventoryCost,
@@ -630,11 +634,8 @@ sales: {
 });
 
 // Obtener historial de liquidaciones
-// Obtener historial de liquidaciones
 router.get("/history", auth, async (req, res) => {
     try {
-        // ✅ CORRECCIÓN: Vendedores (tipo 1) solo ven sus propias liquidaciones
-        // Admins (tipo 2 y 3) ven todas
         const query = (req.user.tipo === 2 || req.user.tipo === 3) 
             ? {} 
             : { user: req.user.id };
