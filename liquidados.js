@@ -47,7 +47,13 @@ function applyFilters() {
     
     filteredSales = sales.filter(sale => {
         const matchesSearch = searchText === "" || sale.clientName.toLowerCase().includes(searchText);
-        const matchesDate = selectedDate === "" || new Date(sale.settledDate).toDateString() === new Date(selectedDate).toDateString();
+        
+        let matchesDate = true;
+        if (selectedDate !== "") {
+            // Convertir la fecha de liquidación a formato YYYY-MM-DD para comparación precisa
+            const settledDateStr = new Date(sale.settledDate).toISOString().split('T')[0];
+            matchesDate = settledDateStr === selectedDate;
+        }
         
         return matchesSearch && matchesDate;
     });
@@ -55,7 +61,6 @@ function applyFilters() {
     displayLiquidatedSales(filteredSales);
     updateStatistics(filteredSales);
 }
-
 function displayLiquidatedSales(salesList) {
     const liquidatedHistory = document.getElementById("liquidatedHistory");
     liquidatedHistory.innerHTML = ""; // Limpiar antes de actualizar

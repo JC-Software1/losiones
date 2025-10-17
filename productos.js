@@ -1316,18 +1316,17 @@ window.applyPreset = function(presetName) {
     }
 };
 
-// ✅ GENERAR CÓDIGOS DE BARRAS CON MÁXIMA CALIDAD
-// ✅ GENERAR CÓDIGOS DE BARRAS EN ALTA CALIDAD CON PAGINACIÓN
-// ✅ GENERAR CÓDIGOS DE BARRAS EN ALTA CALIDAD CON PAGINACIÓN Y ESCALA REAL
+
+// ✅ GENERAR CÓDIGOS QR MASIVOS CON DISEÑO MEJORADO Y CENTRADO
 window.generateBulkBarcodes = async function() {
     if (bulkSelectedProducts.length === 0) {
         showNotification("Selecciona al menos un producto", "warning");
         return;
     }
 
-    showNotification("Generando códigos de barras en alta calidad...", "info");
+    showNotification("Generando códigos QR en alta calidad...", "info");
 
-    // Obtener configuración EN CENTÍMETROS (valores del usuario)
+    // Obtener configuración EN CENTÍMETROS
     const widthCm = parseFloat(document.getElementById('barcodeWidth').value);
     const heightCm = parseFloat(document.getElementById('barcodeHeight').value);
     const fontSizeCm = parseFloat(document.getElementById('barcodeFontSize').value);
@@ -1350,10 +1349,10 @@ window.generateBulkBarcodes = async function() {
 
     const config = layoutConfigs[layout];
     
-    // ✅ CONFIGURACIÓN DE PÁGINA A4 Y DPI
-    const DPI = 300; // Alta calidad para impresión
-    const pageWidthCm = 21; // A4
-    const pageHeightCm = 29.7; // A4
+    // CONFIGURACIÓN DE PÁGINA A4 Y DPI
+    const DPI = 300;
+    const pageWidthCm = 21;
+    const pageHeightCm = 29.7;
     const pagePaddingCm = 1;
     const gapCm = 0.5;
     
@@ -1368,7 +1367,7 @@ window.generateBulkBarcodes = async function() {
     const containerWidthPx = cmToPx300(containerWidthCm);
     const containerHeightPx = cmToPx300(containerHeightCm);
     
-    // ✅ CALCULAR CUÁNTOS PRODUCTOS CABEN POR PÁGINA
+    // CALCULAR CUÁNTOS PRODUCTOS CABEN POR PÁGINA
     const usableWidthCm = pageWidthCm - (2 * pagePaddingCm);
     const usableHeightCm = pageHeightCm - (2 * pagePaddingCm);
     
@@ -1379,9 +1378,8 @@ window.generateBulkBarcodes = async function() {
     console.log(`📄 Configuración:`);
     console.log(`   - ${itemsPerPage} códigos por página`);
     console.log(`   - ${itemsPerRow} columnas × ${rowsPerPage} filas`);
-    console.log(`   - Tamaño código: ${containerWidthCm}cm × ${containerHeightCm}cm`);
     
-    // ✅ DIVIDIR PRODUCTOS EN PÁGINAS
+    // DIVIDIR PRODUCTOS EN PÁGINAS
     const pages = [];
     for (let i = 0; i < selectedProductsData.length; i += itemsPerPage) {
         pages.push(selectedProductsData.slice(i, i + itemsPerPage));
@@ -1389,7 +1387,7 @@ window.generateBulkBarcodes = async function() {
     
     console.log(`📑 Total de páginas: ${pages.length}`);
     
-    // ✅ GENERAR CADA PÁGINA COMO IMAGEN SEPARADA
+    // GENERAR CADA PÁGINA
     const images = [];
     
     for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
@@ -1415,123 +1413,106 @@ window.generateBulkBarcodes = async function() {
         `;
         document.body.appendChild(container);
         
-        // ✅ GENERAR CADA CÓDIGO CON MEDIDAS EXACTAS
+        // ✅ GENERAR CADA CÓDIGO CON DISEÑO MEJORADO
         for (const product of pageProducts) {
             const wrapper = document.createElement('div');
             
             wrapper.style.cssText = `
-                border: ${cmToPx300(0.05)}px solid #000;
+                border: ${cmToPx300(0.05)}px solid #333;
                 padding: ${cmToPx300(marginCm)}px;
-                border-radius: ${cmToPx300(0.2)}px;
+                border-radius: ${cmToPx300(0.3)}px;
                 text-align: center;
                 background: white;
                 width: ${containerWidthPx}px;
                 height: ${containerHeightPx}px;
                 display: flex;
                 flex-direction: column;
-                justify-content: space-evenly;
+                justify-content: center;
                 align-items: center;
                 box-sizing: border-box;
                 overflow: hidden;
+                gap: ${cmToPx300(0.2)}px;
             `;
 
-            // ✅ TÍTULO DEL PRODUCTO (usando tamaño de fuente exacto)
+            // ✅ CONTENEDOR DEL QR (perfectamente centrado)
+            const qrContainer = document.createElement('div');
+            const qrSize = cmToPx300(Math.min(containerWidthCm * 0.6, containerHeightCm * 0.5));
+            qrContainer.style.cssText = `
+                width: ${qrSize}px;
+                height: ${qrSize}px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: ${cmToPx300(0.2)}px auto;
+                flex-shrink: 0;
+            `;
+            
+            // Generar código QR
+            const shortId = product._id.slice(-8);
+            const cleanName = product.name.replace(/[^\w\s]/g, '').substring(0, 15);
+            const code = `${shortId}|${cleanName}|${product.salePrice}`;
+
+            try {
+                new QRCode(qrContainer, {
+                    text: code,
+                    width: qrSize,
+                    height: qrSize,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            } catch (error) {
+                console.error('Error generando código QR para:', product.name, error);
+            }
+
+            // ✅ NOMBRE DEL PRODUCTO (debajo del QR)
             const title = document.createElement('div');
-            const productName = product.name.length > 35 ? product.name.substring(0, 32) + '...' : product.name;
+            const productName = product.name.length > 30 ? product.name.substring(0, 27) + '...' : product.name;
             title.textContent = productName;
             title.style.cssText = `
                 font-weight: 700;
-                font-size: ${cmToPx300(fontSizeCm)}px;
+                font-size: ${cmToPx300(fontSizeCm * 0.9)}px;
                 color: #000;
-                line-height: 1.1;
+                line-height: 1.2;
                 font-family: Arial, sans-serif;
                 width: 100%;
+                text-align: center;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 display: -webkit-box;
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
-                margin-bottom: ${cmToPx300(0.15)}px;
+                margin-top: ${cmToPx300(0.1)}px;
+                flex-shrink: 0;
             `;
 
-            // ✅ DETALLES (categoría, marca, talla)
-            const details = document.createElement('div');
-            const detailsParts = [];
-            if (product.category) detailsParts.push(product.category);
-            if (product.brand) detailsParts.push(product.brand);
-            if (product.size) detailsParts.push(`T:${product.size}`);
-            details.textContent = detailsParts.join(' • ');
-            details.style.cssText = `
-                font-size: ${cmToPx300(fontSizeCm * 0.7)}px;
-                color: #333;
-                font-family: Arial, sans-serif;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 100%;
-                margin-bottom: ${cmToPx300(0.1)}px;
-            `;
-
-            // ✅ PRECIO
+            // ✅ PRECIO (destacado debajo del nombre)
             const price = document.createElement('div');
             price.textContent = `$${product.salePrice.toLocaleString()}`;
             price.style.cssText = `
-                font-size: ${cmToPx300(fontSizeCm * 0.95)}px;
+                font-size: ${cmToPx300(fontSizeCm * 1.1)}px;
                 color: #27ae60;
-                font-weight: 700;
+                font-weight: 800;
                 font-family: Arial, sans-serif;
-                margin-bottom: ${cmToPx300(0.15)}px;
+                margin-top: ${cmToPx300(0.1)}px;
+                text-align: center;
+                flex-shrink: 0;
             `;
 
-            // ✅ CANVAS PARA CÓDIGO DE BARRAS (con escala proporcional)
-            const canvas = document.createElement('canvas');
-            
+            // Agregar elementos al wrapper en orden: QR → Nombre → Precio
+            wrapper.appendChild(qrContainer);
             wrapper.appendChild(title);
-            wrapper.appendChild(details);
             wrapper.appendChild(price);
-            wrapper.appendChild(canvas);
             container.appendChild(wrapper);
-
-            // ✅ GENERAR CÓDIGO DE BARRAS CON PROPORCIONES REALES
-            const shortId = product._id.slice(-8);
-            const cleanName = product.name.replace(/[^\w\s]/g, '').substring(0, 15);
-            const code = `${shortId}|${cleanName}|${product.salePrice}`;
-
-try {
-                // Crear div contenedor para el QR en alta resolución
-                const qrDiv = document.createElement('div');
-                qrDiv.style.cssText = `
-                    width: ${cmToPx300(containerWidthCm * 0.5)}px;
-                    height: ${cmToPx300(containerHeightCm * 0.4)}px;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                `;
-                
-                // Generar código QR en el div
-                new QRCode(qrDiv, {
-                    text: code,
-                    width: cmToPx300(containerWidthCm * 0.5),
-                    height: cmToPx300(containerHeightCm * 0.4),
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-                
-                // Agregar el div completo al wrapper
-                wrapper.appendChild(qrDiv);
-                
-            } catch (error) {
-                console.error('Error generando código QR para:', product.name, error);
-            }
         }
 
-        // ✅ AUMENTAR TIEMPO DE ESPERA para renderizado completo
+        // Esperar para renderizado completo
         await new Promise(resolve => setTimeout(resolve, 2000));
-        // ✅ CAPTURAR ESTA PÁGINA CON html2canvas
+        
+        // CAPTURAR ESTA PÁGINA
         try {
             const canvas = await html2canvas(container, {
-                scale: 1, // Ya usamos 300 DPI en el tamaño
+                scale: 1,
                 backgroundColor: '#ffffff',
                 logging: false,
                 width: pageWidthPx,
@@ -1542,7 +1523,6 @@ try {
                 allowTaint: false
             });
 
-            // Convertir a blob
             const blob = await new Promise(resolve => {
                 canvas.toBlob(resolve, 'image/png', 1.0);
             });
@@ -1553,32 +1533,26 @@ try {
                 totalPages: pages.length
             });
             
-            console.log(`✅ Página ${pageIndex + 1}/${pages.length} generada (${pageProducts.length} códigos)`);
+            console.log(`✅ Página ${pageIndex + 1}/${pages.length} generada`);
             
         } catch (error) {
             console.error(`❌ Error en página ${pageIndex + 1}:`, error);
-            showNotification(`Error en página ${pageIndex + 1}: ${error.message}`, "error");
+            showNotification(`Error en página ${pageIndex + 1}`, "error");
         } finally {
-            // Limpiar contenedor
             document.body.removeChild(container);
         }
     }
     
-    // ✅ DESCARGAR TODAS LAS IMÁGENES
+    // DESCARGAR TODAS LAS IMÁGENES
     if (images.length > 0) {
         const timestamp = new Date().toISOString().slice(0, 10);
-        const categoryFilter = document.getElementById('bulkCategory').value;
-        const brandFilter = document.getElementById('bulkBrand').value;
         
         for (const img of images) {
             const url = URL.createObjectURL(img.blob);
             const link = document.createElement('a');
             
-            let filename = `codigos_barras_HD_${timestamp}`;
-            if (categoryFilter) filename += `_${categoryFilter}`;
-            if (brandFilter) filename += `_${brandFilter}`;
+            let filename = `codigos_QR_${timestamp}`;
             
-            // Si hay múltiples páginas, agregar número
             if (img.totalPages > 1) {
                 filename += `_pag${img.pageNumber}de${img.totalPages}`;
             }
@@ -1591,12 +1565,11 @@ try {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
             
-            // Pequeña pausa entre descargas
             await new Promise(resolve => setTimeout(resolve, 300));
         }
         
         showNotification(
-            `✅ ${images.length} archivo(s) descargado(s) con ${bulkSelectedProducts.length} códigos en total - CALIDAD HD 300 DPI`, 
+            `✅ ${images.length} archivo(s) descargado(s) - ${bulkSelectedProducts.length} códigos QR generados`, 
             "success"
         );
         closeBulkBarcodeModal();
