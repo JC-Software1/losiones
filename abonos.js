@@ -46,42 +46,48 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ========== FUNCIONES PRINCIPALES ==========
 
-    async function loadData() {
+async function loadData() {
+    try {
+        showLoading();
+        const token = getToken();
+        
+        // ✅ CORRECCIÓN: Usar endpoint que respeta permisos de usuario
+        const endpoint = '/sales'; // Este endpoint ya filtra por usuario automáticamente
+        
         try {
-            showLoading();
-            const token = getToken();
+            // Cargar ventas activas
+            const activeSales = await apiFetch(endpoint, "GET", null, token);
             
-            // Intentar cargar todas las ventas (incluyendo liquidadas)
+            // Cargar ventas liquidadas
+            const settledSales = await apiFetch('/sales/settled', "GET", null, token);
             
-            try {
-                allSales = await apiFetch("/sales/all", "GET", null, token);
-                console.log('✅ Ventas cargadas desde /sales/all:', allSales.length);
-            } catch (error) {
-                // Si /sales/all no existe, cargar ventas activas y liquidadas por separado
-                console.warn('⚠️ /sales/all no disponible, cargando ventas separadamente...');
-                const activeSales = await apiFetch("/sales", "GET", null, token);
-                const settledSales = await apiFetch("/sales/settled", "GET", null, token);
-                allSales = [...activeSales, ...settledSales];
-                console.log('✅ Ventas activas:', activeSales.length);
-                console.log('✅ Ventas liquidadas:', settledSales.length);
-                console.log('✅ Total ventas:', allSales.length);
-            }
+            // Combinar ambas
+            allSales = [...activeSales, ...settledSales];
             
-            allPayments = extractAllPayments(allSales);
-            filteredPayments = [...allPayments];
-
-            if (allPayments.length === 0) {
-                showEmptyState();
-            } else {
-                displayPayments(filteredPayments);
-                updateStatistics(filteredPayments, allSales);
-            }
-
+            console.log('✅ Ventas activas:', activeSales.length);
+            console.log('✅ Ventas liquidadas:', settledSales.length);
+            console.log('✅ Total ventas del usuario:', allSales.length);
+            
         } catch (error) {
-            console.error('❌ Error completo:', error);
-            showError("Error al cargar los datos: " + error.message);
+            console.error('❌ Error al cargar ventas:', error);
+            throw error;
         }
+        
+        allPayments = extractAllPayments(allSales);
+        filteredPayments = [...allPayments];
+
+        if (allPayments.length === 0) {
+            showEmptyState();
+        } else {
+            displayPayments(filteredPayments);
+            updateStatistics(filteredPayments, allSales);
+        }
+
+    } catch (error) {
+        console.error('❌ Error completo:', error);
+        showError("Error al cargar los datos: " + error.message);
     }
+}
 
 function extractAllPayments(sales) {
     let payments = [];

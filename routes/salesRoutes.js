@@ -226,6 +226,21 @@ router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
     }
 });
 
+// ✅ AGREGAR ESTA RUTA NUEVA - Obtener ventas activas del usuario
+router.get("/", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        const query = req.user.tipo === 1 
+            ? { user: req.user.id, settled: false } 
+            : { settled: false };
+            
+        const sales = await Sale.find(query).sort({ saleDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error("Error al obtener ventas activas:", error);
+        res.status(500).json({ error: "Error al obtener ventas activas" });
+    }
+});
+
 // ========================================
 // RUTAS CON PARÁMETROS DINÁMICOS
 // ========================================
