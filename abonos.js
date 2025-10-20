@@ -52,7 +52,7 @@ async function loadData() {
         const token = getToken();
         
         // ✅ CORRECCIÓN: Usar endpoint que respeta permisos de usuario
-const endpoint = '/sales/all';
+        const endpoint = '/sales'; // Este endpoint ya filtra por usuario automáticamente
         
         try {
             // Cargar ventas activas

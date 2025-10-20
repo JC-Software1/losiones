@@ -227,6 +227,21 @@ router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
 });
 
 
+router.get("/", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        // Filtrar por usuario si es vendedor, todo si es admin
+        const query = req.user.tipo === 1 
+            ? { user: req.user.id }  // Vendedor: todas SUS ventas
+            : {};                     // Admin: TODAS las ventas
+            
+        const sales = await Sale.find(query).sort({ saleDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error("Error al obtener ventas:", error);
+        res.status(500).json({ error: "Error al obtener ventas" });
+    }
+});
+
 
 // ========================================
 // RUTAS CON PARÁMETROS DINÁMICOS
