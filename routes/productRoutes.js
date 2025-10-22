@@ -137,7 +137,6 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
 });
 
 // Update a product
-// Update a product
 router.put("/:id", auth, checkPermission('editarProductos'), async (req, res) => {
     const { name, costPrice, salePrice, category, brand, size } = req.body;
     try {
@@ -147,17 +146,42 @@ router.put("/:id", auth, checkPermission('editarProductos'), async (req, res) =>
             return res.status(404).json({ error: "Producto no encontrado" });
         }
 
-        product.name = name;
-        product.costPrice = costPrice;
-        product.salePrice = salePrice;
-        product.category = category;
-        product.brand = brand;
-        product.size = size || null;
+        // ✅ VALIDACIÓN: Asegurarse de que los campos obligatorios estén presentes
+        if (!name || name.trim() === '') {
+            return res.status(400).json({ error: "El nombre del producto es obligatorio" });
+        }
+
+        if (costPrice === undefined || costPrice === null || isNaN(costPrice)) {
+            return res.status(400).json({ error: "El precio de costo debe ser un número válido" });
+        }
+
+        if (salePrice === undefined || salePrice === null || isNaN(salePrice)) {
+            return res.status(400).json({ error: "El precio de venta debe ser un número válido" });
+        }
+
+        // ✅ ACTUALIZACIÓN CON VALORES POR DEFECTO
+        product.name = name.trim();
+        product.costPrice = parseFloat(costPrice) || 0;
+        product.salePrice = parseFloat(salePrice) || 0;
+        product.category = category ? category.trim() : 'Sin categoría';
+        product.brand = brand ? brand.trim() : 'Sin marca';
+        product.size = size ? size.trim() : null;
 
         await product.save();
+        
+        console.log('✅ Producto actualizado:', {
+            id: product._id,
+            name: product.name,
+            salePrice: product.salePrice
+        });
+        
         res.json(product);
     } catch (error) {
-        res.status(500).json({ error: "Error al actualizar el producto" });
+        console.error('❌ Error al actualizar producto:', error);
+        res.status(500).json({ 
+            error: "Error al actualizar el producto",
+            details: error.message 
+        });
     }
 });
 

@@ -359,11 +359,18 @@
                 <div class="stat-label">Total Señas</div>
             </div>
 
-            <div class="stat-card accent">
-                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
-                <div class="stat-value" id="bestDay">-</div>
-                <div class="stat-label">Mejor Día</div>
-            </div>
+<!-- Después de la tarjeta "Total Señas" -->
+<div class="stat-card accent">
+    <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="stat-value" id="totalCashInHand">$0</div>
+    <div class="stat-label">Caja Efectivo Total</div>
+</div>
+
+<div class="stat-card accent">
+    <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+    <div class="stat-value" id="bestDay">-</div>
+    <div class="stat-label">Mejor Día</div>
+</div>
         </div>
 
         <!-- Filtros -->
@@ -469,43 +476,49 @@
         }
     }
     
-    function updateGlobalStats(liquidations) {
-        if (liquidations.length === 0) return;
+function updateGlobalStats(liquidations) {
+    if (liquidations.length === 0) return;
 
-        const currentCash = liquidations[0].finalCash;
-        document.getElementById("currentCash").textContent = `$${currentCash.toLocaleString('es-CO')}`;
+    const currentCash = liquidations[0].finalCash;
+    document.getElementById("currentCash").textContent = `$${currentCash.toLocaleString('es-CO')}`;
 
-        const totalIncome = liquidations.reduce((sum, liq) => {
-            const initialPayments = liq.payments.totalInitialPayments || 0;
-            const regularPayments = liq.payments.total - initialPayments;
-            const commission = liq.payments.commissionPercentage || 0;
-            const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
-            const paymentsAfterComm = regularPayments - paymentsCommAmount;
-            const realIncome = Math.round(paymentsAfterComm + initialPayments);
-            return sum + realIncome;
-        }, 0);
-        document.getElementById("totalIncome").textContent = `$${totalIncome.toLocaleString('es-CO')}`;
+    const totalIncome = liquidations.reduce((sum, liq) => {
+        const initialPayments = liq.payments.totalInitialPayments || 0;
+        const regularPayments = liq.payments.total - initialPayments;
+        const commission = liq.payments.commissionPercentage || 0;
+        const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
+        const paymentsAfterComm = regularPayments - paymentsCommAmount;
+        const realIncome = Math.round(paymentsAfterComm + initialPayments);
+        return sum + realIncome;
+    }, 0);
+    document.getElementById("totalIncome").textContent = `$${totalIncome.toLocaleString('es-CO')}`;
 
-        const totalExpenses = liquidations.reduce((sum, l) => sum + l.totalExpenses, 0);
-        document.getElementById("totalExpenses").textContent = `$${totalExpenses.toLocaleString('es-CO')}`;
+    const totalExpenses = liquidations.reduce((sum, l) => sum + l.totalExpenses, 0);
+    document.getElementById("totalExpenses").textContent = `$${totalExpenses.toLocaleString('es-CO')}`;
 
-        const totalPayments = liquidations.reduce((sum, l) => sum + l.payments.total, 0);
-        document.getElementById("totalPayments").textContent = `$${totalPayments.toLocaleString('es-CO')}`;
+    const totalPayments = liquidations.reduce((sum, l) => sum + l.payments.total, 0);
+    document.getElementById("totalPayments").textContent = `$${totalPayments.toLocaleString('es-CO')}`;
 
-        const totalInitialPayments = liquidations.reduce((sum, l) => sum + (l.payments.totalInitialPayments || 0), 0);
-        document.getElementById("totalInitialPayments").textContent = `$${totalInitialPayments.toLocaleString('es-CO')}`;
+    const totalInitialPayments = liquidations.reduce((sum, l) => sum + (l.payments.totalInitialPayments || 0), 0);
+    document.getElementById("totalInitialPayments").textContent = `$${totalInitialPayments.toLocaleString('es-CO')}`;
 
-        const bestLiquidation = liquidations.reduce((max, l) => 
-            l.finalCash > max.finalCash ? l : max
-        , liquidations[0]);
+    // 🔥 NUEVO: Calcular total de Caja Efectivo
+    const totalCashInHand = liquidations.reduce((sum, liq) => {
+        const expensesAmount = liq.expenses?.totalAmount || 0;
+        return sum + (liq.payments.total - expensesAmount);
+    }, 0);
+    document.getElementById("totalCashInHand").textContent = `$${totalCashInHand.toLocaleString('es-CO')}`;
 
-        const bestDayDate = new Date(bestLiquidation.liquidationDate).toLocaleDateString('es-CO', {
-            day: '2-digit',
-            month: '2-digit'
-        });
-        document.getElementById("bestDay").innerHTML = `${bestDayDate}<br><small style="font-size: 14px;">$${bestLiquidation.finalCash.toLocaleString('es-CO')}</small>`;
-    }
+    const bestLiquidation = liquidations.reduce((max, l) => 
+        l.finalCash > max.finalCash ? l : max
+    , liquidations[0]);
 
+    const bestDayDate = new Date(bestLiquidation.liquidationDate).toLocaleDateString('es-CO', {
+        day: '2-digit',
+        month: '2-digit'
+    });
+    document.getElementById("bestDay").innerHTML = `${bestDayDate}<br><small style="font-size: 14px;">$${bestLiquidation.finalCash.toLocaleString('es-CO')}</small>`;
+}
     function renderLiquidations(liquidations) {
         const container = document.getElementById("liquidationsContainer");
         const emptyState = document.getElementById("emptyState");
@@ -519,68 +532,79 @@
         container.style.display = "grid";
         emptyState.style.display = "none";
         
-        container.innerHTML = liquidations.map(liq => {
-            const initialPayments = liq.payments.totalInitialPayments || 0;
-            const regularPayments = liq.payments.total - initialPayments;
-            const commission = liq.payments.commissionPercentage || 0;
-            const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
-            const paymentsAfterComm = regularPayments - paymentsCommAmount;
-            const realTotalIncome = Math.round(paymentsAfterComm + initialPayments);
+// Dentro de la función renderLiquidations, reemplaza el contenido de la función map:
+container.innerHTML = liquidations.map(liq => {
+    const initialPayments = liq.payments.totalInitialPayments || 0;
+    const regularPayments = liq.payments.total - initialPayments;
+    const commission = liq.payments.commissionPercentage || 0;
+    const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
+    const paymentsAfterComm = regularPayments - paymentsCommAmount;
+    const realTotalIncome = Math.round(paymentsAfterComm + initialPayments);
+    
+    // 🔥 NUEVO: Calcular Caja Efectivo (Abonos - Gastos)
+    const expensesAmount = liq.expenses?.totalAmount || 0;
+    const cashInHand = Math.round(liq.payments.total - expensesAmount);
 
-            return `
-                <div class="liquidation-card">
-                    <div class="card-header">
-                        <div class="card-date">
-                            <i class="fas fa-calendar"></i>
-                            ${new Date(liq.liquidationDate).toLocaleDateString('es-CO', { 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                            })}
-                        </div>
-                    </div>
-
-                    <div class="card-stats">
-                        <div class="stat-item">
-                            <div class="stat-item-label">Caja Inicial</div>
-                            <div class="stat-item-value">$${liq.initialCash.toLocaleString('es-CO')}</div>
-                        </div>
-
-                        <div class="stat-item">
-                            <div class="stat-item-label">Total Ingresos</div>
-                            <div class="stat-item-value success">$${realTotalIncome.toLocaleString('es-CO')}</div>
-                        </div>
-
-                        <div class="stat-item">
-                            <div class="stat-item-label">Total Egresos</div>
-                            <div class="stat-item-value danger">$${liq.totalExpenses.toLocaleString('es-CO')}</div>
-                        </div>
-
-                        <div class="stat-item">
-                            <div class="stat-item-label">Caja Final</div>
-                            <div class="stat-item-value primary">$${liq.finalCash.toLocaleString('es-CO')}</div>
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); font-size: 13px; color: var(--medium-gray); display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                        <div><i class="fas fa-hand-holding-usd"></i> ${liq.payments.count} abonos</div>
-                        <div><i class="fas fa-shopping-cart"></i> ${liq.sales.count} ventas</div>
-                        <div><i class="fas fa-boxes"></i> ${liq.inventory.productCount} productos</div>
-                    </div>
-
-                    ${liq.notes ? `<div class="notes-preview"><strong>Notas:</strong> ${liq.notes}</div>` : ''}
-
-                    <div class="action-buttons">
-                        <button class="btn btn-primary" onclick="inspectLiquidation('${liq._id}')">
-                            <i class="fas fa-search"></i> Inspeccionar
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteLiquidation('${liq._id}')">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
-                    </div>
+    return `
+        <div class="liquidation-card">
+            <div class="card-header">
+                <div class="card-date">
+                    <i class="fas fa-calendar"></i>
+                    ${new Date(liq.liquidationDate).toLocaleDateString('es-CO', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    })}
                 </div>
-            `;
-        }).join('');
+            </div>
+
+            <div class="card-stats">
+                <div class="stat-item">
+                    <div class="stat-item-label">Caja Inicial</div>
+                    <div class="stat-item-value">$${liq.initialCash.toLocaleString('es-CO')}</div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-item-label">Total Ingresos</div>
+                    <div class="stat-item-value success">$${realTotalIncome.toLocaleString('es-CO')}</div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-item-label">Total Egresos</div>
+                    <div class="stat-item-value danger">$${liq.totalExpenses.toLocaleString('es-CO')}</div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-item-label">Caja Efectivo</div>
+                    <div class="stat-item-value" style="color: #9b59b6;">$${cashInHand.toLocaleString('es-CO')}</div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-item-label">Caja Final</div>
+                    <div class="stat-item-value primary">$${liq.finalCash.toLocaleString('es-CO')}</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); font-size: 13px; color: var(--medium-gray); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                <div><i class="fas fa-hand-holding-usd"></i> ${liq.payments.count} abonos</div>
+                <div><i class="fas fa-shopping-cart"></i> ${liq.sales.count} ventas</div>
+                <div><i class="fas fa-boxes"></i> ${liq.inventory.productCount} productos</div>
+                <div><i class="fas fa-receipt"></i> ${liq.expenses?.count || 0} gastos</div>
+            </div>
+
+            ${liq.notes ? `<div class="notes-preview"><strong>Notas:</strong> ${liq.notes}</div>` : ''}
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="inspectLiquidation('${liq._id}')">
+                    <i class="fas fa-search"></i> Inspeccionar
+                </button>
+                <button class="btn btn-danger" onclick="deleteLiquidation('${liq._id}')">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    `;
+}).join('');
     }
 
     function setupFilters() {

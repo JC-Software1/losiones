@@ -998,7 +998,7 @@ async function editProductPrice(index) {
     if (!product) return;
 
     const newPrice = prompt(
-        `📝 Editar precio de: ${product.name}\n\nPrecio actual: $${product.salePrice.toLocaleString()}\n\nIngresa el nuevo precio:`,
+        `🔧 Editar precio de: ${product.name}\n\nPrecio actual: $${product.salePrice.toLocaleString()}\n\nIngresa el nuevo precio:`,
         product.salePrice
     );
 
@@ -1011,20 +1011,29 @@ async function editProductPrice(index) {
         return;
     }
 
+    // Guardar precio original para revertir si falla
+    const originalPrice = product.salePrice;
+    
     // Actualizar en el array local
     selectedProducts[index].salePrice = parsedPrice;
 
     // Actualizar en la base de datos
     try {
         const token = getToken();
-        await apiFetch(`/products/${product._id}`, 'PUT', {
+        
+        // ✅ CORREGIDO: Preparar datos completos del producto
+        const updateData = {
             name: product.name,
-            costPrice: product.costPrice,
+            costPrice: product.costPrice || 0,
             salePrice: parsedPrice,
-            category: product.category,
-            brand: product.brand,
-            size: product.size
-        }, token);
+            category: product.category || 'Sin categoría',
+            brand: product.brand || 'Sin marca',
+            size: product.size || null
+        };
+        
+        console.log('📤 Enviando actualización de producto:', updateData);
+        
+        await apiFetch(`/products/${product._id}`, 'PUT', updateData, token);
 
         // Mostrar notificación de éxito
         showPriceUpdateNotification(product.name, parsedPrice);
@@ -1035,11 +1044,17 @@ async function editProductPrice(index) {
 
     } catch (error) {
         console.error('Error al actualizar precio del producto:', error);
-        alert('❌ No se pudo actualizar el precio en el inventario: ' + error.message);
         
         // Revertir el cambio local si falló el guardado
-        selectedProducts[index].salePrice = product.salePrice;
+        selectedProducts[index].salePrice = originalPrice;
         renderSelectedProducts();
+        
+        // Mostrar error más descriptivo
+        let errorMessage = 'No se pudo actualizar el precio';
+        if (error.message) {
+            errorMessage += ': ' + error.message;
+        }
+        alert('❌ ' + errorMessage);
     }
 }
 
