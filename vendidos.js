@@ -1,5 +1,6 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import "./authCheck.js";
 
 // Función para verificar permiso y ocultar/mostrar costos
 async function verificarPermisoCostos() {

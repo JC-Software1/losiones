@@ -57,3 +57,75 @@ export function logout() {
     removeToken();
     window.location.href = "index.html";
 }
+
+// ======================================
+// NUEVO: SISTEMA DE CIERRE AUTOMÁTICO
+// ======================================
+
+let inactivityTimer = null;
+const INACTIVITY_TIME = 20 * 60 * 1000; // 20 minutos en milisegundos
+
+// Función para cerrar sesión por inactividad
+function logoutByInactivity() {
+    console.log("Sesión cerrada por inactividad");
+    removeToken();
+    window.location.href = "index.html";
+}
+
+// Reiniciar el temporizador de inactividad
+function resetInactivityTimer() {
+    // Limpiar el temporizador anterior
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+    }
+    
+    // Crear nuevo temporizador
+    inactivityTimer = setTimeout(logoutByInactivity, INACTIVITY_TIME);
+}
+
+// Iniciar el monitoreo de inactividad
+export function startInactivityMonitor() {
+    // Verificar que hay una sesión activa
+    if (!isAuthenticated()) {
+        return;
+    }
+    
+    // Lista de eventos que se consideran "actividad"
+    const events = [
+        'mousedown',
+        'mousemove',
+        'keypress',
+        'scroll',
+        'touchstart',
+        'click'
+    ];
+    
+    // Agregar listeners para todos los eventos
+    events.forEach(event => {
+        document.addEventListener(event, resetInactivityTimer, true);
+    });
+    
+    // Iniciar el temporizador por primera vez
+    resetInactivityTimer();
+}
+
+// Detener el monitoreo de inactividad (útil al cerrar sesión manualmente)
+export function stopInactivityMonitor() {
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+    }
+    
+    const events = [
+        'mousedown',
+        'mousemove',
+        'keypress',
+        'scroll',
+        'touchstart',
+        'click'
+    ];
+    
+    events.forEach(event => {
+        document.removeEventListener(event, resetInactivityTimer, true);
+    });
+}

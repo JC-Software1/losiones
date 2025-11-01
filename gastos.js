@@ -1,6 +1,7 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
 import "./keepAlive.js";
+import "./authCheck.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
 const expenseCountInput = document.getElementById("expenseCount");

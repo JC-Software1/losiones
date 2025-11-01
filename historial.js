@@ -1,6 +1,7 @@
 /* ---------- módulos ---------- */
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import "./authCheck.js";
 
 /* ---------- referencias DOM ---------- */
 const salesHistory   = document.getElementById("salesHistory");

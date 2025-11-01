@@ -1,5 +1,6 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import "./authCheck.js";
 import "./keepAlive.js";
 
 // ✅ fuera de loadData, ya declarado

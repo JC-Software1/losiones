@@ -1,5 +1,6 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import "./authCheck.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
     const liquidationId = sessionStorage.getItem('inspectLiquidationId');

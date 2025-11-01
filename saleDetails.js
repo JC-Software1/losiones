@@ -1,3 +1,6 @@
+import "./authCheck.js";
+
+
 document.addEventListener("DOMContentLoaded", () => {
     const saleDetailsContainer = document.getElementById("saleDetails");
     const paymentsContainer = document.getElementById("paymentsDetails");
