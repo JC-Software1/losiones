@@ -2378,3 +2378,50 @@ async function handleReceiptAction(action, receiptId) {
 
   closeReceiptModal();
 }
+window.cerrarSesion = function() {
+    if (!confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+        return;
+    }
+    
+    // Limpiar TODA la información de sesión
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Mostrar feedback
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        z-index: 10001;
+        font-weight: 600;
+        text-align: center;
+    `;
+    notification.innerHTML = `
+        <i class="fas fa-check-circle" style="font-size: 24px; margin-bottom: 8px;"></i>
+        <div>Sesión cerrada correctamente</div>
+    `;
+    document.body.appendChild(notification);
+    
+    // Redirigir después de 1 segundo
+    setTimeout(() => {
+        window.location.href = 'index.html';
+    }, 1000);
+};
+
+// 🔄 Renovar automáticamente el timestamp del modo admin cada 5 minutos
+setInterval(() => {
+    const adminMode = sessionStorage.getItem('adminMode');
+    const vendedorId = sessionStorage.getItem('vendedorId');
+    
+    if (adminMode === 'true' && vendedorId && vendedorId !== 'null') {
+        sessionStorage.setItem('adminModeTimestamp', Date.now().toString());
+        console.log('🔄 Sesión de administrador renovada');
+    }
+}, 5 * 60 * 1000); // Cada 5 minutos
