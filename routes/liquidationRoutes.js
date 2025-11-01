@@ -6,12 +6,26 @@ const DailyLiquidation = require("../models/DailyLiquidation");
 const Expense = require("../models/Expense");
 const router = express.Router();
 
-// ✅ FUNCIÓN AUXILIAR CORREGIDA: Solo obtener ventas ACTIVAS para liquidación
 async function getSalesForLiquidation(userId) {
-    // Solo ventas NO liquidadas (settled: false)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
     return await Sale.find({ 
         user: userId,
-        settled: false
+        $or: [
+            // Ventas activas (no liquidadas)
+            { settled: false },
+            // Ventas liquidadas HOY (para incluir el último pago)
+            { 
+                settled: true, 
+                settledDate: { 
+                    $gte: today, 
+                    $lte: endOfDay 
+                } 
+            }
+        ]
     }).lean().select('_id clientName payments advancePayment settled settledDate');
 }
 
