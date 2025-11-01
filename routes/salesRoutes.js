@@ -320,9 +320,9 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         price, 
         installments, 
         clientAddress, 
-        advancePayment,
+        advancePayment, // ✅ NUEVO
         paymentPerInstallment,
-        updateProductPrices  // ✅ NUEVO
+        updateProductPrices
     } = req.body;
 
     try {
@@ -351,12 +351,41 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
             }
         }
 
+        // ✅ NUEVO: Actualizar el primer pago (abono inicial) si cambió
+        if (advancePayment !== undefined && sale.payments.length > 0) {
+            const firstPayment = sale.payments[0];
+            
+            // Verificar si el primer pago es el abono inicial (misma fecha que la venta)
+            const saleDate = new Date(sale.saleDate).toISOString().split('T')[0];
+            const firstPaymentDate = new Date(firstPayment.date).toISOString().split('T')[0];
+            
+            if (saleDate === firstPaymentDate) {
+                // Es el abono inicial, actualizarlo
+                sale.payments[0].amount = advancePayment;
+            } else if (advancePayment > 0) {
+                // No había abono inicial, agregarlo al principio
+                sale.payments.unshift({
+                    amount: advancePayment,
+                    date: new Date(sale.saleDate),
+                    liquidatedDay: false
+                });
+            }
+        } else if (advancePayment > 0 && sale.payments.length === 0) {
+            // No había pagos, agregar el abono inicial
+            sale.payments.push({
+                amount: advancePayment,
+                date: new Date(sale.saleDate),
+                liquidatedDay: false
+            });
+        }
+
         sale.clientName = clientName;
         sale.productName = productName;
         sale.saleDate = saleDate;
         sale.price = price;
         sale.installments = installments;
         sale.clientAddress = clientAddress;
+        sale.advancePayment = advancePayment || 0; // ✅ NUEVO
         sale.paymentFrequency = req.body.paymentFrequency || sale.paymentFrequency;
         sale.paymentDays = req.body.paymentDays || sale.paymentDays;
         sale.paymentDaysText = req.body.paymentDaysText || sale.paymentDaysText;
@@ -384,6 +413,7 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         res.status(500).json({ error: "Error al actualizar la venta" });
     }
 });
+
 // Agregar abono
 router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, res) => {
     const { amount, date } = req.body;

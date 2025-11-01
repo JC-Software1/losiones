@@ -393,18 +393,18 @@ async function editSale(sale) {
     inputPrice.value      = sale.price;
     inputInstallments.value = sale.installments;
 
-    // ✅ CAMBIO: Cargar valor por cuota si existe
+    // ✅ Cargar valor por cuota si existe
     if (sale.paymentPerInstallment) {
         document.getElementById('installmentAmount').value = sale.paymentPerInstallment;
     }
 
-    // ✅ NUEVO: Habilitar edición de precio total
-    inputPrice.removeAttribute('readonly');
-    
-    if (document.getElementById("clientAddress")) {
-        document.getElementById("clientAddress").value = sale.clientAddress || '';
-    }
+    // ✅ NUEVO: Cargar abono inicial
+    inputAdvance.value = sale.advancePayment || 0;
 
+    // ✅ Habilitar edición de precio total y abono
+    inputPrice.removeAttribute('readonly');
+    inputAdvance.removeAttribute('readonly');
+    
     if (document.getElementById("clientAddress")) {
         document.getElementById("clientAddress").value = sale.clientAddress || '';
     }
@@ -419,21 +419,54 @@ async function editSale(sale) {
         updateSelectedDaysDisplay();
     }
 
-    // ✅ Autorellenar productos originales
-    selectedProducts = []; // limpiar antes
+    // ✅ Cargar productos EXACTOS de la venta con sus precios originales
+    selectedProducts = [];
+    
+    const productNames = sale.productName.split(',').map(p => p.trim()).filter(Boolean);
+    const pricePerProduct = Math.round(sale.price / productNames.length);
 
-    const productNames = sale.productName
-        .split(',')
-        .map(p => p.trim())
-        .filter(Boolean);
-
-    const token = getToken();
-    const products = await apiFetch('/products', 'GET', null, token);
-
-    productNames.forEach(name => {
-        const found = products.find(p => p.name.trim() === name && !p.sold);
-        if (found) selectedProducts.push(found);
-    });
+    // Si la venta tiene el array 'products' con info completa, usarlo
+    if (sale.products && sale.products.length > 0) {
+        selectedProducts = sale.products.map(p => ({
+            _id: p._id || `temp_${Date.now()}_${Math.random()}`,
+            name: p.name,
+            brand: p.brand || 'Sin marca',
+            category: p.category || 'Sin categoría',
+            size: p.size || '',
+            salePrice: p.salePrice || pricePerProduct
+        }));
+    } else {
+        // Fallback: crear productos sintéticos con precio proporcional
+        const token = getToken();
+        try {
+            const allProducts = await apiFetch('/products', 'GET', null, token);
+            
+            productNames.forEach(name => {
+                const foundInInventory = allProducts.find(p => p.name.trim() === name);
+                
+                selectedProducts.push({
+                    _id: foundInInventory?._id || `temp_${Date.now()}_${Math.random()}`,
+                    name: name,
+                    brand: foundInInventory?.brand || 'Sin marca',
+                    category: foundInInventory?.category || 'Sin categoría',
+                    size: foundInInventory?.size || '',
+                    salePrice: pricePerProduct
+                });
+            });
+        } catch (error) {
+            console.warn('No se pudo cargar inventario, usando datos básicos:', error);
+            productNames.forEach(name => {
+                selectedProducts.push({
+                    _id: `temp_${Date.now()}_${Math.random()}`,
+                    name: name,
+                    brand: 'Sin marca',
+                    category: 'Sin categoría',
+                    size: '',
+                    salePrice: pricePerProduct
+                });
+            });
+        }
+    }
 
     renderSelectedProducts();
     updateTotalPrice();
@@ -600,7 +633,7 @@ async function updateSale() {
     const cuotasMatch = installments.match(/^\d+(?:[.,]\d{1,2})?/);
     const numberOfInstallments = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 1;
 
-    // ✅ CAMBIO CLAVE: Usar valor manual si existe
+    // ✅ Usar valor manual si existe
     const manualInstallmentAmount = parseFloat(document.getElementById('installmentAmount').value);
     const remaining = price - advance;
 
@@ -622,7 +655,7 @@ async function updateSale() {
         installments: installments,
         numberOfInstallments,
         paymentPerInstallment,
-        // ✅ NUEVO: Enviar lista de productos para actualizar precios
+        advancePayment: advance, // ✅ NUEVO: Incluir abono inicial
         updateProductPrices: true,
         ...(plan || { 
             paymentFrequency: 'mensual', 
@@ -642,7 +675,6 @@ async function updateSale() {
         alert("No se pudo actualizar la venta: " + error.message);
     }
 }
-
 /* ---------- agregar pago ---------- */
 async function addPayment() {
     const id   = document.getElementById("paymentModal").dataset.saleId;
