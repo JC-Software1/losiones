@@ -1,5 +1,4 @@
-import { isAuthenticated, startInactivityMonitor } from "./auth.js";
-
+import { isAuthenticated, startInactivityMonitor } from "./utils/auth.js";
 // Verificar autenticación e iniciar monitoreo de inactividad
 function initAuthProtection() {
     if (!isAuthenticated()) {

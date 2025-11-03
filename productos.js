@@ -420,68 +420,68 @@ async function saveProduct() {
 
     const baseProduct = {
         name: inputName.value.trim(),
-        costPrice: parseFloat(inputCostPrice.value),
-        salePrice: parseFloat(inputSalePrice.value),
+        costPrice: parseFloat(inputCostPrice.value) || 0,
+        salePrice: parseFloat(inputSalePrice.value) || 0,
         category: inputCategory.value.trim(),
         brand: inputBrand.value.trim(),
         size: inputSize.value.trim() || null
     };
 
-    if (!baseProduct.name || isNaN(baseProduct.costPrice) || isNaN(baseProduct.salePrice)) {
-        showNotification("Completa todos los campos requeridos.", "error");
+    // ✅ Validación mínima: solo nombre es obligatorio
+    if (!baseProduct.name) {
+        showNotification("El nombre del producto es obligatorio.", "error");
         return;
     }
 
+    // ✅ Validar que no sean negativos
     if (baseProduct.costPrice < 0 || baseProduct.salePrice < 0) {
         showNotification("Los precios no pueden ser negativos.", "error");
         return;
     }
 
-    if (baseProduct.salePrice <= baseProduct.costPrice) {
+    // ✅ Solo validar margen si ambos precios son mayores a 0
+    if (baseProduct.costPrice > 0 && baseProduct.salePrice > 0 && baseProduct.salePrice <= baseProduct.costPrice) {
         const confirm = window.confirm("El precio de venta es menor o igual al costo. ¿Deseas continuar?");
         if (!confirm) return;
     }
 
-try {
-    const token = getToken();
-    
-    // Detectar modo admin
-    const adminMode = sessionStorage.getItem('adminMode') === 'true';
-    const vendedorId = sessionStorage.getItem('vendedorId');
-
-    // Guardar el producto la cantidad de veces indicada
-// Determinar el endpoint según el modo
-let createEndpoint = "/products/new";
-if (adminMode && vendedorId) {
-    createEndpoint = `/products/vendedor/${vendedorId}/new`;
-}
-
-// Guardar el producto la cantidad de veces indicada
-for (let i = 0; i < quantity; i++) {
-    await apiFetch(createEndpoint, "POST", baseProduct, token);
-}
-    // Obtener el último producto creado (funciona tanto en modo normal como admin)
-    let lastProductEndpoint = "/products/last";
-    
-    if (adminMode && vendedorId) {
-        lastProductEndpoint = `/products/vendedor/${vendedorId}/last`;
-    }
-    
-    // Generar código de barras del último producto creado
     try {
-        const lastProduct = await apiFetch(lastProductEndpoint, "GET", null, token);
-        if (lastProduct && lastProduct._id) {
-            generateBarcodeImage(lastProduct._id, lastProduct.name, lastProduct.salePrice);
+        const token = getToken();
+
+        // Detectar modo admin
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorId = sessionStorage.getItem('vendedorId');
+
+        let createEndpoint = "/products/new";
+        if (adminMode && vendedorId) {
+            createEndpoint = `/products/vendedor/${vendedorId}/new`;
         }
-    } catch (error) {
-        console.log("No se pudo generar el código de barras:", error);
-    }
-      
+
+        // Guardar el producto la cantidad de veces indicada
+        for (let i = 0; i < quantity; i++) {
+            await apiFetch(createEndpoint, "POST", baseProduct, token);
+        }
+
+        // Generar código de barras del último producto creado
+        let lastProductEndpoint = "/products/last";
+        if (adminMode && vendedorId) {
+            lastProductEndpoint = `/products/vendedor/${vendedorId}/last`;
+        }
+
+        try {
+            const lastProduct = await apiFetch(lastProductEndpoint, "GET", null, token);
+            if (lastProduct && lastProduct._id) {
+                generateBarcodeImage(lastProduct._id, lastProduct.name, lastProduct.salePrice);
+            }
+        } catch (error) {
+            console.log("No se pudo generar el código de barras:", error);
+        }
 
         showNotification(`${quantity} producto(s) guardado(s) correctamente.`, "success");
         form.reset();
         clearMarginPreview();
         await loadProducts();
+
     } catch (error) {
         console.error("Error al guardar el producto:", error.message);
         showNotification("No se pudo guardar el producto: " + error.message, "error");
@@ -518,26 +518,40 @@ window.editProduct = function(productId) {
 // Actualizar producto
 async function updateProduct() {
     const id = inputId.value;
-    
-const productData = {
-    name: inputName.value.trim(),
-    costPrice: parseFloat(inputCostPrice.value),
-    salePrice: parseFloat(inputSalePrice.value),
-    category: inputCategory.value.trim(),
-    brand: inputBrand.value.trim(),
-    size: inputSize.value.trim() || null
-};
-    
-    if (!productData.name || isNaN(productData.costPrice) || isNaN(productData.salePrice)) {
-        showNotification("Completa todos los campos requeridos.", "error");
+
+    const productData = {
+        name: inputName.value.trim(),
+        costPrice: parseFloat(inputCostPrice.value) || 0,
+        salePrice: parseFloat(inputSalePrice.value) || 0,
+        category: inputCategory.value.trim(),
+        brand: inputBrand.value.trim(),
+        size: inputSize.value.trim() || null
+    };
+
+    // 1) Solo el nombre es obligatorio
+    if (!productData.name) {
+        showNotification("El nombre del producto es obligatorio.", "error");
         return;
     }
-    
-    if (productData.salePrice <= productData.costPrice) {
-        const confirm = window.confirm("El precio de venta es menor o igual al costo. ¿Deseas continuar?");
+
+    // 2) No permitir precios negativos
+    if (productData.costPrice < 0 || productData.salePrice < 0) {
+        showNotification("Los precios no pueden ser negativos.", "error");
+        return;
+    }
+
+    // 3) Validar margen SOLO si ambos precios son mayores a 0
+    if (
+        productData.costPrice > 0 &&
+        productData.salePrice > 0 &&
+        productData.salePrice <= productData.costPrice
+    ) {
+        const confirm = window.confirm(
+            "El precio de venta es menor o igual al costo. ¿Deseas continuar?"
+        );
         if (!confirm) return;
     }
-    
+
     try {
         const token = getToken();
         await apiFetch(`/products/${id}`, "PUT", productData, token);
