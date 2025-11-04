@@ -81,9 +81,9 @@ router.post("/new", auth, checkPermission('crearProductos'), async (req, res) =>
     try {
         const { name, costPrice, salePrice, category, brand, size } = req.body;
 
-        if (!name || !costPrice || !salePrice) {
-            return res.status(400).json({ error: "Todos los campos son obligatorios" });
-        }
+if (!name || costPrice === undefined || costPrice === null || salePrice === undefined || salePrice === null) {
+    return res.status(400).json({ error: "Todos los campos son obligatorios" });
+}
 
         const product = new Product({
             name,

@@ -440,11 +440,14 @@ async function saveProduct() {
     }
 
     // ✅ Solo validar margen si ambos precios son mayores a 0
-    if (baseProduct.costPrice > 0 && baseProduct.salePrice > 0 && baseProduct.salePrice <= baseProduct.costPrice) {
-        const confirm = window.confirm("El precio de venta es menor o igual al costo. ¿Deseas continuar?");
-        if (!confirm) return;
-    }
-
+// ✅ Solo validar margen si ambos precios son mayores a 0
+if (baseProduct.costPrice > 0 &&
+    baseProduct.salePrice > 0 &&
+    baseProduct.salePrice <= baseProduct.costPrice) {
+  const confirm = window.confirm(
+    "El precio de venta es menor o igual al costo. ¿Deseas continuar?");
+  if (!confirm) return;
+}
     try {
         const token = getToken();
 
