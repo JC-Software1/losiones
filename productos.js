@@ -433,6 +433,12 @@ async function saveProduct() {
         return;
     }
 
+    // ✅ Validar que los precios sean números válidos (permitir 0)
+if (isNaN(baseProduct.costPrice) || isNaN(baseProduct.salePrice)) {
+    showNotification("Los precios deben ser números válidos.", "error");
+    return;
+}
+
     // ✅ Validar que no sean negativos
     if (baseProduct.costPrice < 0 || baseProduct.salePrice < 0) {
         showNotification("Los precios no pueden ser negativos.", "error");
@@ -440,6 +446,7 @@ async function saveProduct() {
     }
 
     // ✅ Solo validar margen si ambos precios son mayores a 0
+// ✅ Solo validar margen si ambos precios son mayores a 0
 // ✅ Solo validar margen si ambos precios son mayores a 0
 if (baseProduct.costPrice > 0 &&
     baseProduct.salePrice > 0 &&

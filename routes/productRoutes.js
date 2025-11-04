@@ -114,7 +114,8 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
         const { vendedorId } = req.params;
         const { name, costPrice, salePrice, category, brand, size } = req.body;
 
-        if (!name || !costPrice || !salePrice) {
+        // ✅ VALIDACIÓN CORRECTA (permite 0 en precios)
+        if (!name || costPrice === undefined || costPrice === null || salePrice === undefined || salePrice === null) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
 
