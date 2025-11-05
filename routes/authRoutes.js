@@ -72,11 +72,27 @@ router.post("/register", async (req, res) => {
 });
 
 /* ----------  LOGIN ---------- */
+/* ----------  LOGIN ---------- */
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ username }).populate('jefe');
+    
     if (!user) return res.status(400).json({ error: "Usuario no encontrado" });
+
+    // Verificar si el usuario está bloqueado
+    if (user.bloqueado) {
+      return res.status(403).json({ 
+        error: "Su cuenta ha sido suspendida. Comuníquese con soporte al 3232323232"
+      });
+    }
+
+    // Verificar si el jefe del usuario está bloqueado
+    if (user.jefe && user.jefe.bloqueado) {
+      return res.status(403).json({ 
+        error: "La cuenta del administrador está suspendida. Comuníquese con soporte al 3232323232"
+      });
+    }
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ error: "Credenciales incorrectas" });
@@ -89,6 +105,29 @@ router.post("/login", async (req, res) => {
     res.status(200).json({ token });
   } catch (e) {
     res.status(400).json({ error: e.message });
+  }
+});
+
+/* ----------  VERIFICAR ESTADO DE BLOQUEO ---------- */
+router.post("/verificar-bloqueo", async (req, res) => {
+  try {
+    const { username } = req.body;
+    const user = await User.findOne({ username });
+    
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    if (user.bloqueado) {
+      return res.status(403).json({ 
+        bloqueado: true,
+        mensaje: "Su cuenta ha sido suspendida. Por favor contacte con soporte."
+      });
+    }
+
+    res.json({ bloqueado: false });
+  } catch (e) {
+    res.status(500).json({ error: "Error al verificar estado de bloqueo" });
   }
 });
 
@@ -614,6 +653,29 @@ router.get("/verificar-vencimiento", auth, async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ error: "Error al verificar vencimiento" });
+  }
+});
+
+/* ----------  VERIFICAR SI EL JEFE ESTÁ BLOQUEADO ---------- */
+router.get("/verificar-jefe/:username", async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.params.username }).populate('jefe');
+    
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    // Si tiene jefe asignado, verificar si está bloqueado
+    if (user.jefe && user.jefe.bloqueado) {
+      return res.json({ 
+        jefeBloqueado: true,
+        mensaje: "La cuenta del administrador está suspendida"
+      });
+    }
+
+    res.json({ jefeBloqueado: false });
+  } catch (e) {
+    res.status(500).json({ error: "Error al verificar estado del jefe" });
   }
 });
 
