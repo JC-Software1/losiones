@@ -83,7 +83,7 @@ router.post("/login", async (req, res) => {
     // Verificar si el usuario está bloqueado
     if (user.bloqueado) {
       return res.status(403).json({ 
-        error: "Su cuenta ha sido suspendida. Comuníquese con soporte al 3232323232"
+        error: "Su cuenta ha sido suspendida. Comuníquese con soporte al 3128540908"
       });
     }
 
@@ -206,6 +206,7 @@ router.put("/users/:id", auth, async (req, res) => {
 });
 
 /* ----------  BLOQUEAR USUARIO ---------- */
+/* ----------  BLOQUEAR USUARIO ---------- */
 router.put("/users/:id/block", auth, async (req, res) => {
   try {
     if (req.user.tipo !== 3) return res.status(403).json({ error: "No autorizado" });
@@ -218,9 +219,39 @@ router.put("/users/:id/block", auth, async (req, res) => {
       return res.status(400).json({ error: "No se puede bloquear a un super administrador" });
     }
     
+    // Bloquear al usuario principal
     await User.findByIdAndUpdate(req.params.id, { bloqueado: true });
-    res.json({ message: "Usuario bloqueado exitosamente" });
+    
+    let vendedoresBloqueados = 0;
+    
+    // Si es un administrador (tipo 2), bloquear todos sus vendedores
+    if (user.tipo === 2) {
+      // Obtener todas las asignaciones de vendedores de este administrador
+      const asignaciones = await VendedorAsignado.find({ administrador: req.params.id });
+      
+      // Extraer los IDs de los vendedores
+      const vendedoresIds = asignaciones.map(asig => asig.vendedor);
+      
+      // Bloquear todos los vendedores asignados
+      if (vendedoresIds.length > 0) {
+        const resultado = await User.updateMany(
+          { _id: { $in: vendedoresIds } },
+          { $set: { bloqueado: true } }
+        );
+        vendedoresBloqueados = resultado.modifiedCount || 0;
+      }
+    }
+    
+    const mensaje = user.tipo === 2 
+      ? `Administrador bloqueado exitosamente. ${vendedoresBloqueados} vendedor(es) también fueron bloqueados.`
+      : "Usuario bloqueado exitosamente";
+    
+    res.json({ 
+      message: mensaje,
+      vendedoresBloqueados: vendedoresBloqueados
+    });
   } catch (e) {
+    console.error("Error al bloquear usuario:", e);
     res.status(500).json({ error: "Error al bloquear usuario" });
   }
 });
@@ -230,13 +261,45 @@ router.put("/users/:id/unblock", auth, async (req, res) => {
   try {
     if (req.user.tipo !== 3) return res.status(403).json({ error: "No autorizado" });
     
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+    
+    // Desbloquear al usuario principal
     await User.findByIdAndUpdate(req.params.id, { bloqueado: false });
-    res.json({ message: "Usuario desbloqueado exitosamente" });
+    
+    let vendedoresDesbloqueados = 0;
+    
+    // Si es un administrador (tipo 2), desbloquear todos sus vendedores
+    if (user.tipo === 2) {
+      // Obtener todas las asignaciones de vendedores de este administrador
+      const asignaciones = await VendedorAsignado.find({ administrador: req.params.id });
+      
+      // Extraer los IDs de los vendedores
+      const vendedoresIds = asignaciones.map(asig => asig.vendedor);
+      
+      // Desbloquear todos los vendedores asignados
+      if (vendedoresIds.length > 0) {
+        const resultado = await User.updateMany(
+          { _id: { $in: vendedoresIds } },
+          { $set: { bloqueado: false } }
+        );
+        vendedoresDesbloqueados = resultado.modifiedCount || 0;
+      }
+    }
+    
+    const mensaje = user.tipo === 2 
+      ? `Administrador desbloqueado exitosamente. ${vendedoresDesbloqueados} vendedor(es) también fueron desbloqueados.`
+      : "Usuario desbloqueado exitosamente";
+    
+    res.json({ 
+      message: mensaje,
+      vendedoresDesbloqueados: vendedoresDesbloqueados
+    });
   } catch (e) {
+    console.error("Error al desbloquear usuario:", e);
     res.status(500).json({ error: "Error al desbloquear usuario" });
   }
 });
-
 /* ----------  ELIMINAR USUARIO ---------- */
 router.delete("/users/:id", auth, async (req, res) => {
   try {
@@ -676,6 +739,37 @@ router.get("/verificar-jefe/:username", async (req, res) => {
     res.json({ jefeBloqueado: false });
   } catch (e) {
     res.status(500).json({ error: "Error al verificar estado del jefe" });
+  }
+});
+
+/* ----------  VERIFICAR SI EL ADMINISTRADOR DEL VENDEDOR ESTÁ BLOQUEADO ---------- */
+router.get("/verificar-admin-bloqueado/:username", async (req, res) => {
+  try {
+    const vendedor = await User.findOne({ username: req.params.username });
+    
+    if (!vendedor) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    // Si es un vendedor (tipo 1), buscar su asignación
+    if (vendedor.tipo === 1) {
+      const asignacion = await VendedorAsignado.findOne({ 
+        vendedor: vendedor._id 
+      }).populate('administrador');
+      
+      // Si tiene un administrador asignado y está bloqueado
+      if (asignacion && asignacion.administrador && asignacion.administrador.bloqueado) {
+        return res.json({ 
+          adminBloqueado: true,
+          mensaje: "El administrador de esta cuenta está suspendido"
+        });
+      }
+    }
+
+    res.json({ adminBloqueado: false });
+  } catch (e) {
+    console.error("Error verificando admin:", e);
+    res.status(500).json({ error: "Error al verificar estado del administrador" });
   }
 });
 

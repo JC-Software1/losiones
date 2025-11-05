@@ -142,7 +142,7 @@ function mostrarModalBloqueo() {
 
     // Evento para el botón de WhatsApp
     document.getElementById('contactarSoporteBtn').addEventListener('click', () => {
-        const telefono = '3232323232';
+        const telefono = '3128540908';
         const mensaje = encodeURIComponent('Hola, mi cuenta ha sido suspendida y necesito información sobre cómo reactivarla.');
         const urlWhatsApp = `https://wa.me/${telefono}?text=${mensaje}`;
         window.open(urlWhatsApp, '_blank');
@@ -158,6 +158,7 @@ function mostrarModalBloqueo() {
 }
 
 // Función para verificar bloqueo de usuario y vendedores
+// Función para verificar bloqueo de usuario y su administrador
 async function verificarBloqueosCompletos(username) {
     try {
         // Verificar si el usuario principal está bloqueado
@@ -173,27 +174,16 @@ async function verificarBloqueosCompletos(username) {
             return { bloqueado: true, tipo: 'principal' };
         }
 
-        // Si no está bloqueado, intentar hacer login temporal para verificar vendedores
-        const responseLogin = await fetch('https://losiones-1.onrender.com/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password: 'temp-check-only' })
+        // Verificar si su administrador está bloqueado
+        const responseAdmin = await fetch(`https://losiones-1.onrender.com/api/auth/verificar-admin-bloqueado/${username}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
         });
 
-        // Si el login falla por credenciales, aún podemos obtener el ID del usuario
-        // para verificar si tiene jefe bloqueado
-        if (responseLogin.status === 400) {
-            // Buscar en la base de datos si este usuario tiene un jefe
-            const userCheckResponse = await fetch(`https://losiones-1.onrender.com/api/auth/verificar-jefe/${username}`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            if (userCheckResponse.ok) {
-                const jefeData = await userCheckResponse.json();
-                if (jefeData.jefeBloqueado) {
-                    return { bloqueado: true, tipo: 'jefe' };
-                }
+        if (responseAdmin.ok) {
+            const adminData = await responseAdmin.json();
+            if (adminData.adminBloqueado) {
+                return { bloqueado: true, tipo: 'administrador' };
             }
         }
 
