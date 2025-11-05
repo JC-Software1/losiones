@@ -559,4 +559,62 @@ router.get('/mis-permisos', auth, async (req, res) => {
     }
 });
 
+/* ----------  ACTUALIZAR FECHA DE PAGO ---------- */
+router.put("/users/:id/fecha-pago", auth, async (req, res) => {
+  try {
+    if (req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const { fechaPago } = req.body;
+    
+    if (!fechaPago) {
+      return res.status(400).json({ error: "Fecha de pago requerida" });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    user.fechaPago = new Date(fechaPago);
+    await user.save();
+
+    res.json({ 
+      message: "Fecha de pago actualizada exitosamente",
+      fechaPago: user.fechaPago
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Error al actualizar fecha de pago" });
+  }
+});
+
+/* ----------  VERIFICAR ESTADO DE VENCIMIENTO ---------- */
+router.get("/verificar-vencimiento", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || !user.fechaPago) {
+      return res.json({ 
+        proximo_vencer: false, 
+        dias_restantes: null 
+      });
+    }
+
+    const hoy = new Date();
+    const fechaPago = new Date(user.fechaPago);
+    const diferenciaDias = Math.ceil((fechaPago - hoy) / (1000 * 60 * 60 * 24));
+
+    const proximoVencer = diferenciaDias <= user.diasAvisoVencimiento && diferenciaDias > 0;
+
+    res.json({
+      proximo_vencer: proximoVencer,
+      dias_restantes: diferenciaDias > 0 ? diferenciaDias : 0,
+      fecha_pago: fechaPago,
+      vencido: diferenciaDias <= 0
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Error al verificar vencimiento" });
+  }
+});
+
 module.exports = router;

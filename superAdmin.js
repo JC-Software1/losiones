@@ -26,7 +26,6 @@ function enableStickyHeader() {
     header.style.maxWidth = "1600px";
     header.style.zIndex = "2000";
 
-    // Guardar padding base si no existe
     const computed = window.getComputedStyle(container);
     const currentPaddingTop = parseFloat(computed.paddingTop) || 0;
     if (!container.dataset.basePaddingTop) container.dataset.basePaddingTop = currentPaddingTop;
@@ -38,16 +37,13 @@ function enableStickyHeader() {
 
   applyHeaderStyles();
   window.addEventListener("resize", applyHeaderStyles);
-  // Also recalc after fonts/images load
   window.addEventListener("load", applyHeaderStyles);
-  // Ensure page starts at top
   window.scrollTo(0, 0);
 }
 
 /* ------------------- Layout controls (Compact / Masonry / List) ------------------- */
 function injectCardLayoutStyles() {
   const css = `
-  /* Injected layout variants */
   #usersGrid.grid-compact {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -113,10 +109,8 @@ function addLayoutControls() {
     wrapper.appendChild(b);
   });
 
-  // Insert before right-most actions
   headerActions.insertBefore(wrapper, headerActions.firstChild);
 
-  // Apply saved layout or default compact
   const saved = localStorage.getItem("usersGridLayout") || "grid-compact";
   const btnToPress = wrapper.querySelector(`button[data-layout="${saved}"]`);
   if (btnToPress) btnToPress.click();
@@ -132,7 +126,6 @@ function toggleLayout(layoutClass) {
   grid.classList.add(layoutClass);
   localStorage.setItem("usersGridLayout", layoutClass);
 
-  // Recalc padding to avoid overlaps
   const headerHeight = header.getBoundingClientRect().height;
   const base = parseFloat(container.dataset.basePaddingTop || window.getComputedStyle(container).paddingTop || 0) || 0;
   container.style.paddingTop = `${base + headerHeight + 12}px`;
@@ -163,7 +156,27 @@ function createUserCard(user) {
   const statusText = user.bloqueado ? '🔒 Bloqueado' : '✅ Activo';
   const firstLetter = (user.name || user.username || 'U').charAt(0).toUpperCase();
 
-  // Build inner markup (no inline onclicks — we'll use delegation)
+  // Formatear fecha de pago
+  let fechaPagoDisplay = 'No establecida';
+  let diasRestantes = null;
+  if (user.fechaPago) {
+    const fechaPago = new Date(user.fechaPago);
+    const hoy = new Date();
+    diasRestantes = Math.ceil((fechaPago - hoy) / (1000 * 60 * 60 * 24));
+    
+    fechaPagoDisplay = fechaPago.toLocaleDateString('es-ES', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    if (diasRestantes <= 0) {
+      fechaPagoDisplay += ' <span style="color:#dc3545;font-weight:700">(VENCIDO)</span>';
+    } else if (diasRestantes <= 5) {
+      fechaPagoDisplay += ` <span style="color:#ffc107;font-weight:700">(${diasRestantes} días)</span>`;
+    }
+  }
+
   div.innerHTML = `
     <div class="user-header">
       <div class="user-avatar">${firstLetter}</div>
@@ -179,6 +192,10 @@ function createUserCard(user) {
 
     <div class="user-details">
       <div class="detail-item">
+        <div class="detail-label">Fecha de Pago</div>
+        <div class="detail-value">${fechaPagoDisplay}</div>
+      </div>
+      <div class="detail-item">
         <div class="detail-label">ID de Sistema</div>
         <div class="detail-value" style="font-family:monospace;font-size:12px">${user._id}</div>
       </div>
@@ -191,6 +208,7 @@ function createUserCard(user) {
 
     <div class="user-actions">
       <button class="btn-sm btn-edit" data-action="edit" data-id="${user._id}">✏️ Editar</button>
+      <button class="btn-sm btn-inspect" data-action="fecha-pago" data-id="${user._id}">📅 Fecha Pago</button>
       <button class="btn-sm ${user.bloqueado ? 'btn-unblock' : 'btn-block'}" data-action="${user.bloqueado ? 'unblock' : 'block'}" data-id="${user._id}" ${user.tipo === 3 ? 'disabled title="No se puede bloquear a un super admin"' : ''}>
         ${user.bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear'}
       </button>
@@ -226,14 +244,11 @@ async function loadUsers() {
   showLoading();
   try {
     const users = await apiFetch("/auth/users", "GET");
-    // ensure array
     allUsers = Array.isArray(users) ? users : [];
     if (allUsers.length === 0) {
       renderEmpty();
     } else {
-      // render cards
       grid.innerHTML = "";
-      // optionally sort so superadmins first
       allUsers.sort((a, b) => (b.tipo - a.tipo));
       allUsers.forEach(u => {
         const card = createUserCard(u);
@@ -245,7 +260,6 @@ async function loadUsers() {
     console.error("Error cargando usuarios:", err);
     grid.innerHTML = `<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.85)">❌ Error cargando usuarios: ${err.message || err}</div>`;
   } finally {
-    // ensure layout class exists
     const saved = localStorage.getItem("usersGridLayout") || "grid-compact";
     document.getElementById("usersGrid").classList.add(saved);
   }
@@ -265,6 +279,24 @@ function attachUsersGridHandlers() {
     const user = allUsers.find(u => u._id === userId);
 
     if (!action || !user) return;
+
+    // NUEVA FUNCIONALIDAD: Establecer fecha de pago
+    if (action === "fecha-pago") {
+      const fechaActual = user.fechaPago ? new Date(user.fechaPago).toISOString().split('T')[0] : '';
+      const nuevaFecha = prompt(`Establecer fecha de pago para ${user.username}\n(Formato: YYYY-MM-DD)`, fechaActual);
+      
+      if (!nuevaFecha) return;
+      
+      try {
+        await apiFetch(`/auth/users/${userId}/fecha-pago`, "PUT", { fechaPago: nuevaFecha });
+        alert("Fecha de pago actualizada exitosamente");
+        await loadUsers();
+      } catch (err) {
+        console.error(err);
+        alert(`Error: ${err.message || err}`);
+      }
+      return;
+    }
 
     if (action === "edit") {
       openEditModalFor(user);
@@ -335,7 +367,6 @@ function openEditModalFor(user) {
   document.getElementById("editPassword").value = '';
   document.getElementById("editTipo").value = user.tipo || 1;
   modal.style.display = "block";
-  // ensure header padding recalculated (modal may change layout)
   recalcPadding();
 }
 
@@ -433,9 +464,8 @@ function setupScrollToTop() {
   btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 }
 
-/* ------------------- Setup event listeners (header buttons & modals) ------------------- */
+/* ------------------- Setup event listeners ------------------- */
 function setupEventListeners() {
-  // Header buttons
   const logoutBtn = document.getElementById("logoutBtn");
   const addUserBtn = document.getElementById("addUserBtn");
 
@@ -446,17 +476,14 @@ function setupEventListeners() {
 
   addUserBtn.addEventListener("click", () => openAddModal());
 
-  // Modal close buttons
   document.getElementById("closeModal").addEventListener("click", closeEditModal);
   document.getElementById("closeAddModal").addEventListener("click", closeAddModal);
   document.getElementById("cancelEdit").addEventListener("click", closeEditModal);
   document.getElementById("cancelAdd").addEventListener("click", closeAddModal);
 
-  // Form submissions
   document.getElementById("editForm").addEventListener("submit", handleEditUser);
   document.getElementById("addForm").addEventListener("submit", handleAddUser);
 
-  // Close modal when clicking outside
   window.addEventListener("click", (e) => {
     if (e.target.classList && e.target.classList.contains("modal")) {
       closeEditModal();
@@ -464,24 +491,17 @@ function setupEventListeners() {
     }
   });
 
-  // Recalculate padding whenever modals transition/visibility change
   const modals = document.querySelectorAll(".modal");
   modals.forEach(mod => {
     mod.addEventListener("transitionend", recalcPadding);
     mod.addEventListener("animationend", recalcPadding);
   });
 
-  // Attach grid action handlers
   attachUsersGridHandlers();
-
-  // Layout controls
   injectCardLayoutStyles();
   addLayoutControls();
-
-  // Scroll to top
   setupScrollToTop();
 
-  // MutationObserver to recalc padding when grid changes (e.g., after loadUsers)
   const grid = document.getElementById("usersGrid");
   const container = document.querySelector(".admin-container");
   const header = document.querySelector(".header");
@@ -495,7 +515,6 @@ function setupEventListeners() {
 document.addEventListener("DOMContentLoaded", async () => {
   enableStickyHeader();
 
-  // Auth
   if (!isAuthenticated()) {
     alert("Sesión expirada. Redirigiendo al login...");
     window.location.href = "index.html";
@@ -509,7 +528,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // Show logged user info
   const userInfoEl = document.getElementById("userInfo");
   if (userInfoEl) {
     userInfoEl.textContent = `Logueado como: ${userInfo.username} (Super Admin) • ${new Date().toLocaleDateString()}`;
@@ -519,8 +537,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadUsers();
 });
 
-/* ------------------- Expose small helpers globally if needed ------------------- */
-// Not strictly necessary, but keeps parity with previous code using window.* for editUser etc.
 window.openAddModal = openAddModal;
 window.openEditModalFor = (idOrUser) => {
   if (typeof idOrUser === "string") {

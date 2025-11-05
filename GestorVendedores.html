@@ -602,6 +602,17 @@
                 flex-direction: column;
             }
         }
+
+        @keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
     </style>
 </head>
 <body>
@@ -1109,6 +1120,47 @@
         const btnGuardarPermisos = document.getElementById('btnGuardarPermisos');
         const btnActivarTodos = document.getElementById('btnActivarTodos');
         const btnDesactivarTodos = document.getElementById('btnDesactivarTodos');
+
+        // Verificar vencimiento al cargar
+async function verificarVencimiento() {
+  try {
+    const response = await apiFetch("/auth/verificar-vencimiento", "GET");
+    
+    if (response.vencido) {
+      mostrarAlertaVencimiento("❌ Tu acceso ha vencido. Contacta al administrador.", "danger");
+      // Opcional: bloquear funcionalidad
+    } else if (response.proximo_vencer) {
+      mostrarAlertaVencimiento(
+        `⚠️ Tu acceso vencerá en ${response.dias_restantes} día(s). Fecha de vencimiento: ${new Date(response.fecha_pago).toLocaleDateString()}`,
+        "warning"
+      );
+    }
+  } catch (error) {
+    console.error("Error verificando vencimiento:", error);
+  }
+}
+
+function mostrarAlertaVencimiento(mensaje, tipo) {
+  const alerta = document.createElement("div");
+  alerta.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${tipo === 'danger' ? '#dc3545' : '#ffc107'};
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    z-index: 10000;
+    max-width: 400px;
+    animation: slideIn 0.3s ease;
+  `;
+  alerta.textContent = mensaje;
+  document.body.appendChild(alerta);
+}
+
+// Llamar al cargar la página
+document.addEventListener("DOMContentLoaded", verificarVencimiento);
 
         function encriptarId(id) {
             let hash = 0;

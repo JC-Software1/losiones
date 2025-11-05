@@ -39,11 +39,15 @@ const UserSchema = new mongoose.Schema({
     name: { type: String, required: true },
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    tipo: { type: Number, default: 1 }, // 1: vendedor, 2: admin, 3: jefe
+    tipo: { type: Number, default: 1 },
     bloqueado: { type: Boolean, default: false },
-    permisos: { type: Boolean, default: false }, // Mantener para compatibilidad
+    permisos: { type: Boolean, default: false },
     permisosDetallados: { type: PermisosSchema, default: () => ({}) },
-    jefe: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
+    jefe: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    // NUEVOS CAMPOS
+    fechaPago: { type: Date, default: null },
+    fechaVencimiento: { type: Date, default: null },
+    diasAvisoVencimiento: { type: Number, default: 5 }
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);
