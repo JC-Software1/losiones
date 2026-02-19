@@ -148,7 +148,7 @@ const inputDate = document.getElementById("saleDate");
 const inputPrice = document.getElementById("price");
 const inputInstallments = document.getElementById("installments");
 const inputAdvance = document.getElementById("advancePayment");
-const inputPaymentDate = document.getElementById("paymentDate");
+const inputPaymentDate = document.getElementById("paymentDateSection");
 
 const btnSave = document.getElementById("saveSale");
 const btnUpdate = document.getElementById("updateSale");
@@ -219,7 +219,7 @@ if (filterDay) {
         }
 
         filteredSales.forEach(sale => {
-            const totalPaid = sale.payments.reduce((sum, p) => sum + p.amount, 0);
+            const totalPaid = (sale.payments || []).reduce((sum, p) => sum + p.amount, 0);
             const remainingDebt = sale.price - totalPaid;
             const paymentPercentage = (totalPaid / sale.price) * 100;
 
@@ -244,7 +244,7 @@ if (filterDay) {
 
                 const missedDays = paymentDaysArray
                     .filter(d => d < today)
-                    .filter(d => !sale.payments.some(p => new Date(p.date).getDate() === d));
+                    .filter(d => !(sale.payments || []).some(p => new Date(p.date).getDate() === d));
 
                 if (missedDays.length) {
                     const oldest = Math.min(...missedDays);
@@ -829,8 +829,6 @@ document.getElementById('advancePayment').addEventListener('input', () => {
 
 /* ---------- listeners (sin cambios) ---------- */
 searchInput.addEventListener("input", () => loadSales(searchInput.value.trim()));
-/* ---------- listeners (sin cambios) ---------- */
-searchInput.addEventListener("input", () => loadSales(searchInput.value.trim()));
 // ✅ NUEVO: Listener para filtro de día
 dayFilterInput.addEventListener("change", () => {
     loadSales(searchInput.value.trim(), dayFilterInput.value);
@@ -838,7 +836,14 @@ dayFilterInput.addEventListener("change", () => {
 btnSave.addEventListener("click", saveSale);
 btnUpdate.addEventListener("click", updateSale);
 btnCancel.addEventListener("click", cancelUpdate);
-btnAddPayment.addEventListener("click", addPayment);
+btnAddPayment.addEventListener("click", async () => {
+    btnAddPayment.disabled = true;
+    try {
+        await addPayment();
+    } finally {
+        btnAddPayment.disabled = false;
+    }
+});
 
 // Al cargar la página
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1262,10 +1267,13 @@ const btnCerr = document.getElementById("cancelPayment");
 const btnX    = document.getElementById("closePaymentModal");
 
 // abrir modal ya está hecho en openPaymentModal
-btnConf.addEventListener("click", () => {
-    // usamos la misma lógica que el área "Registrar Abono"
-    addPayment();
-    modal.classList.remove("show");
+btnConf.addEventListener("click", async () => {
+    btnConf.disabled = true;
+    try {
+        await addPayment();
+    } finally {
+        btnConf.disabled = false;
+    }
 });
 btnCerr.addEventListener("click", () => modal.classList.remove("show"));
 btnX.addEventListener("click",   () => modal.classList.remove("show"));

@@ -110,6 +110,9 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
         });
 
         if (advancePayment > 0) {
+            if (!sale.payments) {
+                sale.payments = [];
+            }
             sale.payments.push({
                 amount: advancePayment,
                 date: new Date(saleDate),
@@ -172,6 +175,9 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
         });
 
         if (advancePayment > 0) {
+            if (!sale.payments) {
+                sale.payments = [];
+            }
             sale.payments.push({
                 amount: advancePayment,
                 date: new Date(saleDate),
@@ -258,6 +264,10 @@ router.delete("/:saleId/payment/:paymentId", auth, checkPermission('eliminarAbon
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
+        if (!sale.payments) {
+            sale.payments = [];
+        }
+
         const initialLength = sale.payments.length;
         sale.payments = sale.payments.filter(p => p._id.toString() !== paymentId);
 
@@ -266,7 +276,7 @@ router.delete("/:saleId/payment/:paymentId", auth, checkPermission('eliminarAbon
         }
 
         if (sale.settled) {
-            const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
+        const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
             if (totalPaid < sale.price) {
                 sale.settled = false;
                 sale.settledDate = null;
@@ -352,6 +362,9 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         }
 
         if (advancePayment !== undefined) {
+            if (!sale.payments) {
+                sale.payments = [];
+            }
             const saleDateOnly = new Date(sale.saleDate).toISOString().split('T')[0];
             
             let initialPaymentIndex = sale.payments.findIndex(p => {
@@ -390,7 +403,7 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
             sale.paymentPerInstallment = paymentPerInstallment;
         }
 
-        const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
+        const totalPaid = (sale.payments || []).reduce((sum, payment) => sum + payment.amount, 0);
         
         if (totalPaid >= price && !sale.settled) {
             sale.settled = true;
@@ -431,13 +444,19 @@ router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, 
         const paymentDate = date ? new Date(date) : new Date();
         const paymentDateOnly = paymentDate.toISOString().split('T')[0];
         
-        const isDuplicate = sale.payments.some(p => {
+        const isDuplicate = (sale.payments || []).some(p => {
             const existingDateOnly = new Date(p.date).toISOString().split('T')[0];
-            return p.amount === amount && existingDateOnly === paymentDateOnly;
+            const timeDiff = Math.abs(new Date(p.date) - paymentDate);
+            const withinWindow = timeDiff < 5000;
+            return p.amount === amount && (existingDateOnly === paymentDateOnly || withinWindow);
         });
         
         if (isDuplicate) {
             return res.status(400).json({ error: "Este abono ya fue registrado anteriormente" });
+        }
+
+        if (!sale.payments) {
+            sale.payments = [];
         }
 
         sale.payments.push({
