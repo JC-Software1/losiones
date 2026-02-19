@@ -428,9 +428,21 @@ router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, 
             return res.status(400).json({ error: "La venta ya está liquidada, no puedes agregar más pagos" });
         }
 
+        const paymentDate = date ? new Date(date) : new Date();
+        const paymentDateOnly = paymentDate.toISOString().split('T')[0];
+        
+        const isDuplicate = sale.payments.some(p => {
+            const existingDateOnly = new Date(p.date).toISOString().split('T')[0];
+            return p.amount === amount && existingDateOnly === paymentDateOnly;
+        });
+        
+        if (isDuplicate) {
+            return res.status(400).json({ error: "Este abono ya fue registrado anteriormente" });
+        }
+
         sale.payments.push({
             amount,
-            date: date || new Date(),
+            date: paymentDate,
             liquidatedDay: false
         });
 

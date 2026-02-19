@@ -675,14 +675,19 @@ async function updateSale() {
         alert("No se pudo actualizar la venta: " + error.message);
     }
 }
+let isAddingPayment = false;
+
 /* ---------- agregar pago ---------- */
 async function addPayment() {
+    if (isAddingPayment) return;
+    isAddingPayment = true;
+    
     const id   = document.getElementById("paymentModal").dataset.saleId;
     const amount = parseFloat(document.getElementById("paymentAmount").value);
     const date = document.getElementById("paymentDate").value;
 
-    if (!id) return alert("No se seleccionó ninguna venta.");
-    if (!amount || amount <= 0) return alert("Monto inválido");
+    if (!id) { alert("No se seleccionó ninguna venta."); isAddingPayment = false; return; }
+    if (!amount || amount <= 0) { alert("Monto inválido"); isAddingPayment = false; return; }
 
     try {
         const token = getToken();
@@ -701,6 +706,7 @@ window.dispatchEvent(new Event('saleUpdated'));
             alert("¡Venta liquidada automáticamente!");
             if (confirm("¿Deseas ir a la sección de ventas liquidadas?")) {
                 window.location.href = "liquidados.html";
+                isAddingPayment = false;
                 return;
             }
         }
@@ -709,6 +715,8 @@ window.dispatchEvent(new Event('saleUpdated'));
     } catch (error) {
         console.error("Error al registrar el abono:", error.message);
         alert("No se pudo registrar el abono: " + error.message);
+    } finally {
+        isAddingPayment = false;
     }
 }
 
