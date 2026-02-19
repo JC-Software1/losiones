@@ -695,13 +695,6 @@ async function addPayment() {
         const formattedAmount = amount.toLocaleString('es-CO');
         alert(`Abono de $${formattedAmount} registrado correctamente.`);
 
-        /* ---- nuevo ---- */
-const sale = JSON.parse(localStorage.getItem('saleDetails'));
-sale.payments.push({ amount, date });
-localStorage.setItem('saleDetails', JSON.stringify(sale));
-window.dispatchEvent(new Event('saleUpdated'));
-/* --------------- */
-
         if (response.justSettled || response.settled) {
             alert("¡Venta liquidada automáticamente!");
             if (confirm("¿Deseas ir a la sección de ventas liquidadas?")) {
@@ -710,6 +703,8 @@ window.dispatchEvent(new Event('saleUpdated'));
                 return;
             }
         }
+        
+        document.getElementById("paymentModal").classList.remove("show");
         cancelUpdate();
         loadSales();
     } catch (error) {
