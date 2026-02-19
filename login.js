@@ -101,7 +101,7 @@ function mostrarModalBloqueo() {
                 font-size: 16px;
                 font-weight: 600;
             ">
-                📞 3232323232
+                📞 3128540908
             </p>
         </div>
     `;
