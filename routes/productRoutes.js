@@ -79,7 +79,7 @@ router.get("/last", auth, checkPermission('verProductos'), async (req, res) => {
 // Create a new product
 router.post("/new", auth, checkPermission('crearProductos'), async (req, res) => {
     try {
-        const { name, costPrice, salePrice, category, brand, size } = req.body;
+        const { name, costPrice, salePrice, category, brand, size, stock } = req.body;
 
 if (!name || costPrice === undefined || costPrice === null || salePrice === undefined || salePrice === null) {
     return res.status(400).json({ error: "Todos los campos son obligatorios" });
@@ -92,6 +92,7 @@ if (!name || costPrice === undefined || costPrice === null || salePrice === unde
             category,
             brand,
             size,
+            stock: stock || 1,
             user: req.user.id
         });
 
@@ -112,7 +113,7 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
         }
 
         const { vendedorId } = req.params;
-        const { name, costPrice, salePrice, category, brand, size } = req.body;
+        const { name, costPrice, salePrice, category, brand, size, stock } = req.body;
 
         // ✅ VALIDACIÓN CORRECTA (permite 0 en precios)
         if (!name || costPrice === undefined || costPrice === null || salePrice === undefined || salePrice === null) {
@@ -126,6 +127,7 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
             category,
             brand,
             size,
+            stock: stock || 1,
             user: vendedorId  // 👈 Usar el ID del vendedor seleccionado
         });
 
@@ -139,7 +141,7 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
 
 // Update a product
 router.put("/:id", auth, checkPermission('editarProductos'), async (req, res) => {
-    const { name, costPrice, salePrice, category, brand, size } = req.body;
+    const { name, costPrice, salePrice, category, brand, size, stock } = req.body;
     try {
         const product = await findProductWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
@@ -167,6 +169,7 @@ router.put("/:id", auth, checkPermission('editarProductos'), async (req, res) =>
         product.category = category ? category.trim() : 'Sin categoría';
         product.brand = brand ? brand.trim() : 'Sin marca';
         product.size = size ? size.trim() : null;
+        product.stock = stock !== undefined ? parseInt(stock) : product.stock;
 
         await product.save();
         
