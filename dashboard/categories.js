@@ -393,6 +393,12 @@ async function editSale(sale) {
     inputPrice.value      = sale.price;
     inputInstallments.value = sale.installments;
 
+    // ✅ Cargar tipo de pago
+    if (sale.paymentType) {
+        document.getElementById('paymentType').value = sale.paymentType;
+        togglePaymentFields();
+    }
+
     // ✅ Cargar valor por cuota si existe
     if (sale.paymentPerInstallment) {
         document.getElementById('installmentAmount').value = sale.paymentPerInstallment;
@@ -521,6 +527,7 @@ async function saveSale() {
     const productName   = selectedProducts.map(p => p.name).join(', ');
     const saleDate      = inputDate.value; // yyyy-mm-dd
     const price         = Number(inputPrice.value);
+    const paymentType   = String(document.getElementById('paymentType').value) || 'cuotas';
     const installments  = String(inputInstallments.value.trim() || "Sin cuotas");
     const advance       = Number(inputAdvance.value) || 0;
     const address       = String(document.getElementById("clientAddress").value.trim() || "Sin dirección");
@@ -552,11 +559,14 @@ if (manualInstallmentAmount > 0) {
     paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
 }
     // ---------- Construcción del objeto limpio ----------
+    const isContado = paymentType === 'contado';
+    
     const saleData = {
         clientName,
         productName,
         saleDate,
         price,
+        paymentType,
         installments,
         advancePayment: advance,
         clientAddress: address,
@@ -568,7 +578,10 @@ if (manualInstallmentAmount > 0) {
             paymentDays: [], 
             paymentDaysText: '' 
         }),
-        paymentDays: selectedPaymentPlan.days.join(', ') // "Miércoles, Viernes"
+        paymentDays: selectedPaymentPlan.days.join(', '), // "Miércoles, Viernes"
+        // ✅ Si es contado, marcar como totalmente pagado
+        paidAmount: isContado ? price : advance,
+        remainingBalance: isContado ? 0 : (price - advance)
     };
 
     // ---------- Log para depurar ----------
@@ -625,9 +638,11 @@ async function updateSale() {
     const id = inputId.value;
     const plan = collectPaymentPlan();
     
+    const paymentType = document.getElementById('paymentType').value || 'cuotas';
     const installments = inputInstallments.value.trim();
     const price = parseFloat(inputPrice.value);
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
+    const isContado = paymentType === 'contado';
     
     // Extraer número de cuotas (permite decimales)
     const cuotasMatch = installments.match(/^\d+(?:[.,]\d{1,2})?/);
@@ -652,10 +667,13 @@ async function updateSale() {
         productName: inputProduct.value.trim(),
         saleDate: inputDate.value,
         price: price,
+        paymentType,
         installments: installments,
         numberOfInstallments,
         paymentPerInstallment,
         advancePayment: advance, // ✅ NUEVO: Incluir abono inicial
+        paidAmount: isContado ? price : advance,
+        remainingBalance: isContado ? 0 : (price - advance),
         updateProductPrices: true,
         ...(plan || { 
             paymentFrequency: 'mensual', 
@@ -824,6 +842,47 @@ document.getElementById('advancePayment').addEventListener('input', () => {
         isUpdating = false;
     } else {
         updateTotalPrice();
+    }
+});
+
+// ✅ Función para mostrar/ocultar campos de crédito según tipo de pago
+window.togglePaymentFields = function() {
+    const paymentType = document.getElementById('paymentType').value;
+    const creditFields = document.querySelectorAll('.credit-fields');
+    const advancePaymentInput = document.getElementById('advancePayment');
+    const priceInput = document.getElementById('price');
+    
+    if (paymentType === 'contado') {
+        // Ocultar campos de crédito
+        creditFields.forEach(field => {
+            field.style.display = 'none';
+        });
+        
+        // Auto-fill: Pago inicial = Precio total
+        const totalPrice = parseFloat(priceInput.value) || 0;
+        advancePaymentInput.value = totalPrice;
+        
+        // Limpiar cuotas
+        document.getElementById('installments').value = '';
+        document.getElementById('installmentAmount').value = '';
+        document.getElementById('paymentPlanType').value = '';
+    } else {
+        // Mostrar campos de crédito
+        creditFields.forEach(field => {
+            field.style.display = '';
+        });
+        
+        // Limpiar pago inicial
+        advancePaymentInput.value = '';
+    }
+};
+
+// ✅ Listener para actualizar pago inicial cuando cambia el precio (en modo contado)
+document.getElementById('price').addEventListener('input', () => {
+    const paymentType = document.getElementById('paymentType').value;
+    if (paymentType === 'contado') {
+        const totalPrice = parseFloat(document.getElementById('price').value) || 0;
+        document.getElementById('advancePayment').value = totalPrice;
     }
 });
 
@@ -2234,6 +2293,7 @@ function saveReceipt(receiptData) {
 
 // Función para mostrar opciones del recibo
 function showReceiptOptions(receiptData) {
+    const isContado = receiptData.saleData.paymentType === 'contado';
     const modal = document.createElement('div');
     modal.className = 'receipt-modal';
     modal.style.cssText = `
@@ -2246,18 +2306,21 @@ function showReceiptOptions(receiptData) {
             background: #fff; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%;
             box-shadow: 0 10px 30px rgba(0,0,0,.2); text-align: center;
         ">
-            <h3 style="margin-bottom: 20px;">✅ Recibo generado</h3>
+            <h3 style="margin-bottom: 20px;">${isContado ? '✅ Pago completado' : '✅ Recibo generado'}</h3>
             <img src="${receiptData.canvas}" style="width: 100%; max-width: 300px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.1);">
             <p><strong>Recibo #${receiptData.receiptNumber}</strong></p>
             <p>Cliente: ${receiptData.saleData.clientName}</p>
-            <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: center;">
+            <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="handleReceiptAction('share', '${receiptData.id}')">
                     <i class="fas fa-share-alt"></i> Compartir
                 </button>
                 <button class="btn btn-secondary" onclick="handleReceiptAction('download', '${receiptData.id}')">
                     <i class="fas fa-download"></i> Descargar
                 </button>
-                <button class="btn btn-success" onclick="handleReceiptAction('view', '${receiptData.id}')">
+                <button class="btn btn-success" onclick="generatePOS(receiptData)">
+                    <i class="fas fa-print"></i> Imprimir POS
+                </button>
+                <button class="btn btn-info" onclick="handleReceiptAction('view', '${receiptData.id}')">
                     <i class="fas fa-eye"></i> Ver todos
                 </button>
                 <button class="btn" onclick="handleReceiptAction('close', '${receiptData.id}')" style="background:#95a5a6;color:#fff">
@@ -2267,6 +2330,137 @@ function showReceiptOptions(receiptData) {
         </div>
     `;
     document.body.appendChild(modal);
+}
+
+// ✅ Función para generar ticket POS
+window.generatePOS = function(receiptData) {
+    const saleData = receiptData.saleData;
+    const isContado = saleData.paymentType === 'contado';
+    
+    // Generar contenido del ticket en texto plano
+    const ticketText = `
+================================
+      ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
+================================
+Fecha: ${new Date().toLocaleDateString('es-CO')}
+Hora: ${new Date().toLocaleTimeString('es-CO')}
+
+--------------------------------
+CLIENTE
+--------------------------------
+${saleData.clientName}
+${saleData.clientAddress || 'Sin dirección'}
+
+--------------------------------
+PRODUCTOS
+--------------------------------
+${saleData.products ? saleData.products.map((p, i) => `${i + 1}. ${p.name}
+   $${p.salePrice.toLocaleString('es-CO')}`).join('\n') : saleData.productName}
+
+--------------------------------
+DETALLE DE PAGO
+--------------------------------
+Total: $${saleData.price.toLocaleString('es-CO')}
+Tipo: ${isContado ? 'CONTADO' : 'A CUOTAS'}
+
+${!isContado ? `Cuotas: ${saleData.numberOfInstallments}
+Valor cuota: $${(saleData.paymentPerInstallment || 0).toLocaleString('es-CO')}
+Pago inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}` : `Pago realizado: $${saleData.price.toLocaleString('es-CO')}
+SALDO: $0`}
+
+--------------------------------
+${isContado ? '✓ PAGO COMPLETO' : `Saldo pendiente: $${(saleData.remainingBalance || 0).toLocaleString('es-CO')}`}
+================================
+
+Gracias por su compra!
+Volver pronto
+
+================================
+`;
+    
+    // Abrir ventana de impresión
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Ticket POS - ${saleData.clientName}</title>
+            <style>
+                @media print {
+                    body { 
+                        margin: 0; 
+                        padding: 10px;
+                        font-family: 'Courier New', monospace;
+                        font-size: 12px;
+                    }
+                    @page {
+                        size: 58mm auto;
+                        margin: 0;
+                    }
+                }
+                body {
+                    font-family: 'Courier New', monospace;
+                    font-size: 12px;
+                    white-space: pre-wrap;
+                    width: 58mm;
+                    margin: 0 auto;
+                }
+                .header { text-align: center; font-weight: bold; }
+                .divider { border-bottom: 1px dashed #000; margin: 5px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+================================
+      ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
+================================
+Fecha: ${new Date().toLocaleDateString('es-CO')}
+Hora: ${new Date().toLocaleTimeString('es-CO')}
+
+--------------------------------
+CLIENTE
+--------------------------------
+${saleData.clientName}
+${saleData.clientAddress || 'Sin dirección'}
+
+--------------------------------
+PRODUCTOS
+--------------------------------
+${saleData.products ? saleData.products.map((p, i) => `${i + 1}. ${p.name}
+   $${p.salePrice.toLocaleString('es-CO')}`).join('\n') : saleData.productName}
+
+--------------------------------
+DETALLE DE PAGO
+--------------------------------
+Total: $${saleData.price.toLocaleString('es-CO')}
+Tipo: ${isContado ? 'CONTADO' : 'A CUOTAS'}
+
+${!isContado ? `Cuotas: ${saleData.numberOfInstallments}
+Valor cuota: $${(saleData.paymentPerInstallment || 0).toLocaleString('es-CO')}
+Pago inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}` : `Pago realizado: $${saleData.price.toLocaleString('es-CO')}
+SALDO: $0`}
+
+--------------------------------
+${isContado ? '✓ PAGO COMPLETO' : `Saldo pendiente: $${(saleData.remainingBalance || 0).toLocaleString('es-CO')}`}
+================================
+
+Gracias por su compra!
+Volver pronto
+
+================================
+            </div>
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                        window.close();
+                    }, 500);
+                };
+            </script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 }
 
 // Funciones para compartir y descargar

@@ -85,13 +85,18 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             installments, 
             advancePayment, 
             clientAddress,
-            paymentPerInstallment  // ✅ RECIBIR DESDE EL FRONTEND
+            paymentPerInstallment,  // ✅ RECIBIR DESDE EL FRONTEND
+            paymentType,
+            paidAmount,
+            remainingBalance
         } = req.body;
 
         if (!clientName || !productName || !price || !saleDate) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
 
+        const isContado = paymentType === 'contado';
+        
         const sale = new Sale({
             clientName,
             productName,
@@ -105,8 +110,11 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             paymentDaysText: req.body.paymentDaysText || '',
             paymentPerInstallment: paymentPerInstallment || 0, // ✅ USAR VALOR DEL FRONTEND
             numberOfInstallments: req.body.numberOfInstallments || 1,
+            paymentType: paymentType || 'cuotas',
+            paidAmount: paidAmount || (isContado ? price : advancePayment || 0),
+            remainingBalance: remainingBalance !== undefined ? remainingBalance : (isContado ? 0 : price - (advancePayment || 0)),
             user: req.user.id,
-            settled: false
+            settled: isContado || advancePayment >= price
         });
 
         if (advancePayment > 0) {
@@ -123,6 +131,18 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
                 sale.settled = true;
                 sale.settledDate = new Date();
             }
+        } else if (isContado) {
+            // Para ventas de contado, agregar pago completo
+            if (!sale.payments) {
+                sale.payments = [];
+            }
+            sale.payments.push({
+                amount: price,
+                date: new Date(saleDate),
+                liquidatedDay: false
+            });
+            sale.settled = true;
+            sale.settledDate = new Date();
         }
 
         await sale.save();
@@ -332,7 +352,10 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         clientAddress, 
         advancePayment, // ✅ NUEVO
         paymentPerInstallment,
-        updateProductPrices
+        updateProductPrices,
+        paymentType,
+        paidAmount,
+        remainingBalance
     } = req.body;
 
     try {
@@ -398,6 +421,9 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         sale.paymentDays = req.body.paymentDays || sale.paymentDays;
         sale.paymentDaysText = req.body.paymentDaysText || sale.paymentDaysText;
         sale.numberOfInstallments = req.body.numberOfInstallments || sale.numberOfInstallments;
+        sale.paymentType = paymentType || sale.paymentType || 'cuotas';
+        sale.paidAmount = paidAmount !== undefined ? paidAmount : sale.paidAmount;
+        sale.remainingBalance = remainingBalance !== undefined ? remainingBalance : sale.remainingBalance;
         
         if (paymentPerInstallment !== undefined) {
             sale.paymentPerInstallment = paymentPerInstallment;

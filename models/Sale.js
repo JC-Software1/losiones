@@ -50,7 +50,10 @@ const SaleSchema = new mongoose.Schema({
     paymentDays: [{ type: mongoose.Schema.Types.Mixed }],
     paymentDaysText: { type: String, default: '' },
     liquidatedDay: { type: Boolean, default: false },
-}, { 
+    paymentType: { type: String, enum: ['contado', 'cuotas'], default: 'cuotas' },
+    paidAmount: { type: Number, default: 0 },
+    remainingBalance: { type: Number, default: 0 }
+}, {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }

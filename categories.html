@@ -2513,12 +2513,20 @@
             </div>
 
             <div class="form-group full-width">
+              <label>Tipo de Pago</label>
+              <select id="paymentType" class="form-control" onchange="togglePaymentFields()">
+                <option value="cuotas">A Cuotas</option>
+                <option value="contado">Contado</option>
+              </select>
+            </div>
+
+            <div class="form-group full-width credit-fields">
               <label for="installments">Número de Cuotas</label>
               <input type="number" id="installments" placeholder="Ej: 12 o 4.5" min="0.01" step="0.01">
             </div>
 
             <!-- Dentro del formulario, reemplazar la sección de días de pago -->
-            <div class="form-group full-width">
+            <div class="form-group full-width credit-fields">
               <label>Plan de Pago</label>
               <select id="paymentPlanType" class="form-control">
                 <option value="">Selecciona un plan</option>
@@ -2529,7 +2537,7 @@
               </select>
             </div>
 
-            <div class="form-group full-width" id="paymentDaysContainer" style="display: none;">
+            <div class="form-group full-width credit-fields" id="paymentDaysContainer" style="display: none;">
 
 
               <label id="paymentDaysLabel">Días de pago</label>
@@ -2543,14 +2551,14 @@
 
             <div id="selectedDaysDisplay" class="days-pills" style="margin-top: 12px;"></div>
 
-            <div class="form-group full-width">
+            <div class="form-group full-width credit-fields">
               <label for="advancePayment">Pago Inicial</label>
               <input type="number" id="advancePayment" placeholder="0" min="0" step="1000">
             </div>
 
             <!-- Valor de cada cuota (auto-calculado) -->
             <!-- Valor de cada cuota (AHORA EDITABLE) -->
-            <div class="form-group full-width">
+            <div class="form-group full-width credit-fields">
               <label for="installmentAmount">Valor por cuota</label>
               <input type="number" id="installmentAmount" placeholder="Se calculará automáticamente" step="1000">
             </div>
