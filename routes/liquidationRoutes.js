@@ -12,18 +12,18 @@ async function getSalesForLiquidation(userId) {
     const endOfDay = new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
 
-    return await Sale.find({ 
+    return await Sale.find({
         user: userId,
         $or: [
             // Ventas activas (no liquidadas)
             { settled: false },
             // Ventas liquidadas HOY (para incluir el último pago)
-            { 
-                settled: true, 
-                settledDate: { 
-                    $gte: today, 
-                    $lte: endOfDay 
-                } 
+            {
+                settled: true,
+                settledDate: {
+                    $gte: today,
+                    $lte: endOfDay
+                }
             }
         ]
     }).lean().select('_id clientName payments advancePayment settled settledDate');
@@ -33,25 +33,25 @@ async function getSalesForLiquidation(userId) {
 router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
-        
+
         if (req.user.tipo !== 2 && req.user.tipo !== 3) {
             return res.status(403).json({ error: 'No tienes permisos' });
         }
-        
-        const sales = await Sale.find({ 
-            user: vendedorId, 
-            liquidatedDay: false 
+
+        const sales = await Sale.find({
+            user: vendedorId,
+            liquidatedDay: false
         }).lean().select('_id clientName productName price advancePayment payments');
-        
-        const products = await Product.find({ 
-            user: vendedorId, 
+
+        const products = await Product.find({
+            user: vendedorId,
             liquidatedDay: false,
             sold: false
         }).lean().select('_id name brand costPrice');
 
-        const expenses = await Expense.find({ 
-            user: vendedorId, 
-            liquidatedDay: false 
+        const expenses = await Expense.find({
+            user: vendedorId,
+            liquidatedDay: false
         }).lean().select('_id date totalAmount items');
 
         // ✅ CORRECCIÓN: Usar función auxiliar que incluye ventas liquidadas hoy
@@ -64,19 +64,19 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
 
         allActiveSales.forEach(sale => {
             if (!sale.payments) return;
-            
+
             const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
-            
+
             unliquidatedPayments.forEach((payment, index) => {
                 const isFirstPayment = index === 0 && sale.advancePayment > 0 && payment.amount === sale.advancePayment;
-                
+
                 if (isFirstPayment) {
                     totalInitialPayments += payment.amount;
                 }
-                
+
                 totalPayments += payment.amount;
                 clientsWhoPaidToday.add(sale.clientName);
-                
+
                 paymentsData.push({
                     saleId: sale._id,
                     clientName: sale.clientName,
@@ -95,7 +95,7 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
         const totalActiveClients = allActiveSales.length;
         const paidTodayCount = clientsWhoPaidToday.size;
         const clientsWhoDidntPayToday = totalActiveClients - paidTodayCount;
-        const effectivenessPercentage = totalActiveClients > 0 
+        const effectivenessPercentage = totalActiveClients > 0
             ? ((paidTodayCount / totalActiveClients) * 100).toFixed(1)
             : 0;
 
@@ -105,7 +105,7 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
             productName: s.productName,
             price: s.price
         }));
-        
+
         const productsData = products.map(p => ({
             _id: p._id,
             name: p.name,
@@ -160,14 +160,14 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
 router.get("/vendedor/:vendedorId/history", auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
-        
+
         if (req.user.tipo !== 2 && req.user.tipo !== 3) {
             return res.status(403).json({ error: 'No tienes permisos' });
         }
-        
+
         const liquidations = await DailyLiquidation.find({ user: vendedorId })
             .sort({ liquidationDate: -1 });
-        
+
         res.json(liquidations);
     } catch (error) {
         console.error("Error al obtener historial del vendedor:", error);
@@ -179,21 +179,21 @@ router.get("/vendedor/:vendedorId/history", auth, async (req, res) => {
 router.get("/pending", auth, async (req, res) => {
     try {
         const userId = req.user.id;
-        
-        const sales = await Sale.find({ 
-            user: userId, 
-            liquidatedDay: false 
-        }).lean().select('_id clientName productName price advancePayment payments'); 
 
-        const products = await Product.find({ 
-            user: userId, 
+        const sales = await Sale.find({
+            user: userId,
+            liquidatedDay: false
+        }).lean().select('_id clientName productName price advancePayment payments');
+
+        const products = await Product.find({
+            user: userId,
             liquidatedDay: false,
             sold: false
         }).lean().select('_id name brand costPrice');
 
-        const expenses = await Expense.find({ 
-            user: userId, 
-            liquidatedDay: false 
+        const expenses = await Expense.find({
+            user: userId,
+            liquidatedDay: false
         }).lean().select('_id date totalAmount items');
 
         // ✅ CORRECCIÓN: Usar función auxiliar que incluye ventas liquidadas hoy
@@ -206,19 +206,19 @@ router.get("/pending", auth, async (req, res) => {
 
         allActiveSales.forEach(sale => {
             if (!sale.payments) return;
-            
+
             const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
-            
+
             unliquidatedPayments.forEach((payment, index) => {
                 const isFirstPayment = index === 0 && sale.advancePayment > 0 && payment.amount === sale.advancePayment;
-                
+
                 if (isFirstPayment) {
                     totalInitialPayments += payment.amount;
                 }
-                
+
                 totalPayments += payment.amount;
                 clientsWhoPaidToday.add(sale.clientName);
-                
+
                 paymentsData.push({
                     saleId: sale._id,
                     clientName: sale.clientName,
@@ -237,7 +237,7 @@ router.get("/pending", auth, async (req, res) => {
         const totalActiveClients = allActiveSales.length;
         const paidTodayCount = clientsWhoPaidToday.size;
         const clientsWhoDidntPayToday = totalActiveClients - paidTodayCount;
-        const effectivenessPercentage = totalActiveClients > 0 
+        const effectivenessPercentage = totalActiveClients > 0
             ? ((paidTodayCount / totalActiveClients) * 100).toFixed(1)
             : 0;
 
@@ -247,7 +247,7 @@ router.get("/pending", auth, async (req, res) => {
             productName: s.productName,
             price: s.price
         }));
-        
+
         const productsData = products.map(p => ({
             _id: p._id,
             name: p.name,
@@ -302,22 +302,22 @@ router.get("/pending", auth, async (req, res) => {
 router.post("/new", auth, async (req, res) => {
     try {
         const { initialCash, notes } = req.body;
-        
+
         const userId = req.user.id;
-        const sales = await Sale.find({ 
-            user: userId, 
-            liquidatedDay: false 
+        const sales = await Sale.find({
+            user: userId,
+            liquidatedDay: false
         }).lean().select('_id clientName price advancePayment payments');
 
-        const products = await Product.find({ 
-            user: userId, 
+        const products = await Product.find({
+            user: userId,
             liquidatedDay: false,
             sold: false
         }).lean().select('_id name brand costPrice');
 
-        const expenses = await Expense.find({ 
-            user: userId, 
-            liquidatedDay: false 
+        const expenses = await Expense.find({
+            user: userId,
+            liquidatedDay: false
         }).lean().select('_id date totalAmount items');
 
         // ✅ CORRECCIÓN: Usar función auxiliar que incluye ventas liquidadas hoy
@@ -330,16 +330,16 @@ router.post("/new", auth, async (req, res) => {
 
         allActiveSales.forEach(sale => {
             if (!sale.payments) return;
-            
+
             const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
-            
+
             unliquidatedPayments.forEach((payment, index) => {
                 const isFirstPayment = index === 0 && sale.advancePayment > 0 && payment.amount === sale.advancePayment;
-                
+
                 if (isFirstPayment) {
                     totalInitialPayments += payment.amount;
                 }
-                
+
                 totalPayments += payment.amount;
                 paymentsData.push({
                     saleId: sale._id,
@@ -364,7 +364,7 @@ router.post("/new", auth, async (req, res) => {
         const paymentsAfterCommission = Math.round(regularPayments - (regularPayments * (paymentsCommission / 100)));
         const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
         const totalIncome = paymentsAfterCommission + totalInitialPayments;
-        
+
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         const totalExpenses = totalInventoryCost + totalExpensesAmount;
@@ -420,27 +420,27 @@ router.post("/new", auth, async (req, res) => {
         await liquidation.save();
 
         await Sale.updateMany(
-            { 
+            {
                 _id: { $in: sales.map(s => s._id) },
-                user: userId 
+                user: userId
             },
             { $set: { liquidatedDay: true } }
         );
 
         await Product.updateMany(
-            { 
+            {
                 _id: { $in: products.map(p => p._id) },
-                user: userId 
+                user: userId
             },
             { $set: { liquidatedDay: true } }
         );
 
         await Expense.updateMany(
-            { 
+            {
                 _id: { $in: expenses.map(e => e._id) },
-                user: userId 
+                user: userId
             },
-            { $set: { liquidatedDay: false } }
+            { $set: { liquidatedDay: true } }
         );
 
         for (const update of paymentUpdates) {
@@ -470,25 +470,25 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
         const { initialCash, notes } = req.body;
-        
+
         if (req.user.tipo !== 2 && req.user.tipo !== 3) {
             return res.status(403).json({ error: 'No tienes permisos' });
         }
-        
-        const sales = await Sale.find({ 
-            user: vendedorId, 
-            liquidatedDay: false 
+
+        const sales = await Sale.find({
+            user: vendedorId,
+            liquidatedDay: false
         }).lean().select('_id clientName price advancePayment payments');
 
-        const products = await Product.find({ 
-            user: vendedorId, 
+        const products = await Product.find({
+            user: vendedorId,
             liquidatedDay: false,
             sold: false
         }).lean().select('_id name brand costPrice');
 
-        const expenses = await Expense.find({ 
-            user: vendedorId, 
-            liquidatedDay: false 
+        const expenses = await Expense.find({
+            user: vendedorId,
+            liquidatedDay: false
         }).lean().select('_id date totalAmount items');
 
         // ✅ CORRECCIÓN: Usar función auxiliar que incluye ventas liquidadas hoy
@@ -501,16 +501,16 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
 
         allActiveSales.forEach(sale => {
             if (!sale.payments) return;
-            
+
             const unliquidatedPayments = sale.payments.filter(p => !p.liquidatedDay);
-            
+
             unliquidatedPayments.forEach((payment, index) => {
                 const isFirstPayment = index === 0 && sale.advancePayment > 0 && payment.amount === sale.advancePayment;
-                
+
                 if (isFirstPayment) {
                     totalInitialPayments += payment.amount;
                 }
-                
+
                 totalPayments += payment.amount;
                 paymentsData.push({
                     saleId: sale._id,
@@ -535,7 +535,7 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
         const paymentsAfterCommission = Math.round(regularPayments - (regularPayments * (paymentsCommission / 100)));
         const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
         const totalIncome = paymentsAfterCommission + totalInitialPayments;
-        
+
         const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         const totalExpenses = totalInventoryCost + totalExpensesAmount;
@@ -591,25 +591,25 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
         await liquidation.save();
 
         await Sale.updateMany(
-            { 
+            {
                 _id: { $in: sales.map(s => s._id) },
-                user: vendedorId 
+                user: vendedorId
             },
             { $set: { liquidatedDay: true } }
         );
 
         await Product.updateMany(
-            { 
+            {
                 _id: { $in: products.map(p => p._id) },
-                user: vendedorId 
+                user: vendedorId
             },
             { $set: { liquidatedDay: true } }
         );
 
         await Expense.updateMany(
-            { 
+            {
                 _id: { $in: expenses.map(e => e._id) },
-                user: vendedorId 
+                user: vendedorId
             },
             { $set: { liquidatedDay: true } }
         );
@@ -639,13 +639,13 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
 // Obtener historial de liquidaciones
 router.get("/history", auth, async (req, res) => {
     try {
-        const query = (req.user.tipo === 2 || req.user.tipo === 3) 
-            ? {} 
+        const query = (req.user.tipo === 2 || req.user.tipo === 3)
+            ? {}
             : { user: req.user.id };
-        
+
         const liquidations = await DailyLiquidation.find(query)
             .sort({ liquidationDate: -1 });
-        
+
         res.json(liquidations);
     } catch (error) {
         console.error("Error al obtener historial:", error);
@@ -656,7 +656,7 @@ router.get("/history", auth, async (req, res) => {
 // Obtener una liquidación específica
 router.get("/:id", auth, async (req, res) => {
     try {
-        const query = req.user.tipo === 1 
+        const query = req.user.tipo === 1
             ? { _id: req.params.id, user: req.user.id }
             : { _id: req.params.id };
 
@@ -676,7 +676,7 @@ router.get("/:id", auth, async (req, res) => {
 // Eliminar liquidación
 router.delete("/:id", auth, async (req, res) => {
     try {
-        const query = req.user.tipo === 1 
+        const query = req.user.tipo === 1
             ? { _id: req.params.id, user: req.user.id }
             : { _id: req.params.id };
 
@@ -698,7 +698,7 @@ router.post("/fix-calculations", auth, async (req, res) => {
     try {
         const query = req.user.tipo === 1 ? { user: req.user.id } : {};
         const liquidations = await DailyLiquidation.find(query);
-        
+
         let fixed = 0;
         const results = [];
 
@@ -706,15 +706,15 @@ router.post("/fix-calculations", auth, async (req, res) => {
             const paymentsAfterComm = Math.round(
                 liq.payments.total - (liq.payments.total * (liq.payments.commissionPercentage / 100))
             );
-            
+
             const initialPayments = liq.payments.totalInitialPayments || 0;
             const totalIncome = Math.round(paymentsAfterComm + initialPayments);
             const expensesAmount = liq.expenses?.totalAmount || 0;
             const totalExpenses = Math.round(liq.inventory.totalCost + expensesAmount);
             const correctFinalCash = Math.round(liq.initialCash + totalIncome - totalExpenses);
 
-            const needsUpdate = 
-                !liq.payments.totalInitialPayments || 
+            const needsUpdate =
+                !liq.payments.totalInitialPayments ||
                 liq.finalCash !== correctFinalCash ||
                 liq.totalIncome !== totalIncome ||
                 liq.totalExpenses !== totalExpenses;
@@ -739,7 +739,7 @@ router.post("/fix-calculations", auth, async (req, res) => {
                 liq.totalExpenses = totalExpenses;
                 liq.payments.afterCommission = paymentsAfterComm;
                 liq.payments.totalInitialPayments = initialPayments;
-                
+
                 await liq.save();
                 fixed++;
             }

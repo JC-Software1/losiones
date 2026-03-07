@@ -24,7 +24,7 @@ app.use(express.json());
 // 🟢 Habilitar CORS para permitir peticiones desde el frontend
 app.use(cors({
     origin: ["https://jc-c.netlify.app", "http://127.0.0.1:5502", "http://127.0.0.1:5503"], // Ajusta según la URL de tu frontend
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH "],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 // Rutas
@@ -35,7 +35,7 @@ app.use('/api/receipts', receiptRoutes);
 app.use('/api/commission', commissionRoutes);
 app.use("/api/sales-commission", salesCommissionRoutes);
 app.use("/api/liquidation", liquidationRoutes);
-app.use("/api/cash-movement", cashMovementRoutes); 
+app.use("/api/cash-movement", cashMovementRoutes);
 app.use("/api/expenses", expenseRoutes);
 
 
