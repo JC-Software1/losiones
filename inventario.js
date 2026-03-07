@@ -62,6 +62,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         puedeVerCostos = await verificarPermisoCostos();
         
         await loadProducts();
+        showLowStockAlert();
         setupEventListeners();
         setupMenuHandlers();
         

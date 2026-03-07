@@ -2372,13 +2372,11 @@ function showReceiptOptions(receiptData) {
     // Guardar en variable global para acceso en onclick
     window.currentReceiptData = receiptData;
     
-    const isContado = receiptData.saleData.paymentType === 'contado';
+    // Siempre abrir ticket POS (tanto para contado como para cuotas)
+    generatePOS(receiptData);
+    return;
     
-    // Si es contado, abrir directamente el ticket POS
-    if (isContado) {
-        generatePOS(receiptData);
-        return;
-    }
+    const isContado = receiptData.saleData.paymentType === 'contado';
     
     const modal = document.createElement('div');
     modal.className = 'receipt-modal';
@@ -2466,8 +2464,12 @@ ${saleData.clientAddress || 'Sin dirección'}
 --------------------------------
 PRODUCTOS
 --------------------------------
-${saleData.products ? saleData.products.map((p, i) => `${i + 1}. ${p.name}
-   $${p.salePrice.toLocaleString('es-CO')}`).join('\n') : saleData.productName}
+${saleData.products ? saleData.products.map((p, i) => {
+    const qty = p.quantity || 1;
+    const subtotal = (p.salePrice || 0) * qty;
+    return `${i + 1}. ${p.name} (x${qty})
+   $${p.salePrice.toLocaleString('es-CO')} c/u = $${subtotal.toLocaleString('es-CO')}`;
+}).join('\n') : saleData.productName}
 
 --------------------------------
 DETALLE DE PAGO
@@ -2544,8 +2546,12 @@ ${saleData.clientAddress || 'Sin dirección'}
 --------------------------------
 PRODUCTOS
 --------------------------------
-${saleData.products ? saleData.products.map((p, i) => `${i + 1}. ${p.name}
-   $${p.salePrice.toLocaleString('es-CO')}`).join('\n') : saleData.productName}
+${saleData.products ? saleData.products.map((p, i) => {
+    const qty = p.quantity || 1;
+    const subtotal = (p.salePrice || 0) * qty;
+    return `${i + 1}. ${p.name} (x${qty})
+   $${p.salePrice.toLocaleString('es-CO')} c/u = $${subtotal.toLocaleString('es-CO')}`;
+}).join('\n') : saleData.productName}
 
 --------------------------------
 DETALLE DE PAGO

@@ -216,6 +216,18 @@
         .products-grid{display:grid;gap:16px;margin-bottom:24px}
         .product-card{background:var(--white);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border);transition:var(--transition);position:relative}
         .product-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
+        
+        /* Producto sin stock */
+        .product-card.out-of-stock{opacity:0.6;background:#f8f9fa;border-color:#e74c3c}
+        .product-card.out-of-stock:hover{transform:none;box-shadow:var(--shadow)}
+        
+        /* Producto con stock bajo */
+        .product-card.low-stock{border-color:#e67e22}
+        .product-card.low-stock .meta-item{color:#e67e22}
+        
+        /* Overlay para reinventar */
+        .no-stock-overlay{text-align:center;padding:10px 0;border-top:1px dashed #ddd;margin-top:10px}
+        
         .product-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
         .product-info h3{font-size:16px;font-weight:600;color:var(--primary);margin-bottom:4px}
         .product-info p{font-size:14px;color:var(--medium-gray)}

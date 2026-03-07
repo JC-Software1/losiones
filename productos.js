@@ -132,6 +132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         puedeVerCostos = await verificarPermisoCostos();
         
         await loadProducts();
+        showLowStockAlert(); // ✅ Mostrar alerta de stock bajo
         setupEventListeners();
         setupMenuHandlers();
         
@@ -160,6 +161,11 @@ function displayProducts(productsList) {
         const productCard = document.createElement("div");
         productCard.classList.add("product-card");
 
+        // Verificar stock
+        const stock = product.stock || 1;
+        const isOutOfStock = stock <= 0;
+        const isLowStock = stock > 0 && stock <= 3; // Alerta si stock <= 3
+        
         // Calcular margen solo si puede ver costos
         let margin = 0;
         let profit = 0;
@@ -225,101 +231,48 @@ function displayProducts(productsList) {
             <div class="product-header">
                 <div class="product-info">
                     <h3>${product.name}</h3>
-                    <p>Producto disponible en inventario</p>
-                </div>
-                <div class="product-meta">
-                    <div class="meta-item">
-                        <i class="fas fa-folder"></i>
-                        <span>Categoría: <span class="meta-value">${product.category}</span></span>
-                    </div>
-                    <div class="meta-item">
-                        <i class="fas fa-tag"></i>
-                        <span>Marca: <span class="meta-value">${product.brand}</span></span>
-                    </div>
-                    ${product.size ? `
-                    <div class="meta-item">
-                        <i class="fas fa-ruler"></i>
-                        <span>Talla: <span class="meta-value">${product.size}</span></span>
-                    </div>` : ''}
-                    <div class="meta-item">
-                        <i class="fas fa-boxes"></i>
-                        <span>Stock: <span class="meta-value">${product.stock || 1}</span></span>
-                    </div>
-                </div>
-                <div class="product-prices">
-                    <div class="cost-price">${costoPriceHTML}</div>
-                    <div class="sale-price">$${product.salePrice.toLocaleString()}</div>
+                    <p>${isOutOfStock ? '<span style="color: #e74c3c; font-weight: bold;">❌ No hay stock disponible</span>' : 'Producto disponible en inventario'}</p>
                 </div>
             </div>
-            
-            ${gananciasHTML}
             
             <div class="product-meta">
-                ${metaItemsHTML}
                 <div class="meta-item">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span>Venta: <span class="meta-value">$${product.salePrice.toLocaleString()}</span></span>
+                    <i class="fas fa-folder"></i>
+                    <span>Categoría: <span class="meta-value">${product.category}</span></span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-tag"></i>
+                    <span>Marca: <span class="meta-value">${product.brand}</span></span>
+                </div>
+                ${product.size ? `
+                <div class="meta-item">
+                    <i class="fas fa-ruler"></i>
+                    <span>Talla: <span class="meta-value">${product.size}</span></span>
+                </div>` : ''}
+                <div class="meta-item" style="${isLowStock ? 'color: #e67e22; font-weight: bold;' : ''}">
+                    <i class="fas fa-boxes"></i>
+                    <span>Stock: <span class="meta-value">${stock}</span>${isLowStock ? ' ⚠️' : ''}</span>
                 </div>
             </div>
-            
-            <div class="product-actions">
-                <button class="btn btn-primary" onclick="editProduct('${product._id}')">
-                    <i class="fas fa-edit"></i> Editar
-                </button>
-                <button class="btn btn-danger" onclick="deleteProduct('${product._id}')">
-                    <i class="fas fa-trash-alt"></i> Eliminar
-                </button>
-                <button class="btn btn-success" onclick="showProductDetails('${product._id}')">
-                    <i class="fas fa-info-circle"></i> Detalles
+            <div class="product-prices">
+                <div class="cost-price">${costoPriceHTML}</div>
+                <div class="sale-price">$${product.salePrice.toLocaleString()}</div>
+            </div>
+            ${isOutOfStock ? `
+            <div class="no-stock-overlay">
+                <button class="btn btn-warning" onclick="restockProduct('${product._id}')">
+                    <i class="fas fa-boxes"></i> Reinventar
                 </button>
             </div>
-            <button class="btn btn-info" onclick="showBarcode('${product._id}', '${product.name}', '${product.salePrice}')">
-                <i class="fas fa-barcode"></i> Ver código de barras
-            </button>
-        `;
-
-        productsContainer.appendChild(productCard);
-    });
-}
-
-// ✅ Ocultar campo de costo en el formulario si no tiene permiso
-async function setupEventListeners() {
-    btnSave.addEventListener("click", saveProduct);
-    btnUpdate.addEventListener("click", updateProduct);
-    btnCancel.addEventListener("click", cancelUpdate);
-    
-    searchInput.addEventListener("input", applyFilters);
-    
-    // ✅ Ocultar campo de costo si no tiene permiso
-    if (!puedeVerCostos) {
-        const costPriceGroup = inputCostPrice.closest('.form-group');
-        if (costPriceGroup) {
-            costPriceGroup.style.display = 'none';
+            ` : ''}
+        </div>`;
+        
+        // Agregar clase de stock bajo o agotado
+        if (isOutOfStock) {
+            productCard.classList.add('out-of-stock');
+        } else if (isLowStock) {
+            productCard.classList.add('low-stock');
         }
-    } else {
-        inputCostPrice.addEventListener("input", calculateMargin);
-        inputSalePrice.addEventListener("input", calculateMargin);
-    }
-}
-
-// Cargar productos
-async function loadProducts() {
-    try {
-        const token = getToken();
-        products = await apiFetch("/products", "GET", null, token);
-        filteredProducts = products.filter(product => !product.sold);
-        
-        displayProducts(filteredProducts);
-        updateStatistics(filteredProducts);
-        
-    } catch (error) {
-        console.error("Error al cargar productos:", error);
-        productsList.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Error al cargar</h3>
-                <p>No se pudieron cargar los productos. Intenta nuevamente.</p>
-            </div>`;
     }
 }
 
@@ -354,6 +307,49 @@ function updateStatistics(productsList) {
     } else {
         document.getElementById("avgMargin").textContent = "0%";
         document.getElementById("totalInventoryValue").textContent = "$0";
+    }
+}
+
+// ✅ Función para mostrar alerta de stock bajo
+function showLowStockAlert() {
+    // Ya mostrar solo una vez por sesión
+    if (sessionStorage.getItem('lowStockAlertShown')) return;
+    
+    const lowStockProducts = products.filter(p => !p.sold && p.stock > 0 && p.stock <= 3);
+    
+    if (lowStockProducts.length > 0) {
+        const alertDiv = document.createElement('div');
+        alertDiv.id = 'lowStockAlert';
+        alertDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #e67e22, #f39c12);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(230, 126, 34, 0.4);
+            z-index: 10001;
+            max-width: 350px;
+            font-weight: 500;
+        `;
+        
+        alertDiv.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-top: 2px;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; margin-bottom: 8px;">⚠️ Stock Bajo</div>
+                    <ul style="margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6;">
+                        ${lowStockProducts.slice(0, 5).map(p => `<li>${p.name}: <strong>${p.stock}</strong> unidades</li>`).join('')}
+                        ${lowStockProducts.length > 5 ? `<li>...y ${lowStockProducts.length - 5} más</li>` : ''}
+                    </ul>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove(); sessionStorage.setItem('lowStockAlertShown', 'true');" 
+                        style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0; line-height: 1;">✕</button>
+            </div>
+        `;
+        
+        document.body.appendChild(alertDiv);
     }
 }
 
@@ -505,6 +501,39 @@ if (productData.costPrice > 0 &&
     }
 }
 // Editar producto
+// ✅ Función para reinventar (volver a poner stock)
+window.restockProduct = function(productId) {
+    const product = products.find(p => p._id === productId);
+    if (!product) return;
+    
+    // Solicitar cantidad para reinventar
+    let newStock = prompt(`Ingresa la cantidad de stock para "${product.name}":`, "1");
+    if (newStock === null || newStock.trim() === '') return;
+    
+    newStock = parseInt(newStock) || 1;
+    if (newStock <= 0) {
+        alert('La cantidad debe ser mayor a 0');
+        return;
+    }
+    
+    // Llamar al servidor para actualizar stock
+    const token = getToken();
+    apiFetch(`/products/${productId}`, "PUT", { 
+        name: product.name,
+        costPrice: product.costPrice,
+        salePrice: product.salePrice,
+        category: product.category,
+        brand: product.brand,
+        size: product.size,
+        stock: newStock
+    }, token).then(() => {
+        alert(`✅ Stock actualizado a ${newStock} unidades`);
+        loadProducts(); // Recargar productos
+    }).catch(err => {
+        alert('❌ Error al actualizar stock: ' + err.message);
+    });
+};
+
 window.editProduct = function(productId) {
     const product = products.find(p => p._id === productId);
     if (!product) return;
