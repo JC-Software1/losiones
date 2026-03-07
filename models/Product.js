@@ -11,7 +11,8 @@ const ProductSchema = new mongoose.Schema({
     category: { type: String, required: true, trim: true },
     brand: { type: String, required: true, trim: true },
     size: { type: String, default: null, trim: true },
-    liquidatedDay: { type: Boolean, default: false } // Nuevo campo
+    liquidatedDay: { type: Boolean, default: false },
+    stock: { type: Number, default: 1, min: 0 } // Nuevo campo
 }, { timestamps: true });
 
 module.exports = mongoose.model("Product", ProductSchema);

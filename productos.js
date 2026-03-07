@@ -241,6 +241,10 @@ function displayProducts(productsList) {
                         <i class="fas fa-ruler"></i>
                         <span>Talla: <span class="meta-value">${product.size}</span></span>
                     </div>` : ''}
+                    <div class="meta-item">
+                        <i class="fas fa-boxes"></i>
+                        <span>Stock: <span class="meta-value">${product.stock || 1}</span></span>
+                    </div>
                 </div>
                 <div class="product-prices">
                     <div class="cost-price">${costoPriceHTML}</div>
@@ -323,8 +327,9 @@ async function loadProducts() {
 
 // Actualizar estadísticas
 function updateStatistics(productsList) {
-    // Total de productos
-    document.getElementById("totalProducts").textContent = productsList.length;
+    // Total de productos (considerando stock)
+    const totalStock = productsList.reduce((sum, product) => sum + (product.stock || 1), 0);
+    document.getElementById("totalProducts").textContent = totalStock;
     
     if (productsList.length > 0) {
         if (puedeVerCostos) {
@@ -335,8 +340,11 @@ function updateStatistics(productsList) {
             }, 0) / productsList.length).toFixed(1);
             document.getElementById("avgMargin").textContent = `${avgMargin}%`;
             
-            // Valor total del inventario (precio de costo)
-            const totalValue = productsList.reduce((sum, product) => sum + product.costPrice, 0);
+            // Valor total del inventario (precio de costo * stock)
+            const totalValue = productsList.reduce((sum, product) => {
+                const productStock = product.stock || 1;
+                return sum + (product.costPrice * productStock);
+            }, 0);
             document.getElementById("totalInventoryValue").textContent = `$${totalValue.toLocaleString()}`;
         } else {
             // Ocultar estadísticas de costos
@@ -416,31 +424,32 @@ function showMarginPreview(margin, profit) {
 // Guardar producto
 // Guardar producto
 async function saveProduct() {
-    const quantity = parseInt(inputQuantity.value) || 1;
+    const stock = parseInt(inputQuantity.value) || 1;
 
-    const baseProduct = {
+    const productData = {
         name: inputName.value.trim(),
         costPrice: parseFloat(inputCostPrice.value) || 0,
         salePrice: parseFloat(inputSalePrice.value) || 0,
         category: inputCategory.value.trim(),
         brand: inputBrand.value.trim(),
-        size: inputSize.value.trim() || null
+        size: inputSize.value.trim() || null,
+        stock: stock
     };
 
     // ✅ Validación mínima: solo nombre es obligatorio
-    if (!baseProduct.name) {
+    if (!productData.name) {
         showNotification("El nombre del producto es obligatorio.", "error");
         return;
     }
 
     // ✅ Validar que los precios sean números válidos (permitir 0)
-if (isNaN(baseProduct.costPrice) || isNaN(baseProduct.salePrice)) {
+if (isNaN(productData.costPrice) || isNaN(productData.salePrice)) {
     showNotification("Los precios deben ser números válidos.", "error");
     return;
 }
 
     // ✅ Validar que no sean negativos
-    if (baseProduct.costPrice < 0 || baseProduct.salePrice < 0) {
+    if (productData.costPrice < 0 || productData.salePrice < 0) {
         showNotification("Los precios no pueden ser negativos.", "error");
         return;
     }
@@ -448,9 +457,9 @@ if (isNaN(baseProduct.costPrice) || isNaN(baseProduct.salePrice)) {
     // ✅ Solo validar margen si ambos precios son mayores a 0
 // ✅ Solo validar margen si ambos precios son mayores a 0
 // ✅ Solo validar margen si ambos precios son mayores a 0
-if (baseProduct.costPrice > 0 &&
-    baseProduct.salePrice > 0 &&
-    baseProduct.salePrice <= baseProduct.costPrice) {
+if (productData.costPrice > 0 &&
+    productData.salePrice > 0 &&
+    productData.salePrice <= productData.costPrice) {
   const confirm = window.confirm(
     "El precio de venta es menor o igual al costo. ¿Deseas continuar?");
   if (!confirm) return;
@@ -467,10 +476,8 @@ if (baseProduct.costPrice > 0 &&
             createEndpoint = `/products/vendedor/${vendedorId}/new`;
         }
 
-        // Guardar el producto la cantidad de veces indicada
-        for (let i = 0; i < quantity; i++) {
-            await apiFetch(createEndpoint, "POST", baseProduct, token);
-        }
+        // Guardar un solo producto con el stock
+        await apiFetch(createEndpoint, "POST", productData, token);
 
         // Generar código de barras del último producto creado
         let lastProductEndpoint = "/products/last";
@@ -487,7 +494,7 @@ if (baseProduct.costPrice > 0 &&
             console.log("No se pudo generar el código de barras:", error);
         }
 
-        showNotification(`${quantity} producto(s) guardado(s) correctamente.`, "success");
+        showNotification(`Producto guardado con stock: ${stock}`, "success");
         form.reset();
         clearMarginPreview();
         await loadProducts();
@@ -509,6 +516,7 @@ window.editProduct = function(productId) {
     inputCategory.value = product.category;
     inputBrand.value = product.brand;
     inputSize.value = product.size || "";
+    inputQuantity.value = product.stock || 1;
     
     formTitle.innerHTML = '<i class="fas fa-edit"></i> Editar Producto';
     btnSave.classList.add('hidden');
@@ -528,6 +536,7 @@ window.editProduct = function(productId) {
 // Actualizar producto
 async function updateProduct() {
     const id = inputId.value;
+    const stock = parseInt(inputQuantity.value) || 1;
 
     const productData = {
         name: inputName.value.trim(),
@@ -535,7 +544,8 @@ async function updateProduct() {
         salePrice: parseFloat(inputSalePrice.value) || 0,
         category: inputCategory.value.trim(),
         brand: inputBrand.value.trim(),
-        size: inputSize.value.trim() || null
+        size: inputSize.value.trim() || null,
+        stock: stock
     };
 
     // 1) Solo el nombre es obligatorio
