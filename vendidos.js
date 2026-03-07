@@ -47,8 +47,55 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const products = await apiFetch("/products", "GET", null, token);
 
-        // Filtrar solo productos vendidos
-        soldProducts = products.filter(product => product.sold);
+        // Obtener ventas realizadas
+        const sales = await apiFetch("/sales", "GET", null, token);
+        
+        // Filtrar ventas que no están canceladas (todas las ventas cuentan)
+        const validSales = sales.filter(sale => !sale.cancelled);
+        
+        // Crear lista de productos vendidos a partir de las ventas
+        const soldFromSales = [];
+        
+        for (const sale of validSales) {
+            if (sale.products && Array.isArray(sale.products)) {
+                for (const prod of sale.products) {
+                    soldFromSales.push({
+                        _id: prod.productId || prod._id || sale._id,
+                        name: prod.name,
+                        brand: prod.brand,
+                        category: prod.category,
+                        size: prod.size,
+                        salePrice: prod.salePrice,
+                        quantity: prod.quantity || 1,
+                        soldDate: sale.saleDate,
+                        soldTo: sale.clientName,
+                        saleId: sale._id,
+                        totalPrice: sale.price,
+                        paymentType: sale.paymentType,
+                        settled: sale.settled
+                    });
+                }
+            } else {
+                // Productos antigos sin formato de array
+                soldFromSales.push({
+                    _id: sale._id,
+                    name: sale.productName,
+                    brand: '',
+                    category: '',
+                    size: '',
+                    salePrice: sale.price,
+                    quantity: 1,
+                    soldDate: sale.saleDate,
+                    soldTo: sale.clientName,
+                    saleId: sale._id,
+                    totalPrice: sale.price,
+                    paymentType: sale.paymentType,
+                    settled: sale.settled
+                });
+            }
+        }
+        
+        soldProducts = soldFromSales;
 
         displayProducts(soldProducts);
         updateTotals(soldProducts);
@@ -105,8 +152,10 @@ function displayProducts(products) {
 
     products.forEach(product => {
         const li = document.createElement("li");
-        const profit = product.salePrice - product.costPrice;
-        const profitPercentage = Math.round((profit / product.costPrice) * 100);
+        const qty = product.quantity || 1;
+        const totalProductPrice = (product.salePrice || 0) * qty;
+        const profit = (product.salePrice || 0) - (product.costPrice || 0);
+        const profitPercentage = product.costPrice ? Math.round((profit / product.costPrice) * 100) : 0;
         
         // Determinar clase de rentabilidad para estilizado visual
         let profitClass = "neutral";
@@ -116,33 +165,30 @@ function displayProducts(products) {
         
         li.innerHTML = `
             <div class="product-header">
-                <h3>${product.name}</h3>
-                <span class="product-badge">Vendido</span>
+                <h3>${product.name} <span style="color: #e74c3c; font-size: 12px;">(x${qty})</span></h3>
+                <span class="product-badge">${product.paymentType === 'contado' ? '✅ Contado' : '📅 Cuotas'}</span>
             </div>
             
             <div class="product-details">
                 <div class="price-row">
-                    <span class="detail-label">Precio de costo:</span>
-                    <span class="detail-value">${product.costPrice.toLocaleString()} COP</span>
+                    <span class="detail-label">Cantidad:</span>
+                    <span class="detail-value">${qty} unidades</span>
                 </div>
                 
                 <div class="price-row">
-                    <span class="detail-label">Precio de venta:</span>
-                    <span class="detail-value sale">${product.salePrice.toLocaleString()} COP</span>
+                    <span class="detail-label">Precio unitario:</span>
+                    <span class="detail-value">${(product.salePrice || 0).toLocaleString()} COP</span>
                 </div>
                 
-                <div class="price-row profit ${profitClass}">
-                    <span class="detail-label">Ganancia:</span>
-                    <span class="detail-value">
-                        ${profit.toLocaleString()} COP 
-                        <span class="percentage">(${profitPercentage}%)</span>
-                    </span>
+                <div class="price-row">
+                    <span class="detail-label">Total venta:</span>
+                    <span class="detail-value sale">${totalProductPrice.toLocaleString()} COP</span>
                 </div>
             </div>
             
             <div class="card-actions">
-                <button class="delete-btn" data-id="${product._id}">
-                    <span class="btn-icon">🗑️</span> Eliminar
+                <button class="view-sale-btn" data-sale-id="${product.saleId}">
+                    <span class="btn-icon">👁️</span> Ver venta
                 </button>
             </div>
         `;
@@ -201,10 +247,21 @@ function updateTotals(products) {
     const totalProductsElement = document.getElementById("totalProducts");
     const totalProfitElement = document.getElementById("totalProfit");
     
-    const totalSold = products.reduce((sum, product) => sum + product.salePrice, 0);
-    const totalProfit = products.reduce((sum, product) => sum + (product.salePrice - product.costPrice), 0);
+    // Calcular considerando cantidades
+    const totalSold = products.reduce((sum, product) => {
+        const qty = product.quantity || 1;
+        return sum + ((product.salePrice || 0) * qty);
+    }, 0);
     
-    totalProductsElement.textContent = products.length;
+    const totalProfit = products.reduce((sum, product) => {
+        const qty = product.quantity || 1;
+        const profit = ((product.salePrice || 0) - (product.costPrice || 0)) * qty;
+        return sum + profit;
+    }, 0);
+    
+    const totalQty = products.reduce((sum, product) => sum + (product.quantity || 1), 0);
+    
+    totalProductsElement.textContent = totalQty;
     totalSoldElement.textContent = `${totalSold.toLocaleString()} COP`;
     totalProfitElement.textContent = `${totalProfit.toLocaleString()} COP`;
 }

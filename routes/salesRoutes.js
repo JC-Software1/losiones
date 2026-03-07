@@ -130,13 +130,16 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
                 // Actualizar stock en el producto
                 product.stock = newStock;
                 
-                // Si el stock llega a 0, marcar como vendido
+                // NO marcar como vendido si queda stock (solo descuenta)
+                // La venta se registra en cualquier caso
                 if (newStock <= 0) {
                     product.sold = true;
                     product.soldDate = new Date();
                     product.soldTo = clientName;
                     productIdsToMarkSold.push(product._id);
-                    console.log(`   ⚠️ Producto marcado como vendido`);
+                    console.log(`   ⚠️ Producto agotado (stock = 0), marcado como vendido`);
+                } else {
+                    console.log(`   ✓ Producto con stock remaining: ${newStock}`);
                 }
                 
                 await product.save();
