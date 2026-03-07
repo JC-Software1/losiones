@@ -2293,7 +2293,17 @@ function saveReceipt(receiptData) {
 
 // Función para mostrar opciones del recibo
 function showReceiptOptions(receiptData) {
+    // Guardar en variable global para acceso en onclick
+    window.currentReceiptData = receiptData;
+    
     const isContado = receiptData.saleData.paymentType === 'contado';
+    
+    // Si es contado, abrir directamente el ticket POS
+    if (isContado) {
+        generatePOS(receiptData);
+        return;
+    }
+    
     const modal = document.createElement('div');
     modal.className = 'receipt-modal';
     modal.style.cssText = `
@@ -2311,19 +2321,19 @@ function showReceiptOptions(receiptData) {
             <p><strong>Recibo #${receiptData.receiptNumber}</strong></p>
             <p>Cliente: ${receiptData.saleData.clientName}</p>
             <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="handleReceiptAction('share', '${receiptData.id}')">
+                <button class="btn btn-success" onclick="generatePOSFromGlobal()">
+                    <i class="fas fa-print"></i> Imprimir POS
+                </button>
+                <button class="btn btn-primary" onclick="shareReceiptFromGlobal()">
                     <i class="fas fa-share-alt"></i> Compartir
                 </button>
-                <button class="btn btn-secondary" onclick="handleReceiptAction('download', '${receiptData.id}')">
+                <button class="btn btn-secondary" onclick="downloadReceiptFromGlobal()">
                     <i class="fas fa-download"></i> Descargar
-                </button>
-                <button class="btn btn-success" onclick="generatePOS(receiptData)">
-                    <i class="fas fa-print"></i> Imprimir POS
                 </button>
                 <button class="btn btn-info" onclick="handleReceiptAction('view', '${receiptData.id}')">
                     <i class="fas fa-eye"></i> Ver todos
                 </button>
-                <button class="btn" onclick="handleReceiptAction('close', '${receiptData.id}')" style="background:#95a5a6;color:#fff">
+                <button class="btn" onclick="closeReceiptModal()" style="background:#95a5a6;color:#fff">
                     <i class="fas fa-times"></i> Cerrar
                 </button>
             </div>
@@ -2331,6 +2341,32 @@ function showReceiptOptions(receiptData) {
     `;
     document.body.appendChild(modal);
 }
+
+// Funciones globales para acceder al receiptData
+window.generatePOSFromGlobal = function() {
+    if (window.currentReceiptData) {
+        generatePOS(window.currentReceiptData);
+    }
+};
+
+window.shareReceiptFromGlobal = async function() {
+    if (window.currentReceiptData) {
+        await shareReceipt(window.currentReceiptData.id);
+    }
+};
+
+window.downloadReceiptFromGlobal = function() {
+    if (window.currentReceiptData) {
+        downloadReceipt(window.currentReceiptData.id);
+    }
+};
+
+window.closeReceiptModal = function() {
+    const modal = document.querySelector('.receipt-modal');
+    if (modal) {
+        modal.remove();
+    }
+};
 
 // ✅ Función para generar ticket POS
 window.generatePOS = function(receiptData) {
@@ -2469,19 +2505,61 @@ async function shareReceipt(receiptId) {
   const receipt = receipts.find(r => r.id === receiptId);
   if (!receipt) return;
 
-  const blob = await fetch(receipt.canvas).then(r => r.blob());
-  const file = new File([blob], `recibo-${receipt.receiptNumber}.png`, { type: 'image/png' });
+  // Generar texto del ticket POS
+  const saleData = receipt.saleData;
+  const isContado = saleData.paymentType === 'contado';
+  
+  const ticketText = `================================
+      ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
+================================
+Fecha: ${new Date().toLocaleDateString('es-CO')}
+Hora: ${new Date().toLocaleTimeString('es-CO')}
 
-  const shareData = {
-    title: `Recibo #${receipt.receiptNumber}`,
-    text: `Recibo de venta para ${receipt.saleData.clientName}`,
-    files: [file]
-  };
+--------------------------------
+CLIENTE
+--------------------------------
+${saleData.clientName}
+${saleData.clientAddress || 'Sin dirección'}
+
+--------------------------------
+PRODUCTOS
+--------------------------------
+${saleData.productName}
+
+--------------------------------
+DETALLE DE PAGO
+--------------------------------
+Total: $${saleData.price.toLocaleString('es-CO')}
+Tipo: ${isContado ? 'CONTADO' : 'A CUOTAS'}
+
+${!isContado ? `Cuotas: ${saleData.numberOfInstallments}
+Valor cuota: $${(saleData.paymentPerInstallment || 0).toLocaleString('es-CO')}
+Pago inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}` : `Pago realizado: $${saleData.price.toLocaleString('es-CO')}
+SALDO: $0`}
+
+--------------------------------
+${isContado ? '✓ PAGO COMPLETO' : `Saldo pendiente: $${(saleData.remainingBalance || 0).toLocaleString('es-CO')}`}
+================================
+
+Gracias por su compra!
+Volver pronto
+================================`;
+
+  // Intentar compartir como archivo de texto
+  const blob = new Blob([ticketText], { type: 'text/plain' });
+  const file = new File([blob], `recibo-${receipt.receiptNumber}.txt`, { type: 'text/plain' });
 
   if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-    await navigator.share(shareData); // <-- espera a que el usuario termine
+    await navigator.share({
+      title: `Recibo #${receipt.receiptNumber}`,
+      text: ticketText,
+      files: [file]
+    });
   } else {
-    fallbackShare(receipt);
+    // Fallback: copiar texto al portapapeles
+    navigator.clipboard.writeText(ticketText).then(() => {
+      alert('Ticket copiado al portapapeles. Pégalo en WhatsApp, email, etc.');
+    });
   }
 }
 
@@ -2490,10 +2568,52 @@ function downloadReceipt(receiptId) {
     const receipt = receipts.find(r => r.id === receiptId);
     if (!receipt) return;
 
+    // Generar texto del ticket POS
+    const saleData = receipt.saleData;
+    const isContado = saleData.paymentType === 'contado';
+    
+    const ticketText = `================================
+      ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
+================================
+Fecha: ${new Date().toLocaleDateString('es-CO')}
+Hora: ${new Date().toLocaleTimeString('es-CO')}
+
+--------------------------------
+CLIENTE
+--------------------------------
+${saleData.clientName}
+${saleData.clientAddress || 'Sin dirección'}
+
+--------------------------------
+PRODUCTOS
+--------------------------------
+${saleData.productName}
+
+--------------------------------
+DETALLE DE PAGO
+--------------------------------
+Total: $${saleData.price.toLocaleString('es-CO')}
+Tipo: ${isContado ? 'CONTADO' : 'A CUOTAS'}
+
+${!isContado ? `Cuotas: ${saleData.numberOfInstallments}
+Valor cuota: $${(saleData.paymentPerInstallment || 0).toLocaleString('es-CO')}
+Pago inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}` : `Pago realizado: $${saleData.price.toLocaleString('es-CO')}
+SALDO: $0`}
+
+--------------------------------
+${isContado ? '✓ PAGO COMPLETO' : `Saldo pendiente: $${(saleData.remainingBalance || 0).toLocaleString('es-CO')}`}
+================================
+
+Gracias por su compra!
+Volver pronto
+================================`;
+
+    const blob = new Blob([ticketText], { type: 'text/plain' });
     const link = document.createElement('a');
-    link.download = `recibo-${receipt.receiptNumber}.png`;
-    link.href = receipt.canvas;
+    link.download = `recibo-${receipt.receiptNumber}.txt`;
+    link.href = URL.createObjectURL(blob);
     link.click();
+    URL.revokeObjectURL(link.href);
 }
 
 function viewAllReceipts() {
@@ -2501,7 +2621,19 @@ function viewAllReceipts() {
 }
 
 function fallbackShare(receipt) {
-    const text = `Recibo de Venta #${receipt.receiptNumber}\nCliente: ${receipt.saleData.clientName}\nTotal: $${receipt.saleData.price.toLocaleString('es-CO')}\nFecha: ${new Date(receipt.saleData.saleDate).toLocaleDateString('es-CO')}`;
+    const saleData = receipt.saleData;
+    const isContado = saleData.paymentType === 'contado';
+    
+    const text = `================================
+      ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
+================================
+Fecha: ${new Date().toLocaleDateString('es-CO')}
+Cliente: ${saleData.clientName}
+Total: $${saleData.price.toLocaleString('es-CO')}
+Tipo: ${isContado ? 'CONTADO' : 'A CUOTAS'}
+${isContado ? '✓ PAGO COMPLETO' : `Saldo: $${(saleData.remainingBalance || 0).toLocaleString('es-CO')}`}
+================================
+Gracias por su compra!`;
     
     if (navigator.share) {
         navigator.share({
@@ -2509,7 +2641,6 @@ function fallbackShare(receipt) {
             text: text
         });
     } else {
-        // Fallback: copiar al portapapeles
         navigator.clipboard.writeText(text).then(() => {
             alert('Texto del recibo copiado al portapapeles. Pégalo en WhatsApp, email, etc.');
         });
