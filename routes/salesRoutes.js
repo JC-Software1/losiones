@@ -113,24 +113,30 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
                     return res.status(400).json({ error: `Producto no encontrado: ${prod.name}` });
                 }
                 
-                // Verificar stock
-                const currentStock = product.stock || 1;
+                console.log(`📦 Procesando producto: ${product.name}, Stock actual: ${product.stock}, Cantidad a vender: ${quantityToSell}`);
+                
+                // Verificar stock (manejar productos sin campo stock)
+                const currentStock = product.stock !== undefined ? product.stock : 1;
+                console.log(`   Stock calculado: ${currentStock}`);
+                
                 if (currentStock < quantityToSell) {
                     return res.status(400).json({ error: `Stock insuficiente para "${product.name}". Disponible: ${currentStock}` });
                 }
                 
                 // Descontar stock
                 const newStock = currentStock - quantityToSell;
+                console.log(`   Nuevo stock: ${newStock}`);
+                
+                // Actualizar stock en el producto
+                product.stock = newStock;
                 
                 // Si el stock llega a 0, marcar como vendido
                 if (newStock <= 0) {
-                    product.stock = 0;
                     product.sold = true;
                     product.soldDate = new Date();
                     product.soldTo = clientName;
                     productIdsToMarkSold.push(product._id);
-                } else {
-                    product.stock = newStock;
+                    console.log(`   ⚠️ Producto marcado como vendido`);
                 }
                 
                 await product.save();

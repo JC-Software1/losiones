@@ -617,11 +617,6 @@ if (manualInstallmentAmount > 0) {
         await apiFetch(endpoint, 'POST', saleData, token);
         alert('Venta guardada correctamente.');
 
-        // Marcar productos como vendidos
-        for (const product of selectedProducts) {
-            await apiFetch(`/products/${product._id}/sell`, 'PUT', { soldTo: clientName }, token);
-        }
-
         // Limpiar todo
         form.reset();
         inputDate.value = new Date().toISOString().split('T')[0];
@@ -638,7 +633,13 @@ if (manualInstallmentAmount > 0) {
         // Recargar y mostrar recibo
         await loadSales();
         await loadProductsForDropdown();
-        showReceiptModal(receiptData);
+        
+        try {
+            showReceiptModal(receiptData);
+        } catch (err) {
+            console.error('Error al mostrar receipt:', err);
+            alert('Venta guardada, pero hubo un error al generar el recibo.');
+        }
 
     } catch (error) {
         console.error('Error al guardar la venta:', error.message);
@@ -2491,6 +2492,12 @@ Volver pronto
     
     // Abrir ventana de impresión
     const printWindow = window.open('', '_blank', 'width=400,height=600');
+    
+    if (!printWindow) {
+        alert("⚠️ El navegador bloquinó la ventana de impresión. Por favor permite las ventanas emergentes e intenta de nuevo.");
+        return;
+    }
+    
     printWindow.document.write(`
         <!DOCTYPE html>
         <html>
