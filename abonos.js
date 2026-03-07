@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const initialPaymentsElement = document.getElementById("initialPayments"); // Cambiado
 
     // Variables globales
-   
+
     let allPayments = [];
     let filteredPayments = [];
 
@@ -47,90 +47,96 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ========== FUNCIONES PRINCIPALES ==========
 
-async function loadData() {
-    try {
-        showLoading();
-        const token = getToken();
-        
-        // ✅ CORRECCIÓN: Usar endpoint que respeta permisos de usuario
-        const endpoint = '/sales'; // Este endpoint ya filtra por usuario automáticamente
-        
+    async function loadData() {
         try {
-            // Cargar ventas activas
-            const activeSales = await apiFetch(endpoint, "GET", null, token);
-            
-            // Cargar ventas liquidadas
-            const settledSales = await apiFetch('/sales/settled', "GET", null, token);
-            
-            // Combinar ambas
-            allSales = [...activeSales, ...settledSales];
-            
-            console.log('✅ Ventas activas:', activeSales.length);
-            console.log('✅ Ventas liquidadas:', settledSales.length);
-            console.log('✅ Total ventas del usuario:', allSales.length);
-            
-        } catch (error) {
-            console.error('❌ Error al cargar ventas:', error);
-            throw error;
-        }
-        
-        allPayments = extractAllPayments(allSales);
-        filteredPayments = [...allPayments];
+            showLoading();
+            const token = getToken();
 
-        if (allPayments.length === 0) {
-            showEmptyState();
-        } else {
-            displayPayments(filteredPayments);
-            updateStatistics(filteredPayments, allSales);
-        }
+            // ✅ CORRECCIÓN: Usar endpoint que respeta permisos de usuario
+            const endpoint = '/sales'; // Este endpoint ya filtra por usuario automáticamente
 
-    } catch (error) {
-        console.error('❌ Error completo:', error);
-        showError("Error al cargar los datos: " + error.message);
-    }
-}
+            try {
+                // Cargar ventas activas
+                const activeSales = await apiFetch(endpoint, "GET", null, token);
 
-function extractAllPayments(sales) {
-    let payments = [];
-    
-    sales.forEach(sale => {
-        if (sale.payments && sale.payments.length > 0) {
-            sale.payments.forEach((payment, index) => {
-                const totalPaid = sale.payments.reduce((sum, p) => sum + p.amount, 0);
-                const remainingAmount = Math.max(0, sale.price - totalPaid);
-                const progressPercentage = Math.min(100, (totalPaid / sale.price) * 100);
-                const isCompleted = totalPaid >= sale.price;
-                
-                // 🔥 Identificar si es el pago inicial (primer pago Y coincide con advancePayment)
-                const isInitialPayment = index === 0 && sale.advancePayment > 0 && payment.amount === sale.advancePayment;
-                
-                payments.push({
-                    ...payment,
-                    clientName: sale.clientName,
-                    clientAddress: sale.clientAddress || 'Sin dirección',
-                    productName: sale.productName,
-                    saleId: sale._id,
-                    saleDate: sale.saleDate,
-                    totalPrice: sale.price,
-                    totalPaid,
-                    remainingAmount,
-                    progressPercentage,
-                    isCompleted,
-                    isSettled: sale.settled || false,
-                    settlementDate: sale.settledDate,
-                    installments: sale.installments || 'No especificado',
-                    isInitialPayment: isInitialPayment  // 🔥 Nueva propiedad
+                // Cargar ventas liquidadas
+                const settledSales = await apiFetch('/sales/settled', "GET", null, token);
+
+                // Combinar ambas
+                const combined = [...activeSales, ...settledSales];
+                const seenIds = new Set();
+                allSales = combined.filter(sale => {
+                    if (seenIds.has(sale._id)) return false;
+                    seenIds.add(sale._id);
+                    return true;
                 });
-            });
+
+                console.log('✅ Ventas activas:', activeSales.length);
+                console.log('✅ Ventas liquidadas:', settledSales.length);
+                console.log('✅ Total ventas del usuario:', allSales.length);
+
+            } catch (error) {
+                console.error('❌ Error al cargar ventas:', error);
+                throw error;
+            }
+
+            allPayments = extractAllPayments(allSales);
+            filteredPayments = [...allPayments];
+
+            if (allPayments.length === 0) {
+                showEmptyState();
+            } else {
+                displayPayments(filteredPayments);
+                updateStatistics(filteredPayments, allSales);
+            }
+
+        } catch (error) {
+            console.error('❌ Error completo:', error);
+            showError("Error al cargar los datos: " + error.message);
         }
-    });
-    
-    return payments.sort((a, b) => new Date(b.date) - new Date(a.date));
-}
+    }
+
+    function extractAllPayments(sales) {
+        let payments = [];
+
+        sales.forEach(sale => {
+            if (sale.payments && sale.payments.length > 0) {
+                sale.payments.forEach((payment, index) => {
+                    const totalPaid = sale.payments.reduce((sum, p) => sum + p.amount, 0);
+                    const remainingAmount = Math.max(0, sale.price - totalPaid);
+                    const progressPercentage = Math.min(100, (totalPaid / sale.price) * 100);
+                    const isCompleted = totalPaid >= sale.price;
+
+                    // 🔥 Identificar si es el pago inicial (primer pago Y coincide con advancePayment)
+                    const isInitialPayment = index === 0 && sale.advancePayment > 0 && payment.amount === sale.advancePayment;
+
+                    payments.push({
+                        ...payment,
+                        clientName: sale.clientName,
+                        clientAddress: sale.clientAddress || 'Sin dirección',
+                        productName: sale.productName,
+                        saleId: sale._id,
+                        saleDate: sale.saleDate,
+                        totalPrice: sale.price,
+                        totalPaid,
+                        remainingAmount,
+                        progressPercentage,
+                        isCompleted,
+                        isSettled: sale.settled || false,
+                        settlementDate: sale.settledDate,
+                        installments: sale.installments || 'No especificado',
+                        isInitialPayment: isInitialPayment  // 🔥 Nueva propiedad
+                    });
+                });
+            }
+        });
+
+        return payments.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
 
     function displayPayments(payments) {
         paymentsList.innerHTML = "";
-        
+
         if (payments.length === 0) {
             showEmptyState();
             return;
@@ -143,60 +149,60 @@ function extractAllPayments(sales) {
             paymentsList.appendChild(card);
         });
     }
-function createPaymentCard(payment) {
-    const card = document.createElement("div");
-    card.classList.add("sale-card");
-    card.setAttribute("data-payment-id", payment._id);
+    function createPaymentCard(payment) {
+        const card = document.createElement("div");
+        card.classList.add("sale-card");
+        card.setAttribute("data-payment-id", payment._id);
 
-// 🔥 Ajustar fecha para zona horaria local
-const paymentDateObj = new Date(payment.date);
-// Compensar diferencia de zona horaria
-const localPaymentDate = new Date(paymentDateObj.getTime() + paymentDateObj.getTimezoneOffset() * 60000);
+        // 🔥 Ajustar fecha para zona horaria local
+        const paymentDateObj = new Date(payment.date);
+        // Compensar diferencia de zona horaria
+        const localPaymentDate = new Date(paymentDateObj.getTime() + paymentDateObj.getTimezoneOffset() * 60000);
 
-const paymentDate = localPaymentDate.toLocaleDateString('es-CO', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-});
-
-const paymentTime = localPaymentDate.toLocaleTimeString('es-CO', {
-    hour: '2-digit',
-    minute: '2-digit'
-});
-
-// 🔥 Ajustar fecha de venta para zona horaria local
-const saleDateObj = new Date(payment.saleDate);
-const localSaleDate = new Date(saleDateObj.getTime() + saleDateObj.getTimezoneOffset() * 60000);
-
-const saleDate = localSaleDate.toLocaleDateString('es-CO', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-});
-
-    const statusClass = payment.isCompleted ? "completed" : "pending";
-    
-    // 🔥 Agregar badge si es pago inicial
-    const initialPaymentBadge = payment.isInitialPayment 
-        ? `<div class="status-badge" style="background: #9b59b6; margin-top: 4px;">Seña/Pago Inicial</div>` 
-        : '';
-    
-    let settlementInfo = '';
-    if (payment.settlementDate) {
-        const settlementDate = new Date(payment.settlementDate).toLocaleDateString('es-CO', {
+        const paymentDate = localPaymentDate.toLocaleDateString('es-CO', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
         });
-        settlementInfo = `
+
+        const paymentTime = localPaymentDate.toLocaleTimeString('es-CO', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // 🔥 Ajustar fecha de venta para zona horaria local
+        const saleDateObj = new Date(payment.saleDate);
+        const localSaleDate = new Date(saleDateObj.getTime() + saleDateObj.getTimezoneOffset() * 60000);
+
+        const saleDate = localSaleDate.toLocaleDateString('es-CO', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+
+        const statusClass = payment.isCompleted ? "completed" : "pending";
+
+        // 🔥 Agregar badge si es pago inicial
+        const initialPaymentBadge = payment.isInitialPayment
+            ? `<div class="status-badge" style="background: #9b59b6; margin-top: 4px;">Seña/Pago Inicial</div>`
+            : '';
+
+        let settlementInfo = '';
+        if (payment.settlementDate) {
+            const settlementDate = new Date(payment.settlementDate).toLocaleDateString('es-CO', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            settlementInfo = `
             <div class="detail-group">
                 <span class="detail-label">Liquidado el:</span>
                 <span class="detail-value">${settlementDate}</span>
             </div>
         `;
-    }
+        }
 
-    card.innerHTML = `
+        card.innerHTML = `
         <div class="sale-header">
             <div class="sale-info">
                 <h3>${payment.clientName}</h3>
@@ -271,47 +277,47 @@ const saleDate = localSaleDate.toLocaleDateString('es-CO', {
         </div>
     `;
 
-    const deleteBtn = card.querySelector(".btn-delete");
-    deleteBtn.addEventListener("click", () => deletePayment(payment._id, payment.saleId, card));
+        const deleteBtn = card.querySelector(".btn-delete");
+        deleteBtn.addEventListener("click", () => deletePayment(payment._id, payment.saleId, card));
 
-    return card;
-}
+        return card;
+    }
 
-function updateStatistics(payments, sales) {
-    const stats = calculateStatistics(payments, sales);
-    
-    // Actualizar todos los valores
-    totalPaymentsElement.textContent = `$${stats.totalAmount.toLocaleString('es-CO')}`;
-    totalPaymentCountElement.textContent = stats.count;
-    averagePaymentElement.textContent = `$${stats.averageAmount.toLocaleString('es-CO')}`;
-    initialPaymentsElement.textContent = `$${stats.totalInitialPayments.toLocaleString('es-CO')}`;
-    
-    console.log('✅ Estadísticas actualizadas - Total mostrado:', stats.totalAmount);
-}
+    function updateStatistics(payments, sales) {
+        const stats = calculateStatistics(payments, sales);
 
-function calculateStatistics(payments, sales) {
-  console.log('🔍 calculateStatistics recibió:');
-  console.log('   - payments:', payments.length);
-  console.log('   - sales:', sales.length);
+        // Actualizar todos los valores
+        totalPaymentsElement.textContent = `$${stats.totalAmount.toLocaleString('es-CO')}`;
+        totalPaymentCountElement.textContent = stats.count;
+        averagePaymentElement.textContent = `$${stats.averageAmount.toLocaleString('es-CO')}`;
+        initialPaymentsElement.textContent = `$${stats.totalInitialPayments.toLocaleString('es-CO')}`;
 
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
-  const averageAmount = payments.length > 0 ? totalAmount / payments.length : 0;
-  
-  // 🔥 Calcular pagos iniciales solo de las ventas que tienen pagos filtrados
-  const saleIds = [...new Set(payments.map(p => p.saleId))];
-  const relevantSales = sales.filter(s => saleIds.includes(s._id));
-  const totalInitialPayments = relevantSales.reduce((sum, s) => sum + (s.advancePayment || 0), 0);
+        console.log('✅ Estadísticas actualizadas - Total mostrado:', stats.totalAmount);
+    }
 
-  console.log('   - Ventas relevantes:', relevantSales.length);
-  console.log('   - Total pagos iniciales:', totalInitialPayments);
+    function calculateStatistics(payments, sales) {
+        console.log('🔍 calculateStatistics recibió:');
+        console.log('   - payments:', payments.length);
+        console.log('   - sales:', sales.length);
 
-  return {
-    totalAmount,
-    count: payments.length,
-    averageAmount: Math.round(averageAmount),
-    totalInitialPayments: Math.round(totalInitialPayments),
-  };
-}
+        const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+        const averageAmount = payments.length > 0 ? totalAmount / payments.length : 0;
+
+        // 🔥 Calcular pagos iniciales solo de las ventas que tienen pagos filtrados
+        const saleIds = [...new Set(payments.map(p => p.saleId))];
+        const relevantSales = sales.filter(s => saleIds.includes(s._id));
+        const totalInitialPayments = relevantSales.reduce((sum, s) => sum + (s.advancePayment || 0), 0);
+
+        console.log('   - Ventas relevantes:', relevantSales.length);
+        console.log('   - Total pagos iniciales:', totalInitialPayments);
+
+        return {
+            totalAmount,
+            count: payments.length,
+            averageAmount: Math.round(averageAmount),
+            totalInitialPayments: Math.round(totalInitialPayments),
+        };
+    }
 
     function showCommissionModal(totalAbonado) {
         // Crear modal dinámicamente
@@ -319,7 +325,7 @@ function calculateStatistics(payments, sales) {
         modal.id = 'commissionModal';
         modal.className = 'modal show';
         modal.style.zIndex = '10000';
-        
+
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 450px;">
                 <div class="modal-header">
@@ -392,10 +398,10 @@ function calculateStatistics(payments, sales) {
         `;
 
         document.body.appendChild(modal);
-        
+
         // Cargar porcentaje guardado si existe
         loadSavedCommission();
-        
+
         document.getElementById('commissionPercentage').focus();
 
         // Permitir calcular con Enter
@@ -406,9 +412,9 @@ function calculateStatistics(payments, sales) {
         });
     }
 
-    window.calculateCommission = function(totalAbonado) {
+    window.calculateCommission = function (totalAbonado) {
         const percentage = parseFloat(document.getElementById('commissionPercentage').value);
-        
+
         if (isNaN(percentage) || percentage < 0 || percentage > 100) {
             alert('Por favor ingresa un porcentaje válido entre 0 y 100');
             return;
@@ -426,7 +432,7 @@ function calculateStatistics(payments, sales) {
 
         resultDiv.style.display = 'block';
         resultDiv.style.animation = 'slideIn 0.3s ease';
-        
+
         // Mostrar botón de guardar después de calcular
         document.getElementById('saveCommissionBtn').style.display = 'inline-flex';
     };
@@ -435,7 +441,7 @@ function calculateStatistics(payments, sales) {
         try {
             const token = getToken();
             const response = await apiFetch("/commission", "GET", null, token);
-            
+
             if (response && response.percentage !== undefined) {
                 document.getElementById('commissionPercentage').value = response.percentage;
                 console.log('✅ Porcentaje de comisión cargado:', response.percentage + '%');
@@ -445,9 +451,9 @@ function calculateStatistics(payments, sales) {
         }
     }
 
-    window.saveCommissionPercentage = async function() {
+    window.saveCommissionPercentage = async function () {
         const percentage = parseFloat(document.getElementById('commissionPercentage').value);
-        
+
         if (isNaN(percentage) || percentage < 0 || percentage > 100) {
             alert('Por favor ingresa un porcentaje válido entre 0 y 100');
             return;
@@ -456,18 +462,18 @@ function calculateStatistics(payments, sales) {
         try {
             const token = getToken();
             await apiFetch("/commission", "POST", { percentage }, token);
-            
+
             // Mostrar mensaje de éxito
             const saveBtn = document.getElementById('saveCommissionBtn');
             const originalText = saveBtn.innerHTML;
             saveBtn.innerHTML = '<i class="fas fa-check"></i> ¡Guardado!';
             saveBtn.style.background = '#27ae60';
-            
+
             setTimeout(() => {
                 saveBtn.innerHTML = originalText;
                 saveBtn.style.background = '';
             }, 2000);
-            
+
             console.log('✅ Porcentaje de comisión guardado:', percentage + '%');
         } catch (error) {
             console.error('❌ Error al guardar comisión:', error);
@@ -475,7 +481,7 @@ function calculateStatistics(payments, sales) {
         }
     };
 
-    window.closeCommissionModal = function() {
+    window.closeCommissionModal = function () {
         const modal = document.getElementById('commissionModal');
         if (modal) {
             modal.style.animation = 'fadeOut 0.2s ease';
@@ -491,7 +497,7 @@ function calculateStatistics(payments, sales) {
         try {
             const token = getToken();
             cardElement.classList.add("deleting");
-            
+
             await apiFetch(`/sales/${saleId}/payment/${paymentId}`, "DELETE", null, token);
 
             setTimeout(() => {
@@ -507,80 +513,80 @@ function calculateStatistics(payments, sales) {
         }
     }
 
-function applyFilters() {
-  const searchText = searchInput.value.toLowerCase().trim();
-  const dateValue = dateFilter.value;
+    function applyFilters() {
+        const searchText = searchInput.value.toLowerCase().trim();
+        const dateValue = dateFilter.value;
 
-  if (searchText || dateValue) {
-    clearFiltersBtn.classList.remove("hidden");
-  } else {
-    clearFiltersBtn.classList.add("hidden");
-  }
+        if (searchText || dateValue) {
+            clearFiltersBtn.classList.remove("hidden");
+        } else {
+            clearFiltersBtn.classList.add("hidden");
+        }
 
-  filteredPayments = [...allPayments];
+        filteredPayments = [...allPayments];
 
-  if (searchText) {
-    filteredPayments = filteredPayments.filter(payment =>
-      payment.clientName.toLowerCase().includes(searchText) ||
-      payment.productName.toLowerCase().includes(searchText) ||
-      payment.clientAddress.toLowerCase().includes(searchText)
-    );
-  }
+        if (searchText) {
+            filteredPayments = filteredPayments.filter(payment =>
+                payment.clientName.toLowerCase().includes(searchText) ||
+                payment.productName.toLowerCase().includes(searchText) ||
+                payment.clientAddress.toLowerCase().includes(searchText)
+            );
+        }
 
-  if (dateValue) {
-    // 🔥 Parsear la fecha seleccionada correctamente
-    const [year, month, day] = dateValue.split('-').map(Number);
-    const selectedDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (dateValue) {
+            // 🔥 Parsear la fecha seleccionada correctamente
+            const [year, month, day] = dateValue.split('-').map(Number);
+            const selectedDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-    filteredPayments = filteredPayments.filter(payment => {
-      // 🔥 Usar parseDateLocal para interpretar correctamente la fecha del pago
-      const paymentDateObj = parseDateLocal(payment.date);
-      const paymentYear = paymentDateObj.getFullYear();
-      const paymentMonth = paymentDateObj.getMonth() + 1;
-      const paymentDay = paymentDateObj.getDate();
-      const paymentDateStr = `${paymentYear}-${String(paymentMonth).padStart(2, '0')}-${String(paymentDay).padStart(2, '0')}`;
-      
-      return paymentDateStr === selectedDateStr;
-    });
-  }
+            filteredPayments = filteredPayments.filter(payment => {
+                // 🔥 Usar parseDateLocal para interpretar correctamente la fecha del pago
+                const paymentDateObj = parseDateLocal(payment.date);
+                const paymentYear = paymentDateObj.getFullYear();
+                const paymentMonth = paymentDateObj.getMonth() + 1;
+                const paymentDay = paymentDateObj.getDate();
+                const paymentDateStr = `${paymentYear}-${String(paymentMonth).padStart(2, '0')}-${String(paymentDay).padStart(2, '0')}`;
 
-  // Actualizar lista y estadísticas con los filtros aplicados
-  displayPayments(filteredPayments);
+                return paymentDateStr === selectedDateStr;
+            });
+        }
 
-  // Recalcular estadísticas SOLO con las ventas que tienen pagos en el rango filtrado
-  updateStatistics(filteredPayments, extractSalesFromPayments(filteredPayments));
-}
+        // Actualizar lista y estadísticas con los filtros aplicados
+        displayPayments(filteredPayments);
 
-// 🔥 Agregar esta función helper si no existe
-function parseDateLocal(dateString) {
-    if (!dateString) return new Date(NaN);
-    
-    // Si es formato solo fecha "YYYY-MM-DD"
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const [y, m, d] = dateString.split('-').map(Number);
-        return new Date(y, m - 1, d);
+        // Recalcular estadísticas SOLO con las ventas que tienen pagos en el rango filtrado
+        updateStatistics(filteredPayments, extractSalesFromPayments(filteredPayments));
     }
-    
-    // Si tiene timezone (ISO con Z o offset)
-    const date = new Date(dateString);
-    if (!isNaN(date)) {
-        // Ajustar a zona local
-        return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+
+    // 🔥 Agregar esta función helper si no existe
+    function parseDateLocal(dateString) {
+        if (!dateString) return new Date(NaN);
+
+        // Si es formato solo fecha "YYYY-MM-DD"
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            const [y, m, d] = dateString.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+
+        // Si tiene timezone (ISO con Z o offset)
+        const date = new Date(dateString);
+        if (!isNaN(date)) {
+            // Ajustar a zona local
+            return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+        }
+
+        return new Date(dateString);
     }
-    
-    return new Date(dateString);
-}
-function extractSalesFromPayments(payments) {
-  if (!payments || payments.length === 0) return [];
+    function extractSalesFromPayments(payments) {
+        if (!payments || payments.length === 0) return [];
 
-  const saleIds = [...new Set(payments.map(p => p.saleId))];
-  console.log('🔍 saleIds desde abonos filtrados:', saleIds);
-  console.log('📦 allSales disponibles:', allSales.map(s => s._id));
+        const saleIds = [...new Set(payments.map(p => p.saleId))];
+        console.log('🔍 saleIds desde abonos filtrados:', saleIds);
+        console.log('📦 allSales disponibles:', allSales.map(s => s._id));
 
-  const filtered = allSales.filter(sale => saleIds.includes(sale._id));
-  console.log('✅ ventas encontradas:', filtered.length);
-  return filtered;
-}
+        const filtered = allSales.filter(sale => saleIds.includes(sale._id));
+        console.log('✅ ventas encontradas:', filtered.length);
+        return filtered;
+    }
 
     function clearFilters() {
         searchInput.value = "";
@@ -633,7 +639,7 @@ function extractSalesFromPayments(payments) {
     function showEmptyState() {
         paymentsList.innerHTML = "";
         emptyState.classList.remove("hidden");
-        
+
         totalPaymentsElement.textContent = "$0";
         totalPaymentCountElement.textContent = "0";
         averagePaymentElement.textContent = "$0";
