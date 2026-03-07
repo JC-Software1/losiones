@@ -20,11 +20,13 @@ const SaleSchema = new mongoose.Schema({
     clientName: { type: String, required: true, trim: true },
     productName: { type: String, required: true, trim: true },
     products: [{
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
         name: String,
         brand: String,
         category: String,
         size: String,
-        salePrice: Number
+        salePrice: Number,
+        quantity: { type: Number, default: 1 }
     }],
     // ✅ NUEVO: Guardar IDs de los productos vendidos
     productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],

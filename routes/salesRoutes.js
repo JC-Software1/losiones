@@ -88,7 +88,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             paymentPerInstallment,  // ✅ RECIBIR DESDE EL FRONTEND
             paymentType,
             paidAmount,
-            remainingBalance
+            remainingBalance,
+            products  // ✅ NUEVO: array de productos con cantidades
         } = req.body;
 
         if (!clientName || !productName || !price || !saleDate) {
@@ -96,6 +97,45 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
         }
 
         const isContado = paymentType === 'contado';
+        
+        // ✅ NUEVO: Descontar stock de los productos
+        const Product = require("../models/Product");
+        const productIdsToMarkSold = [];
+        
+        if (products && Array.isArray(products)) {
+            for (const prod of products) {
+                const productId = prod.productId;
+                const quantityToSell = prod.quantity || 1;
+                
+                // Buscar el producto
+                const product = await Product.findById(productId);
+                if (!product) {
+                    return res.status(400).json({ error: `Producto no encontrado: ${prod.name}` });
+                }
+                
+                // Verificar stock
+                const currentStock = product.stock || 1;
+                if (currentStock < quantityToSell) {
+                    return res.status(400).json({ error: `Stock insuficiente para "${product.name}". Disponible: ${currentStock}` });
+                }
+                
+                // Descontar stock
+                const newStock = currentStock - quantityToSell;
+                
+                // Si el stock llega a 0, marcar como vendido
+                if (newStock <= 0) {
+                    product.stock = 0;
+                    product.sold = true;
+                    product.soldDate = new Date();
+                    product.soldTo = clientName;
+                    productIdsToMarkSold.push(product._id);
+                } else {
+                    product.stock = newStock;
+                }
+                
+                await product.save();
+            }
+        }
         
         const sale = new Sale({
             clientName,
@@ -114,7 +154,9 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             paidAmount: paidAmount || (isContado ? price : advancePayment || 0),
             remainingBalance: remainingBalance !== undefined ? remainingBalance : (isContado ? 0 : price - (advancePayment || 0)),
             user: req.user.id,
-            settled: isContado || advancePayment >= price
+            settled: isContado || advancePayment >= price,
+            products: products,  // ✅ GUARDAR productos con cantidades
+            productIds: productIdsToMarkSold  // ✅ IDs de productos vendidos completamente
         });
 
         if (advancePayment > 0) {
@@ -170,11 +212,56 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             installments, 
             advancePayment, 
             clientAddress,
-            paymentPerInstallment  // ✅ RECIBIR DESDE EL FRONTEND
+            paymentPerInstallment,
+            paymentType,
+            paidAmount,
+            remainingBalance,
+            products  // ✅ NUEVO: array de productos con cantidades
         } = req.body;
 
         if (!clientName || !productName || !price || !saleDate) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
+        }
+
+        const isContado = paymentType === 'contado';
+
+        // ✅ NUEVO: Descontar stock de los productos
+        const Product = require("../models/Product");
+        const productIdsToMarkSold = [];
+        
+        if (products && Array.isArray(products)) {
+            for (const prod of products) {
+                const productId = prod.productId;
+                const quantityToSell = prod.quantity || 1;
+                
+                // Buscar el producto
+                const product = await Product.findById(productId);
+                if (!product) {
+                    return res.status(400).json({ error: `Producto no encontrado: ${prod.name}` });
+                }
+                
+                // Verificar stock
+                const currentStock = product.stock || 1;
+                if (currentStock < quantityToSell) {
+                    return res.status(400).json({ error: `Stock insuficiente para "${product.name}". Disponible: ${currentStock}` });
+                }
+                
+                // Descontar stock
+                const newStock = currentStock - quantityToSell;
+                
+                // Si el stock llega a 0, marcar como vendido
+                if (newStock <= 0) {
+                    product.stock = 0;
+                    product.sold = true;
+                    product.soldDate = new Date();
+                    product.soldTo = clientName;
+                    productIdsToMarkSold.push(product._id);
+                } else {
+                    product.stock = newStock;
+                }
+                
+                await product.save();
+            }
         }
 
         const sale = new Sale({
@@ -190,8 +277,13 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             paymentDaysText: req.body.paymentDaysText || '',
             paymentPerInstallment: paymentPerInstallment || 0, // ✅ USAR VALOR DEL FRONTEND
             numberOfInstallments: req.body.numberOfInstallments || 1,
+            paymentType: paymentType || 'cuotas',
+            paidAmount: paidAmount || (isContado ? price : advancePayment || 0),
+            remainingBalance: remainingBalance !== undefined ? remainingBalance : (isContado ? 0 : price - (advancePayment || 0)),
             user: vendedorId,
-            settled: false
+            settled: isContado || advancePayment >= price,
+            products: products,  // ✅ GUARDAR productos con cantidades
+            productIds: productIdsToMarkSold  // ✅ IDs de productos vendidos completamente
         });
 
         if (advancePayment > 0) {
@@ -208,6 +300,17 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
                 sale.settled = true;
                 sale.settledDate = new Date();
             }
+        } else if (isContado) {
+            if (!sale.payments) {
+                sale.payments = [];
+            }
+            sale.payments.push({
+                amount: price,
+                date: new Date(saleDate),
+                liquidatedDay: false
+            });
+            sale.settled = true;
+            sale.settledDate = new Date();
         }
 
         await sale.save();

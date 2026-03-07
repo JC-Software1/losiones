@@ -561,6 +561,17 @@ if (manualInstallmentAmount > 0) {
     // ---------- Construcción del objeto limpio ----------
     const isContado = paymentType === 'contado';
     
+    // Construir array de productos con cantidades
+    const productsWithQty = selectedProducts.map(p => ({
+        productId: p._id,
+        name: p.name,
+        quantity: p.quantity || 1,
+        salePrice: p.salePrice,
+        brand: p.brand,
+        category: p.category,
+        size: p.size
+    }));
+    
     const saleData = {
         clientName,
         productName,
@@ -581,7 +592,9 @@ if (manualInstallmentAmount > 0) {
         paymentDays: selectedPaymentPlan.days.join(', '), // "Miércoles, Viernes"
         // ✅ Si es contado, marcar como totalmente pagado
         paidAmount: isContado ? price : advance,
-        remainingBalance: isContado ? 0 : (price - advance)
+        remainingBalance: isContado ? 0 : (price - advance),
+        // ✅ Productos con cantidades
+        products: productsWithQty
     };
 
     // ---------- Log para depurar ----------
@@ -985,7 +998,7 @@ async function loadProductsForDropdown() {
 
                         <div class="info" style="flex: 1;">
                             <div class="name" style="font-weight: 600; color: var(--primary); font-size: 14px;">
-                                ${product.name}
+                                ${product.name} <span style="color: #e74c3c; font-size: 11px;">(Stock: ${product.stock || 1})</span>
                             </div>
                             <div class="price" style="font-size: 13px; color: var(--success); margin-top: 2px;">
                                 $${product.salePrice.toLocaleString()}
@@ -1022,7 +1035,19 @@ async function loadProductsForDropdown() {
 
                 item.addEventListener("click", (e) => {
                     if (e.target.closest('.btn-edit-dropdown')) return;
-                    selectProduct(product);
+                    
+                    // Solicitar cantidad
+                    const availableStock = product.stock || 1;
+                    let qty = prompt(`Cantidad de "${product.name}" (Stock disponible: ${availableStock}):`, "1");
+                    if (qty === null) return;
+                    
+                    qty = parseInt(qty) || 1;
+                    if (qty <= 0) {
+                        alert("La cantidad debe ser mayor a 0");
+                        return;
+                    }
+                    
+                    selectProduct(product, qty);
                 });
 
                 listContainer.appendChild(item);
@@ -1048,14 +1073,23 @@ async function loadProductsForDropdown() {
     }
 }
 
-function selectProduct(product) {
-    // Evitar duplicados
-    if (selectedProducts.find(p => p._id === product._id)) {
-        alert("Este producto ya fue seleccionado.");
+function selectProduct(product, quantity = 1) {
+    // Verificar stock disponible
+    const availableStock = product.stock || 1;
+    const existingProduct = selectedProducts.find(p => p._id === product._id);
+    const currentQty = existingProduct ? existingProduct.quantity : 0;
+    
+    if (currentQty + quantity > availableStock) {
+        alert(`Stock insuficiente. Disponible: ${availableStock}, ya seleccionado: ${currentQty}`);
         return;
     }
 
-    selectedProducts.push(product);
+    // Si ya existe, incrementar cantidad
+    if (existingProduct) {
+        existingProduct.quantity += quantity;
+    } else {
+        selectedProducts.push({ ...product, quantity: quantity });
+    }
     renderSelectedProducts();
     updateTotalPrice();
 }
@@ -1065,20 +1099,26 @@ function renderSelectedProducts() {
   container.innerHTML = "";
 
   selectedProducts.forEach((product, index) => {
+    const qty = product.quantity || 1;
     const tag = document.createElement("div");
     tag.className = "selected-product-tag";
     tag.innerHTML = `
-      <div class="product-name">${product.name}</div>
+      <div class="product-name">${product.name} <span style="color: #e74c3c; font-weight: bold;">(x${qty})</span></div>
       <div class="product-bottom">
-        <span class="product-price">$${product.salePrice.toLocaleString('es-CO')}</span>
+        <span class="product-price">$${(product.salePrice * qty).toLocaleString('es-CO')}</span>
         <div class="product-buttons">
-          <button class="edit-price"  data-index="${index}" title="Editar precio">✏️</button>
-          <button class="remove"      data-index="${index}" title="Eliminar">🗑️</button>
+          <button class="edit-qty" data-index="${index}" title="Editar cantidad">🔢</button>
+          <button class="edit-price" data-index="${index}" title="Editar precio">✏️</button>
+          <button class="remove" data-index="${index}" title="Eliminar">🗑️</button>
         </div>
       </div>
     `;
 
     // listeners
+    tag.querySelector('.edit-qty').addEventListener('click', e => {
+      const idx = parseInt(e.currentTarget.dataset.index);
+      editProductQuantity(idx);
+    });
     tag.querySelector('.edit-price').addEventListener('click', e => {
       const idx = parseInt(e.currentTarget.dataset.index);
       editProductPrice(idx);
@@ -1157,6 +1197,30 @@ async function editProductPrice(index) {
     }
 }
 
+function editProductQuantity(index) {
+    const product = selectedProducts[index];
+    const availableStock = product.stock || 1;
+    
+    let newQty = prompt(`Cantidad de "${product.name}" (Stock disponible: ${availableStock}):`, product.quantity || 1);
+    if (newQty === null || newQty.trim() === '') return;
+    
+    newQty = parseInt(newQty) || 1;
+    
+    if (newQty <= 0) {
+        alert('❌ Cantidad inválida. Debe ser mayor a 0.');
+        return;
+    }
+    
+    if (newQty > availableStock) {
+        alert(`❌ Stock insuficiente. Disponible: ${availableStock}`);
+        return;
+    }
+    
+    selectedProducts[index].quantity = newQty;
+    renderSelectedProducts();
+    updateTotalPrice();
+}
+
 function showPriceUpdateNotification(productName, newPrice) {
     const notification = document.createElement('div');
     notification.style.cssText = `
@@ -1227,7 +1291,7 @@ function showPriceUpdateNotification(productName, newPrice) {
 function updateTotalPrice() {
     if (isUpdating) return;
     
-    const total = selectedProducts.reduce((sum, p) => sum + p.salePrice, 0);
+    const total = selectedProducts.reduce((sum, p) => sum + (p.salePrice * (p.quantity || 1)), 0);
     document.getElementById("price").value = total;
 
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
@@ -2090,7 +2154,18 @@ window.useManualProduct = function(scannedCode) {
 
 function selectProductFromBarcode(product) {
     if (typeof selectProduct === 'function') {
-        selectProduct(product);
+        // Solicitar cantidad
+        const availableStock = product.stock || 1;
+        let qty = prompt(`Cantidad de "${product.name}" (Stock disponible: ${availableStock}):`, "1");
+        if (qty === null) return;
+        
+        qty = parseInt(qty) || 1;
+        if (qty <= 0) {
+            alert("La cantidad debe ser mayor a 0");
+            return;
+        }
+        
+        selectProduct(product, qty);
     }
 }
 
