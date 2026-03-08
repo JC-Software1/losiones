@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,231 +25,533 @@
             --light-gray: #f8f9fa;
             --medium-gray: #6c757d;
             --border: #e9ecef;
-            --shadow: 0 2px 4px rgba(0,0,0,0.08);
-            --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
             --radius: 8px;
             --radius-lg: 12px;
             --transition: all 0.3s ease;
         }
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{
-            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-            background:linear-gradient(135deg,var(--cream) 0%,var(--light-gray) 100%);
-            color:var(--dark);
-            line-height:1.5;
-            min-height:100vh;
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
         }
-        .container{max-width:100%;margin:0 auto;padding:16px;min-height:100vh}
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--cream) 0%, var(--light-gray) 100%);
+            color: var(--dark);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 16px;
+            min-height: 100vh
+        }
 
         /* ---------- Header ---------- */
-        .header{
-            background:var(--white);
-            border-radius:var(--radius-lg);
-            padding:20px;
-            margin-bottom:20px;
-            box-shadow:var(--shadow);
-            text-align:center;
-            border:1px solid var(--border);
+        .header {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border: 1px solid var(--border);
         }
-        .header h1{color:var(--primary);font-size:24px;font-weight:600;margin-bottom:8px}
-        .header p{color:var(--medium-gray);font-size:14px}
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px
+        }
+
+        .header p {
+            color: var(--medium-gray);
+            font-size: 14px
+        }
 
         /* ---------- Menú (mismo que historial) ---------- */
-        .menu-toggle{
-            position:fixed;
-            top:18px;
-            right:18px;
-            width:52px;
-            height:52px;
-            background:var(--white);
-            border:1px solid var(--border);
-            border-radius:50%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            cursor:pointer;
-            box-shadow:var(--shadow);
-            z-index:10010;
-            transition:transform .22s ease,background .22s ease,color .22s ease;
+        .menu-toggle {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            width: 52px;
+            height: 52px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 10010;
+            transition: transform .22s ease, background .22s ease, color .22s ease;
         }
-        .menu-toggle:active{transform:scale(.98)}
-        .menu-toggle:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
-        .menu-toggle .menu-icon{font-size:18px;color:var(--primary)}
-        .menu-toggle.open{background:var(--primary);color:var(--white)}
-        .menu-toggle.open .menu-icon{color:var(--white)}
-        .backdrop{
-            position:fixed;
-            inset:0;
-            background:rgba(0,0,0,.45);
-            z-index:10005;
-            opacity:0;
-            visibility:hidden;
-            transition:opacity .28s ease,visibility .28s;
+
+        .menu-toggle:active {
+            transform: scale(.98)
         }
-        .backdrop.show{opacity:1;visibility:visible}
-        .menu-items{
-            position:fixed;
-            left:50%;
-            top:50%;
-            transform:translate(-50%,-50%) scale(.92);
-            min-width:260px;
-            max-width:92%;
-            background:linear-gradient(180deg,var(--white),#fbfbfb);
-            border-radius:14px;
-            padding:14px;
-            box-shadow:0 20px 50px rgba(0,0,0,.22);
-            z-index:10010;
-            opacity:0;
-            visibility:hidden;
-            transition:transform .32s cubic-bezier(.2,.9,.2,1),opacity .22s ease,visibility .22s;
-            border:1px solid rgba(0,0,0,.03);
-            overflow:hidden;
-            outline:0;
+
+        .menu-toggle:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover)
         }
-        .menu-items.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
-        .menu-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px}
-        .menu-head strong{color:var(--primary);font-size:14px}
-        .menu-close{background:transparent;border:none;font-size:16px;color:var(--medium-gray);cursor:pointer;padding:6px;border-radius:8px}
-        .menu-close:hover{color:var(--danger);transform:translateY(-2px)}
-        .menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;align-items:stretch}
-        .menu-link{display:flex;gap:10px;align-items:center;justify-content:center;text-decoration:none;background:linear-gradient(180deg,#fff,var(--light-gray));padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.03);box-shadow:0 6px 18px rgba(0,0,0,.06);transition:transform .18s ease,box-shadow .18s ease,background .18s;color:var(--primary);font-weight:600;font-size:13px;text-align:center}
-        .menu-link i{font-size:16px;width:20px;text-align:center;color:var(--accent)}
-        .menu-link span{display:inline-block;line-height:1}
-        .menu-link:hover{transform:translateY(-6px);box-shadow:0 14px 36px rgba(0,0,0,.14);background:linear-gradient(180deg,var(--accent),#2a86c8);color:#fff}
-        .menu-link:hover i{color:#fff}
-        @media (max-width:420px){.menu-grid{grid-template-columns:repeat(3,1fr);gap:8px}.menu-link{padding:8px;font-size:12px;border-radius:8px}}
-        .menu-link{opacity:0;transform:translateY(6px) scale(.995);transition-property:transform,opacity,box-shadow,background;transition-duration:320ms}
-        .menu-items.show .menu-link{opacity:1;transform:translateY(0) scale(1)}
-        .menu-link:focus{outline:3px solid rgba(52,152,219,.18);transform:translateY(-3px)}
+
+        .menu-toggle .menu-icon {
+            font-size: 18px;
+            color: var(--primary)
+        }
+
+        .menu-toggle.open {
+            background: var(--primary);
+            color: var(--white)
+        }
+
+        .menu-toggle.open .menu-icon {
+            color: var(--white)
+        }
+
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .45);
+            z-index: 10005;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .28s ease, visibility .28s;
+        }
+
+        .backdrop.show {
+            opacity: 1;
+            visibility: visible
+        }
+
+        .menu-items {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(.92);
+            min-width: 260px;
+            max-width: 92%;
+            background: linear-gradient(180deg, var(--white), #fbfbfb);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .22);
+            z-index: 10010;
+            opacity: 0;
+            visibility: hidden;
+            transition: transform .32s cubic-bezier(.2, .9, .2, 1), opacity .22s ease, visibility .22s;
+            border: 1px solid rgba(0, 0, 0, .03);
+            overflow: hidden;
+            outline: 0;
+        }
+
+        .menu-items.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1)
+        }
+
+        .menu-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px
+        }
+
+        .menu-head strong {
+            color: var(--primary);
+            font-size: 14px
+        }
+
+        .menu-close {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            color: var(--medium-gray);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px
+        }
+
+        .menu-close:hover {
+            color: var(--danger);
+            transform: translateY(-2px)
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            align-items: stretch
+        }
+
+        .menu-link {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            background: linear-gradient(180deg, #fff, var(--light-gray));
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 0, 0, .03);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+            transition: transform .18s ease, box-shadow .18s ease, background .18s;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center
+        }
+
+        .menu-link i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+            color: var(--accent)
+        }
+
+        .menu-link span {
+            display: inline-block;
+            line-height: 1
+        }
+
+        .menu-link:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, .14);
+            background: linear-gradient(180deg, var(--accent), #2a86c8);
+            color: #fff
+        }
+
+        .menu-link:hover i {
+            color: #fff
+        }
+
+        @media (max-width:420px) {
+            .menu-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px
+            }
+
+            .menu-link {
+                padding: 8px;
+                font-size: 12px;
+                border-radius: 8px
+            }
+        }
+
+        .menu-link {
+            opacity: 0;
+            transform: translateY(6px) scale(.995);
+            transition-property: transform, opacity, box-shadow, background;
+            transition-duration: 320ms
+        }
+
+        .menu-items.show .menu-link {
+            opacity: 1;
+            transform: translateY(0) scale(1)
+        }
+
+        .menu-link:focus {
+            outline: 3px solid rgba(52, 152, 219, .18);
+            transform: translateY(-3px)
+        }
 
         /* ---------- Formulario ---------- */
-        .form-container{
-            background:var(--white);
-            border-radius:var(--radius-lg);
-            padding:24px;
-            margin-bottom:24px;
-            box-shadow:var(--shadow);
-            border:1px solid var(--border);
+        .form-container {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
         }
-        .form-container h2{
-            color:var(--primary);
-            margin-bottom:20px;
-            font-size:20px;
-            text-align:center;
+
+        .form-container h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 20px;
+            text-align: center;
         }
-        .form-grid{
-            display:grid;
-            gap:16px;
-            margin-bottom:20px;
+
+        .form-grid {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 20px;
         }
-        @media (min-width:768px){
-            .form-grid{grid-template-columns:repeat(3,1fr)}
+
+        @media (min-width:768px) {
+            .form-grid {
+                grid-template-columns: repeat(3, 1fr)
+            }
         }
-        .form-group{position:relative}
-        .form-group label{
-            display:block;
-            margin-bottom:6px;
-            font-weight:600;
-            color:var(--primary);
-            font-size:14px;
+
+        .form-group {
+            position: relative
         }
-        .form-group input{
-            width:100%;
-            padding:12px 16px;
-            border:1px solid var(--border);
-            border-radius:var(--radius);
-            background:var(--white);
-            font-size:16px;
-            transition:var(--transition);
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 14px;
         }
-        .form-group input:focus{
-            outline:0;
-            border-color:var(--accent);
-            box-shadow:0 0 0 3px rgba(52,152,219,.1);
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 16px;
+            transition: var(--transition);
         }
-        .form-actions{
-            display:flex;
-            gap:12px;
-            justify-content:center;
-            flex-wrap:wrap;
+
+        .form-group input:focus {
+            outline: 0;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, .1);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         /* ---------- Estadísticas de productos ---------- */
-        .product-stats{
-            display:grid;
-            grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-            gap:16px;
-            margin-bottom:24px;
+        .product-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
         }
-        .stat-card{
-            background:var(--white);
-            border-radius:var(--radius-lg);
-            padding:20px;
-            box-shadow:var(--shadow);
-            border:1px solid var(--border);
-            text-align:center;
-            transition:var(--transition);
+
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            text-align: center;
+            transition: var(--transition);
         }
-        .stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
-        .stat-icon{
-            width:48px;
-            height:48px;
-            border-radius:50%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            margin:0 auto 12px;
-            font-size:20px;
-            color:var(--white);
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover)
         }
-        .stat-icon.primary{background:linear-gradient(135deg,var(--primary),var(--secondary))}
-        .stat-icon.success{background:linear-gradient(135deg,var(--success),#2ecc71)}
-        .stat-icon.accent{background:linear-gradient(135deg,var(--accent),#2980b9)}
-        .stat-value{font-size:20px;font-weight:700;color:var(--primary);margin-bottom:4px}
-        .stat-label{font-size:14px;color:var(--medium-gray)}
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 20px;
+            color: var(--white);
+        }
+
+        .stat-icon.primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary))
+        }
+
+        .stat-icon.success {
+            background: linear-gradient(135deg, var(--success), #2ecc71)
+        }
+
+        .stat-icon.accent {
+            background: linear-gradient(135deg, var(--accent), #2980b9)
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--medium-gray)
+        }
 
         /* ---------- Búsqueda ---------- */
-        .search-container{margin:20px 0;display:flex;gap:12px;flex-wrap:wrap}
-        .search-input{flex:1;min-width:200px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--white);font-size:16px;transition:var(--transition)}
-        .search-input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px rgba(52,152,219,.1)}
+        .search-container {
+            margin: 20px 0;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 16px;
+            transition: var(--transition)
+        }
+
+        .search-input:focus {
+            outline: 0;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, .1)
+        }
 
         /* ---------- Listado de productos ---------- */
-        .products-grid{display:grid;gap:16px;margin-bottom:24px}
-        .product-card{background:var(--white);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border);transition:var(--transition);position:relative}
-        .product-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
-        
-        /* Producto sin stock */
-        .product-card.out-of-stock{opacity:0.6;background:#f8f9fa;border-color:#e74c3c}
-        .product-card.out-of-stock:hover{transform:none;box-shadow:var(--shadow)}
-        
-        /* Producto con stock bajo */
-        .product-card.low-stock{border-color:#e67e22}
-        .product-card.low-stock .meta-item{color:#e67e22}
-        
-        /* Overlay para reinventar */
-        .no-stock-overlay{text-align:center;padding:10px 0;border-top:1px dashed #ddd;margin-top:10px}
-        
-        .product-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
-        .product-info h3{font-size:16px;font-weight:600;color:var(--primary);margin-bottom:4px}
-        .product-info p{font-size:14px;color:var(--medium-gray)}
-        .product-prices{text-align:right}
-        .cost-price{font-size:14px;color:var(--medium-gray);margin-bottom:4px}
-        .sale-price{font-size:18px;font-weight:700;color:var(--success)}
-        .profit-margin{
-            background:linear-gradient(135deg,rgba(39,174,96,0.1),rgba(46,204,113,0.05));
-            border:1px solid rgba(39,174,96,0.2);
-            border-radius:var(--radius);
-            padding:8px 12px;
-            margin:12px 0;
-            text-align:center;
+        .products-grid {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px
         }
-        .margin-text{font-size:14px;color:var(--success);font-weight:600}
-        .product-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:16px 0}
-        .meta-item{display:flex;align-items:center;gap:8px;font-size:14px}
-        .meta-item i{width:16px;color:var(--accent)}
-        .meta-value{font-weight:600;color:var(--primary)}
-        .product-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
-        .product-actions .btn{flex:1;min-width:80px;justify-content:center}
+
+        .product-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+            position: relative
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover)
+        }
+
+        /* Producto sin stock */
+        .product-card.out-of-stock {
+            opacity: 0.6;
+            background: #f8f9fa;
+            border-color: #e74c3c
+        }
+
+        .product-card.out-of-stock:hover {
+            transform: none;
+            box-shadow: var(--shadow)
+        }
+
+        /* Producto con stock bajo */
+        .product-card.low-stock {
+            border-color: #e67e22
+        }
+
+        .product-card.low-stock .meta-item {
+            color: #e67e22
+        }
+
+        /* Overlay para reinventar */
+        .no-stock-overlay {
+            text-align: center;
+            padding: 10px 0;
+            border-top: 1px dashed #ddd;
+            margin-top: 10px
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px
+        }
+
+        .product-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px
+        }
+
+        .product-info p {
+            font-size: 14px;
+            color: var(--medium-gray)
+        }
+
+        .product-prices {
+            text-align: right
+        }
+
+        .cost-price {
+            font-size: 14px;
+            color: var(--medium-gray);
+            margin-bottom: 4px
+        }
+
+        .sale-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--success)
+        }
+
+        .profit-margin {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.1), rgba(46, 204, 113, 0.05));
+            border: 1px solid rgba(39, 174, 96, 0.2);
+            border-radius: var(--radius);
+            padding: 8px 12px;
+            margin: 12px 0;
+            text-align: center;
+        }
+
+        .margin-text {
+            font-size: 14px;
+            color: var(--success);
+            font-weight: 600
+        }
+
+        .product-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin: 16px 0
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px
+        }
+
+        .meta-item i {
+            width: 16px;
+            color: var(--accent)
+        }
+
+        .meta-value {
+            font-weight: 600;
+            color: var(--primary)
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap
+        }
+
+        .product-actions .btn {
+            flex: 1;
+            min-width: 80px;
+            justify-content: center
+        }
 
         /* ---------- Botones de acción ---------- */
         .btn {
@@ -265,572 +568,699 @@
             transition: var(--transition);
             box-shadow: var(--shadow);
         }
-        .btn i {font-size: 15px;}
+
+        .btn i {
+            font-size: 15px;
+        }
+
         .btn-primary {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: var(--white);
         }
+
         .btn-primary:hover {
             background: linear-gradient(135deg, var(--secondary), var(--primary));
             box-shadow: var(--shadow-hover);
             transform: translateY(-2px);
         }
+
         .btn-success {
             background: linear-gradient(135deg, var(--success), #2ecc71);
             color: var(--white);
         }
+
         .btn-success:hover {
             background: linear-gradient(135deg, #2ecc71, var(--success));
             box-shadow: var(--shadow-hover);
             transform: translateY(-2px);
         }
+
         .btn-warning {
             background: linear-gradient(135deg, var(--warning), #e67e22);
             color: var(--white);
         }
+
         .btn-warning:hover {
             background: linear-gradient(135deg, #e67e22, var(--warning));
             box-shadow: var(--shadow-hover);
             transform: translateY(-2px);
         }
+
         .btn-danger {
             background: linear-gradient(135deg, var(--danger), #c0392b);
             color: var(--white);
         }
+
         .btn-danger:hover {
             background: linear-gradient(135deg, #c0392b, var(--danger));
             box-shadow: var(--shadow-hover);
             transform: translateY(-2px);
         }
-        .btn:active {transform: scale(0.96);}
+
+        .btn:active {
+            transform: scale(0.96);
+        }
 
         /* ---------- Estados vacíos / loading ---------- */
-        .empty-state{text-align:center;padding:40px 20px;color:var(--medium-gray)}
-        .empty-state i{font-size:48px;margin-bottom:16px;opacity:.5}
-        .loading{display:flex;justify-content:center;align-items:center;padding:40px}
-        .spinner{width:32px;height:32px;border:3px solid var(--light-gray);border-top:3px solid var(--accent);border-radius:50%;animation:spin 1s linear infinite}
-        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--medium-gray)
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: .5
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--light-gray);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
 
         /* ---------- Responsive ---------- */
-        @media (max-width:768px){
-            .container{padding:12px}
-            .form-actions{flex-direction:column}
-            .form-actions .btn{flex:none}
-            .product-actions{flex-direction:column}
-            .product-actions .btn{flex:none}
-            .product-stats{grid-template-columns:1fr}
-            .product-meta{grid-template-columns:1fr}
+        @media (max-width:768px) {
+            .container {
+                padding: 12px
+            }
+
+            .form-actions {
+                flex-direction: column
+            }
+
+            .form-actions .btn {
+                flex: none
+            }
+
+            .product-actions {
+                flex-direction: column
+            }
+
+            .product-actions .btn {
+                flex: none
+            }
+
+            .product-stats {
+                grid-template-columns: 1fr
+            }
+
+            .product-meta {
+                grid-template-columns: 1fr
+            }
         }
-        .hidden{display:none !important}
 
-          #barcodeModal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.55);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  }
-  #barcodeModal.show { display: flex; }
-  .barcode-box {
-    background: #fff;
-    padding: 24px;
-    border-radius: 12px;
-    text-align: center;
-    box-shadow: 0 8px 30px rgba(0,0,0,.25);
-  }
-  .barcode-box canvas { display: block; margin: 12px auto; }
-  .barcode-box h3 { margin-bottom: 8px; color: var(--primary); }
-  .barcode-box p { margin: 4px 0; font-size: 14px; color: var(--medium-gray); }
+        .hidden {
+            display: none !important
+        }
 
-  /* ============================
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        #barcodeModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        #barcodeModal.show {
+            display: flex;
+        }
+
+        .barcode-box {
+            background: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+        }
+
+        .barcode-box canvas {
+            display: block;
+            margin: 12px auto;
+        }
+
+        .barcode-box h3 {
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        .barcode-box p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: var(--medium-gray);
+        }
+
+        /* ============================
   Mejora visual y espaciado del menu-toggle
   ============================ */
 
-/* Forzar máximo alto y scroll interno para evitar que el contenido se amontone */
-.menu-items {
-  max-width: 92%;
-  width: auto;
-  max-height: calc(100vh - 120px); /* deja espacio arriba/abajo */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 18px; /* más aire alrededor */
-  gap: 12px;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.2);
-}
-
-/* Cabecera del menú: más separación y tipografía clara */
-.menu-head {
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-.menu-head strong {
-  font-size:15px;
-  letter-spacing:0.2px;
-  color:var(--primary);
-}
-
-/* Ajuste del grid: columnas y gaps más generosos */
-.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr)); /* 2 columnas limpias por defecto */
-  gap: 12px;
-  align-items:stretch;
-}
-
-/* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
-@media (max-width:420px) {
-  .menu-grid { grid-template-columns: 1fr; gap: 10px; }
-}
-
-/* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
-.menu-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: flex-start;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: linear-gradient(180deg,#fff,var(--light-gray));
-  border: 1px solid rgba(0,0,0,0.04);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-  min-height: 52px;           /* mayor área táctil */
-  align-items: center;
-  white-space: normal;
-}
-
-/* Icono: tamaño y contenedor */
-.menu-link i {
-  font-size: 18px;
-  width: 30px;
-  height: 30px;
-  line-height: 30px;
-  text-align: center;
-  color: var(--accent);
-  background: rgba(52,152,219,0.06);
-  border-radius: 8px;
-  flex: 0 0 30px;
-}
-
-/* Texto: permitir varias líneas y buen espaciado */
-.menu-link span {
-  display: block;
-  text-align: left;
-  line-height: 1.1;
-  font-size: 14px;
-  color: var(--primary);
-  margin: 0;
-  word-break: break-word;
-}
-
-/* Estado hover / focus: contraste y sombra más suave */
-.menu-link:hover,
-.menu-link:focus {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.12);
-  background: linear-gradient(180deg,var(--accent),#2a86c8);
-  color: #fff;
-}
-.menu-link:hover i,
-.menu-link:focus i { color: #fff; background: transparent; }
-
-/* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
-.menu-grid .btn-go-liquidation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  min-height: 52px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  text-decoration: none;
-}
-
-/* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
-.menu-items .menu-grid { margin-top: 6px; }
-
-/* indicadores de focus accesible */
-.menu-link:focus { outline: 3px solid rgba(52,152,219,0.12); }
-
-/* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
-.menu-link > *:first-child { margin-left: 2px; }
-
-/* Si quieres dividir opciones por secciones (opcional) */
-.menu-section {
-  display:block;
-  margin-bottom: 8px;
-}
-.menu-section + .menu-section { border-top: 1px dashed rgba(0,0,0,0.04); padding-top: 8px; margin-top: 8px; }
-
-/* Scrollbar más discreto (WebKit) */
-.menu-items::-webkit-scrollbar { width: 8px; }
-.menu-items::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 6px; }
-
-
-/* ========== MODAL DE CÓDIGOS MASIVOS ========== */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-    padding: 20px;
-    overflow-y: auto;
-}
-
-.modal-overlay.show {
-    display: flex;
-}
-
-.bulk-barcode-container {
-    background: var(--white);
-    border-radius: var(--radius-lg);
-    max-width: 900px;
-    width: 100%;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 2px solid var(--border);
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-
-.modal-header h2 {
-    color: var(--white);
-    font-size: 22px;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.btn-close {
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition);
-}
-
-.btn-close:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: rotate(90deg);
-}
-
-.modal-body {
-    padding: 24px;
-    overflow-y: auto;
-    flex: 1;
-}
-
-.filter-section,
-.barcode-config,
-.product-selection {
-    background: var(--light-gray);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.filter-section h3,
-.barcode-config h3,
-.product-selection h3 {
-    color: var(--primary);
-    font-size: 18px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.filter-grid,
-.config-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-.filter-group,
-.config-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.filter-group label,
-.config-group label {
-    font-weight: 600;
-    color: var(--primary);
-    margin-bottom: 6px;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.filter-group select,
-.config-group input {
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--white);
-    font-size: 15px;
-    transition: var(--transition);
-}
-
-.filter-group select:focus,
-.config-group input:focus {
-    outline: 0;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-}
-
-.search-box {
-    margin-top: 16px;
-}
-
-.search-box input {
-    width: 100%;
-    padding: 12px 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--white);
-    font-size: 16px;
-}
-
-.layout-options {
-    display: flex;
-    gap: 20px;
-    margin-top: 16px;
-}
-
-.layout-options label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: var(--white);
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    cursor: pointer;
-    transition: var(--transition);
-    font-weight: 600;
-    color: var(--primary);
-}
-
-.layout-options label:hover {
-    border-color: var(--accent);
-    background: rgba(52, 152, 219, 0.05);
-}
-
-.layout-options input[type="radio"] {
-    margin: 0;
-}
-
-.layout-options input[type="radio"]:checked + i {
-    color: var(--accent);
-}
-
-.selection-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.selection-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 13px;
-}
-
-.product-list {
-    max-height: 300px;
-    overflow-y: auto;
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
-}
-
-.product-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-bottom: 1px solid var(--border);
-    transition: var(--transition);
-}
-
-.product-item:hover {
-    background: var(--light-gray);
-}
-
-.product-item:last-child {
-    border-bottom: none;
-}
-
-.product-item input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-}
-
-.product-item-info {
-    flex: 1;
-}
-
-.product-item-name {
-    font-weight: 600;
-    color: var(--primary);
-    margin-bottom: 4px;
-}
-
-.product-item-details {
-    font-size: 13px;
-    color: var(--medium-gray);
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.selection-summary {
-    margin-top: 16px;
-    padding: 12px;
-    background: var(--white);
-    border: 2px solid var(--accent);
-    border-radius: var(--radius);
-    text-align: center;
-    font-weight: 600;
-    color: var(--accent);
-}
-
-.modal-footer {
-    padding: 20px 24px;
-    border-top: 2px solid var(--border);
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-}
-
-.btn-lg {
-    padding: 14px 28px;
-    font-size: 16px;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .bulk-barcode-container {
-        max-height: 95vh;
-    }
-
-    .filter-grid,
-    .config-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .layout-options {
-        flex-direction: column;
-    }
-
-    .selection-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .modal-footer {
-        flex-direction: column;
-    }
-
-    .modal-footer button {
-        width: 100%;
-    }
-}
-
-/* Scrollbar personalizado */
-.product-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-.product-list::-webkit-scrollbar-track {
-    background: var(--light-gray);
-    border-radius: 4px;
-}
-
-.product-list::-webkit-scrollbar-thumb {
-    background: var(--medium-gray);
-    border-radius: 4px;
-}
-
-.product-list::-webkit-scrollbar-thumb:hover {
-    background: var(--primary);
-}
-
-/* Agregar después de los estilos del config-group */
-
-.config-group small {
-    font-size: 11px;
-    color: var(--medium-gray);
-    font-weight: 400;
-    margin-top: 4px;
-    font-style: italic;
-}
-
-.layout-preview {
-    margin-top: 16px;
-    padding: 12px;
-    background: rgba(52, 152, 219, 0.1);
-    border-left: 4px solid var(--accent);
-    border-radius: 4px;
-    font-size: 14px;
-}
-
-.layout-preview strong {
-    color: var(--primary);
-}
-
-.layout-preview span {
-    color: var(--accent);
-    font-weight: 600;
-}
-
+        /* Forzar máximo alto y scroll interno para evitar que el contenido se amontone */
+        .menu-items {
+            max-width: 92%;
+            width: auto;
+            max-height: calc(100vh - 120px);
+            /* deja espacio arriba/abajo */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 18px;
+            /* más aire alrededor */
+            gap: 12px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Cabecera del menú: más separación y tipografía clara */
+        .menu-head {
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .menu-head strong {
+            font-size: 15px;
+            letter-spacing: 0.2px;
+            color: var(--primary);
+        }
+
+        /* Ajuste del grid: columnas y gaps más generosos */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            /* 2 columnas limpias por defecto */
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        /* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
+        @media (max-width:420px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+        }
+
+        /* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: flex-start;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #fff, var(--light-gray));
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+            min-height: 52px;
+            /* mayor área táctil */
+            align-items: center;
+            white-space: normal;
+        }
+
+        /* Icono: tamaño y contenedor */
+        .menu-link i {
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            color: var(--accent);
+            background: rgba(52, 152, 219, 0.06);
+            border-radius: 8px;
+            flex: 0 0 30px;
+        }
+
+        /* Texto: permitir varias líneas y buen espaciado */
+        .menu-link span {
+            display: block;
+            text-align: left;
+            line-height: 1.1;
+            font-size: 14px;
+            color: var(--primary);
+            margin: 0;
+            word-break: break-word;
+        }
+
+        /* Estado hover / focus: contraste y sombra más suave */
+        .menu-link:hover,
+        .menu-link:focus {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+            background: linear-gradient(180deg, var(--accent), #2a86c8);
+            color: #fff;
+        }
+
+        .menu-link:hover i,
+        .menu-link:focus i {
+            color: #fff;
+            background: transparent;
+        }
+
+        /* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
+        .menu-grid .btn-go-liquidation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            min-height: 52px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            text-decoration: none;
+        }
+
+        /* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
+        .menu-items .menu-grid {
+            margin-top: 6px;
+        }
+
+        /* indicadores de focus accesible */
+        .menu-link:focus {
+            outline: 3px solid rgba(52, 152, 219, 0.12);
+        }
+
+        /* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
+        .menu-link>*:first-child {
+            margin-left: 2px;
+        }
+
+        /* Si quieres dividir opciones por secciones (opcional) */
+        .menu-section {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .menu-section+.menu-section {
+            border-top: 1px dashed rgba(0, 0, 0, 0.04);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        /* Scrollbar más discreto (WebKit) */
+        .menu-items::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .menu-items::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 6px;
+        }
+
+
+        /* ========== MODAL DE CÓDIGOS MASIVOS ========== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .bulk-barcode-container {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 2px solid var(--border);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        }
+
+        .modal-header h2 {
+            color: var(--white);
+            font-size: 22px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .btn-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .filter-section,
+        .barcode-config,
+        .product-selection {
+            background: var(--light-gray);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filter-section h3,
+        .barcode-config h3,
+        .product-selection h3 {
+            color: var(--primary);
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-grid,
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .filter-group,
+        .config-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label,
+        .config-group label {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 6px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-group select,
+        .config-group input {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        .filter-group select:focus,
+        .config-group input:focus {
+            outline: 0;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .search-box {
+            margin-top: 16px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 16px;
+        }
+
+        .layout-options {
+            display: flex;
+            gap: 20px;
+            margin-top: 16px;
+        }
+
+        .layout-options label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--white);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .layout-options label:hover {
+            border-color: var(--accent);
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .layout-options input[type="radio"] {
+            margin: 0;
+        }
+
+        .layout-options input[type="radio"]:checked+i {
+            color: var(--accent);
+        }
+
+        .selection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .selection-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        .product-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+        }
+
+        .product-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .product-item:hover {
+            background: var(--light-gray);
+        }
+
+        .product-item:last-child {
+            border-bottom: none;
+        }
+
+        .product-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .product-item-info {
+            flex: 1;
+        }
+
+        .product-item-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .product-item-details {
+            font-size: 13px;
+            color: var(--medium-gray);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .selection-summary {
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--white);
+            border: 2px solid var(--accent);
+            border-radius: var(--radius);
+            text-align: center;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .modal-footer {
+            padding: 20px 24px;
+            border-top: 2px solid var(--border);
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .btn-lg {
+            padding: 14px 28px;
+            font-size: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .bulk-barcode-container {
+                max-height: 95vh;
+            }
+
+            .filter-grid,
+            .config-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .layout-options {
+                flex-direction: column;
+            }
+
+            .selection-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .modal-footer {
+                flex-direction: column;
+            }
+
+            .modal-footer button {
+                width: 100%;
+            }
+        }
+
+        /* Scrollbar personalizado */
+        .product-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .product-list::-webkit-scrollbar-track {
+            background: var(--light-gray);
+            border-radius: 4px;
+        }
+
+        .product-list::-webkit-scrollbar-thumb {
+            background: var(--medium-gray);
+            border-radius: 4px;
+        }
+
+        .product-list::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        /* Agregar después de los estilos del config-group */
+
+        .config-group small {
+            font-size: 11px;
+            color: var(--medium-gray);
+            font-weight: 400;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .layout-preview {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid var(--accent);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .layout-preview strong {
+            color: var(--primary);
+        }
+
+        .layout-preview span {
+            color: var(--accent);
+            font-weight: 600;
+        }
     </style>
 </head>
+
 <body>
 
     <!-- ========== MENÚ (igual que historial) ========== -->
@@ -850,7 +1280,8 @@
             <a href="liquidados.html" class="menu-link"><i class="fas fa-check-circle"></i><span>Liquidados</span></a>
             <a href="inventario.html" class="menu-link"><i class="fas fa-warehouse"></i><span>Inventario</span></a>
             <a href="vendidos.html" class="menu-link"><i class="fas fa-tags"></i><span>Productos vendidos</span></a>
-                        <center><a href="recibos.html" class="menu-link"><i class="fas fa-file-alt"></i><span>Recibos</span></a></center>
+            <center><a href="recibos.html" class="menu-link"><i class="fas fa-file-alt"></i><span>Recibos</span></a>
+            </center>
 
         </div>
     </nav>
@@ -892,7 +1323,7 @@
             <h2 id="formTitle"><i class="fas fa-plus-circle"></i> Agregar Nuevo Producto</h2>
             <form id="productForm">
                 <input type="hidden" id="productId" value="" />
-                
+
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="productName">
@@ -902,27 +1333,27 @@
                     </div>
 
                     <div class="form-group">
-    <label for="productCategory"><i class="fas fa-folder"></i> Categoría</label>
-    <input type="text" id="productCategory" required placeholder="Ej: Ropa, Calzado, Accesorios">
-</div>
+                        <label for="productCategory"><i class="fas fa-folder"></i> Categoría</label>
+                        <input type="text" id="productCategory" required placeholder="Ej: Ropa, Calzado, Accesorios">
+                    </div>
 
-<div class="form-group">
-    <label for="productBrand"><i class="fas fa-tag"></i> Marca</label>
-    <input type="text" id="productBrand" required placeholder="Ej: Nike, BASTONI, Samsung">
-</div>
+                    <div class="form-group">
+                        <label for="productBrand"><i class="fas fa-tag"></i> Marca</label>
+                        <input type="text" id="productBrand" required placeholder="Ej: Nike, BASTONI, Samsung">
+                    </div>
 
-<div class="form-group">
-    <label for="productSize"><i class="fas fa-ruler"></i> Talla (opcional)</label>
-    <input type="text" id="productSize" placeholder="Ej: M, 42, L, Único">
-</div>
-                    
+                    <div class="form-group">
+                        <label for="productSize"><i class="fas fa-ruler"></i> Talla (opcional)</label>
+                        <input type="text" id="productSize" placeholder="Ej: M, 42, L, Único">
+                    </div>
+
                     <div class="form-group">
                         <label for="costPrice">
                             <i class="fas fa-coins"></i> Precio de Costo
                         </label>
                         <input type="number" id="costPrice" required placeholder="0" step="0.01" min="0">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="salePrice">
                             <i class="fas fa-money-bill-wave"></i> Precio de Venta
@@ -932,10 +1363,10 @@
                 </div>
 
                 <div class="form-group">
-    <label for="productQuantity"><i class="fas fa-boxes"></i> Stock</label>
-    <input type="number" id="productQuantity" placeholder="Ej: 5" min="1" value="1">
-</div>
-                
+                    <label for="productQuantity"><i class="fas fa-boxes"></i> Stock</label>
+                    <input type="number" id="productQuantity" placeholder="Ej: 5" min="1" value="1">
+                </div>
+
                 <div class="form-actions">
                     <button type="button" class="btn btn-success" id="saveProduct">
                         <i class="fas fa-save"></i> Guardar
@@ -954,16 +1385,16 @@
         </div>
 
         <!-- ---------- BÚSQUEDA Y ACCIONES ---------- -->
-<!-- ---------- BÚSQUEDA Y ACCIONES ---------- -->
-<div class="search-container">
-    <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar productos por nombre...">
-    <button class="btn btn-success" onclick="exportProductsData()" title="Exportar datos a CSV">
-        <i class="fas fa-download"></i> Exportar
-    </button>
-<button class="btn btn-warning" onclick="openBulkBarcodeModal()" title="Generar códigos QR masivos">
-    <i class="fas fa-qrcode"></i> QR Masivos
-</button>
-</div>
+        <!-- ---------- BÚSQUEDA Y ACCIONES ---------- -->
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar productos por nombre...">
+            <button class="btn btn-success" onclick="exportProductsData()" title="Exportar datos a CSV">
+                <i class="fas fa-download"></i> Exportar
+            </button>
+            <button class="btn btn-warning" onclick="openBulkBarcodeModal()" title="Generar códigos QR masivos">
+                <i class="fas fa-qrcode"></i> QR Masivos
+            </button>
+        </div>
 
         <!-- ---------- LISTADO DE PRODUCTOS ---------- -->
         <div class="products-grid" id="productsList">
@@ -973,167 +1404,169 @@
         </div>
     </div>
 
-<div id="barcodeModal" onclick="closeBarcodeModal(event)">
-  <div class="barcode-box" onclick="event.stopPropagation()">
-    <h3 id="barcodeTitle">Código QR</h3>
-    <p id="barcodePrice"></p>
-    <div id="barcodeCanvas" style="display:flex;justify-content:center;"></div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
-      <button class="btn btn-primary" onclick="downloadBarcode()">
-        <i class="fas fa-download"></i> Descargar QR
-      </button>
-      <button class="btn btn-secondary" onclick="closeBarcodeModal()">
-        <i class="fas fa-times"></i> Cerrar
-      </button>
+    <div id="barcodeModal" onclick="closeBarcodeModal(event)">
+        <div class="barcode-box" onclick="event.stopPropagation()">
+            <h3 id="barcodeTitle">Código QR</h3>
+            <p id="barcodePrice"></p>
+            <div id="barcodeCanvas" style="display:flex;justify-content:center;"></div>
+            <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+                <button class="btn btn-primary" onclick="downloadBarcode()">
+                    <i class="fas fa-download"></i> Descargar QR
+                </button>
+                <button class="btn btn-secondary" onclick="closeBarcodeModal()">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
 
     <!-- ---------- SCRIPTS ---------- -->
-<script type="module" src="productos.js"></script>
+    <script type="module" src="productos.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/minified/html5-qrcode.min.js"></script>
 
-<!-- Modal para códigos de barras masivos -->
-<div id="bulkBarcodeModal" class="modal-overlay" onclick="closeBulkBarcodeModal(event)">
-    <div class="bulk-barcode-container" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <h2><i class="fas fa-barcode"></i> Generar Códigos de Barras Masivos</h2>
-            <button class="btn-close" onclick="closeBulkBarcodeModal()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
+    <!-- Modal para códigos de barras masivos -->
+    <div id="bulkBarcodeModal" class="modal-overlay" onclick="closeBulkBarcodeModal(event)">
+        <div class="bulk-barcode-container" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2><i class="fas fa-barcode"></i> Generar Códigos de Barras Masivos</h2>
+                <button class="btn-close" onclick="closeBulkBarcodeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
 
-        <div class="modal-body">
-            <!-- Filtros -->
-            <div class="filter-section">
-                <h3><i class="fas fa-filter"></i> Filtrar Productos</h3>
-                
-                <div class="filter-grid">
-                    <div class="filter-group">
-                        <label><i class="fas fa-folder"></i> Categoría</label>
-                        <select id="bulkCategory" onchange="updateBulkSelection()">
-                            <option value="">Todas las categorías</option>
-                        </select>
+            <div class="modal-body">
+                <!-- Filtros -->
+                <div class="filter-section">
+                    <h3><i class="fas fa-filter"></i> Filtrar Productos</h3>
+
+                    <div class="filter-grid">
+                        <div class="filter-group">
+                            <label><i class="fas fa-folder"></i> Categoría</label>
+                            <select id="bulkCategory" onchange="updateBulkSelection()">
+                                <option value="">Todas las categorías</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label><i class="fas fa-tag"></i> Marca</label>
+                            <select id="bulkBrand" onchange="updateBulkSelection()">
+                                <option value="">Todas las marcas</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label><i class="fas fa-ruler"></i> Talla</label>
+                            <select id="bulkSize" onchange="updateBulkSelection()">
+                                <option value="">Todas las tallas</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="filter-group">
-                        <label><i class="fas fa-tag"></i> Marca</label>
-                        <select id="bulkBrand" onchange="updateBulkSelection()">
-                            <option value="">Todas las marcas</option>
-                        </select>
-                    </div>
-
-                    <div class="filter-group">
-                        <label><i class="fas fa-ruler"></i> Talla</label>
-                        <select id="bulkSize" onchange="updateBulkSelection()">
-                            <option value="">Todas las tallas</option>
-                        </select>
+                    <div class="search-box">
+                        <input type="text" id="bulkSearch" placeholder="Buscar por nombre..."
+                            oninput="updateBulkSelection()">
                     </div>
                 </div>
 
-                <div class="search-box">
-                    <input type="text" id="bulkSearch" placeholder="Buscar por nombre..." oninput="updateBulkSelection()">
+                <!-- Configuración de códigos -->
+                <!-- Configuración de códigos -->
+                <div class="barcode-config">
+                    <h3><i class="fas fa-cog"></i> Configuración de Códigos</h3>
+
+                    <div class="config-grid">
+                        <div class="config-group">
+                            <label><i class="fas fa-arrows-alt-h"></i> Ancho de línea (RECOMENDADO)</label>
+                            <input type="number" id="barcodeWidth" value="0.2" min="0.02" max="0.15" step="0.01">
+                            <small>Grosor de las barras (cm)</small>
+                        </div>
+
+                        <div class="config-group">
+                            <label><i class="fas fa-arrows-alt-v"></i> Alto del código (RECOMENDADO)</label>
+                            <input type="number" id="barcodeHeight" value="3" min="1" max="5" step="0.5">
+                            <small>Altura en centímetros</small>
+                        </div>
+
+                        <div class="config-group">
+                            <label><i class="fas fa-text-height"></i> Tamaño texto (RECOMENDADO)</label>
+                            <input type="number" id="barcodeFontSize" value="0.5" min="0.2" max="0.8" step="0.1">
+                            <small>Tamaño de fuente (cm)</small>
+                        </div>
+
+                        <div class="config-group">
+                            <label><i class="fas fa-border-style"></i> Margen (RECOMENDADO)</label>
+                            <input type="number" id="barcodeMargin" value="0.4" min="0" max="2" step="0.1">
+                            <small>Espacio alrededor (cm)</small>
+                        </div>
+
+                        <div class="config-group">
+                            <label><i class="fas fa-expand"></i> Ancho total (RECOMENDADO)</label>
+                            <input type="number" id="barcodeContainerWidth" value="6.5" min="3" max="10" step="0.5">
+                            <small>Ancho del contenedor (cm)</small>
+                        </div>
+
+                        <div class="config-group">
+                            <label><i class="fas fa-arrows-alt-v"></i> Alto total (RECOMENDADO)</label>
+                            <input type="number" id="barcodeContainerHeight" value="4.5" min="2" max="8" step="0.5">
+                            <small>Alto del contenedor (cm)</small>
+                        </div>
+                    </div>
+
+                    <div class="layout-options">
+                        <label>
+                            <input type="radio" name="layout" value="grid" checked onchange="updateLayoutPreview()">
+                            <i class="fas fa-th"></i> Cuadrícula
+                        </label>
+                        <label>
+                            <input type="radio" name="layout" value="list" onchange="updateLayoutPreview()">
+                            <i class="fas fa-list"></i> Lista vertical
+                        </label>
+                        <label>
+                            <input type="radio" name="layout" value="compact" onchange="updateLayoutPreview()">
+                            <i class="fas fa-th-large"></i> Compacto (más por hoja)
+                        </label>
+                    </div>
+
+                    <div class="layout-preview" id="layoutPreview">
+                        <strong>Vista previa:</strong> <span id="previewText">3 columnas × N filas (A4)</span>
+                    </div>
+                </div>
+                <!-- Selección de productos -->
+                <div class="product-selection">
+                    <div class="selection-header">
+                        <h3><i class="fas fa-check-square"></i> Productos Seleccionados</h3>
+                        <div class="selection-actions">
+                            <button class="btn btn-sm btn-primary" onclick="selectAllBulk()">
+                                <i class="fas fa-check-double"></i> Seleccionar Todos
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="deselectAllBulk()">
+                                <i class="fas fa-times"></i> Deseleccionar Todos
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="bulkProductList" class="product-list">
+                        <!-- Se llenará dinámicamente -->
+                    </div>
+
+                    <div class="selection-summary">
+                        <span id="selectedCount">0 productos seleccionados</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Configuración de códigos -->
-<!-- Configuración de códigos -->
-<div class="barcode-config">
-    <h3><i class="fas fa-cog"></i> Configuración de Códigos</h3>
-    
-    <div class="config-grid">
-        <div class="config-group">
-            <label><i class="fas fa-arrows-alt-h"></i> Ancho de línea (RECOMENDADO)</label>
-            <input type="number" id="barcodeWidth" value="0.2" min="0.02" max="0.15" step="0.01">
-            <small>Grosor de las barras (cm)</small>
-        </div>
-
-        <div class="config-group">
-            <label><i class="fas fa-arrows-alt-v"></i> Alto del código (RECOMENDADO)</label>
-            <input type="number" id="barcodeHeight" value="3" min="1" max="5" step="0.5">
-            <small>Altura en centímetros</small>
-        </div>
-
-        <div class="config-group">
-            <label><i class="fas fa-text-height"></i> Tamaño texto (RECOMENDADO)</label>
-            <input type="number" id="barcodeFontSize" value="0.5" min="0.2" max="0.8" step="0.1">
-            <small>Tamaño de fuente (cm)</small>
-        </div>
-
-        <div class="config-group">
-            <label><i class="fas fa-border-style"></i> Margen (RECOMENDADO)</label>
-            <input type="number" id="barcodeMargin" value="0.4" min="0" max="2" step="0.1">
-            <small>Espacio alrededor (cm)</small>
-        </div>
-
-        <div class="config-group">
-            <label><i class="fas fa-expand"></i> Ancho total (RECOMENDADO)</label>
-            <input type="number" id="barcodeContainerWidth" value="6.5" min="3" max="10" step="0.5">
-            <small>Ancho del contenedor (cm)</small>
-        </div>
-
-        <div class="config-group">
-            <label><i class="fas fa-arrows-alt-v"></i> Alto total (RECOMENDADO)</label>
-            <input type="number" id="barcodeContainerHeight" value="4.5" min="2" max="8" step="0.5">
-            <small>Alto del contenedor (cm)</small>
-        </div>
-    </div>
-
-    <div class="layout-options">
-        <label>
-            <input type="radio" name="layout" value="grid" checked onchange="updateLayoutPreview()">
-            <i class="fas fa-th"></i> Cuadrícula
-        </label>
-        <label>
-            <input type="radio" name="layout" value="list" onchange="updateLayoutPreview()">
-            <i class="fas fa-list"></i> Lista vertical
-        </label>
-        <label>
-            <input type="radio" name="layout" value="compact" onchange="updateLayoutPreview()">
-            <i class="fas fa-th-large"></i> Compacto (más por hoja)
-        </label>
-    </div>
-
-    <div class="layout-preview" id="layoutPreview">
-        <strong>Vista previa:</strong> <span id="previewText">3 columnas × N filas (A4)</span>
-    </div>
-</div>
-            <!-- Selección de productos -->
-            <div class="product-selection">
-                <div class="selection-header">
-                    <h3><i class="fas fa-check-square"></i> Productos Seleccionados</h3>
-                    <div class="selection-actions">
-                        <button class="btn btn-sm btn-primary" onclick="selectAllBulk()">
-                            <i class="fas fa-check-double"></i> Seleccionar Todos
-                        </button>
-                        <button class="btn btn-sm btn-secondary" onclick="deselectAllBulk()">
-                            <i class="fas fa-times"></i> Deseleccionar Todos
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="bulkProductList" class="product-list">
-                    <!-- Se llenará dinámicamente -->
-                </div>
-
-                <div class="selection-summary">
-                    <span id="selectedCount">0 productos seleccionados</span>
-                </div>
+            <div class="modal-footer">
+                <button class="btn btn-success btn-lg" onclick="generateBulkBarcodes()">
+                    <i class="fas fa-download"></i> Generar y Descargar
+                </button>
+                <button class="btn btn-secondary btn-lg" onclick="closeBulkBarcodeModal()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
             </div>
         </div>
-
-        <div class="modal-footer">
-            <button class="btn btn-success btn-lg" onclick="generateBulkBarcodes()">
-                <i class="fas fa-download"></i> Generar y Descargar
-            </button>
-            <button class="btn btn-secondary btn-lg" onclick="closeBulkBarcodeModal()">
-                <i class="fas fa-times"></i> Cancelar
-            </button>
-        </div>
     </div>
-</div>
 
 </body>
+
 </html>

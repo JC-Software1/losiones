@@ -12,21 +12,21 @@ async function verificarPermisosYOcultarElementos() {
         const token = getToken();
         const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
         const { permisosDetallados, tipo } = response;
-        
+
         const btnLiquidacion = document.querySelector('.btn-go-liquidation');
-        
+
         if (!btnLiquidacion) return;
-        
+
         // Admins y jefes: acceso completo
         if (tipo === 2 || tipo === 3) {
             btnLiquidacion.style.display = 'inline-flex';
             return;
         }
-        
+
         // Vendedores sin permiso
         if (!permisosDetallados?.realizarLiquidacion) {
             btnLiquidacion.style.display = 'none';
-            
+
             // Opcional: agregar mensaje informativo
             const mensaje = document.createElement('div');
             mensaje.style.cssText = `
@@ -45,14 +45,14 @@ async function verificarPermisosYOcultarElementos() {
                 <i class="fas fa-info-circle"></i>
                 <span>No tienes permiso para realizar liquidaciones. Contacta a tu supervisor.</span>
             `;
-            
+
             // Insertar después del grid de menú
             const menuGrid = document.querySelector('.menu-grid');
             if (menuGrid) {
                 menuGrid.after(mensaje);
             }
         }
-        
+
     } catch (error) {
         console.error('Error verificando permisos:', error);
         // Por seguridad, ocultar si hay error
@@ -66,7 +66,7 @@ function verificarModoAdmin() {
     const adminMode = sessionStorage.getItem('adminMode');
     const vendedorId = sessionStorage.getItem('vendedorId');
     const vendedorName = sessionStorage.getItem('vendedorName');
-    
+
     if (adminMode === 'true' && vendedorId) {
         // Mostrar banner de modo administrador
         mostrarBannerAdmin(vendedorName);
@@ -96,7 +96,7 @@ function mostrarBannerAdmin(nombreVendedor) {
         font-weight: 600;
         font-size: 14px;
     `;
-    
+
     banner.innerHTML = `
         <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -119,9 +119,9 @@ function mostrarBannerAdmin(nombreVendedor) {
             Salir
         </button>
     `;
-    
+
     document.body.insertBefore(banner, document.body.firstChild);
-    
+
     // Ajustar padding del contenido principal
     const container = document.querySelector('.container');
     if (container) {
@@ -130,7 +130,7 @@ function mostrarBannerAdmin(nombreVendedor) {
 }
 
 // Función global para salir del modo admin
-window.salirModoAdmin = function() {
+window.salirModoAdmin = function () {
     sessionStorage.removeItem('adminMode');
     sessionStorage.removeItem('vendedorId');
     sessionStorage.removeItem('vendedorName');
@@ -186,26 +186,26 @@ async function loadSales(query = "", filterDay = "") {
             const productMatch = sale.productName.toLowerCase().includes(query.toLowerCase());
             const searchMatch = clientMatch || productMatch;
 
-let dayMatch = true;
-if (filterDay) {
-    // Normalizamos el tipo de plan seleccionado
-    const planType = document.getElementById('dayFilterType').value; // "semanal", "quincenal", "mensual"
+            let dayMatch = true;
+            if (filterDay) {
+                // Normalizamos el tipo de plan seleccionado
+                const planType = document.getElementById('dayFilterType').value; // "semanal", "quincenal", "mensual"
 
-    // Normalizamos los días de la venta
-    const rawDays = (() => {
-        if (typeof sale.paymentDays === 'string') return sale.paymentDays.split(',').map(d => d.trim());
-        if (Array.isArray(sale.paymentDays)) return sale.paymentDays.map(d => String(d).trim());
-        return [];
-    })();
+                // Normalizamos los días de la venta
+                const rawDays = (() => {
+                    if (typeof sale.paymentDays === 'string') return sale.paymentDays.split(',').map(d => d.trim());
+                    if (Array.isArray(sale.paymentDays)) return sale.paymentDays.map(d => String(d).trim());
+                    return [];
+                })();
 
-    // Verificamos frecuencia exacta
-    const freqMatch = (sale.paymentFrequency || '').toLowerCase() === planType;
+                // Verificamos frecuencia exacta
+                const freqMatch = (sale.paymentFrequency || '').toLowerCase() === planType;
 
-    // Verificamos que el día esté en la lista
-    const dayIncluded = rawDays.includes(filterDay.trim());
+                // Verificamos que el día esté en la lista
+                const dayIncluded = rawDays.includes(filterDay.trim());
 
-    dayMatch = freqMatch && dayIncluded;
-}
+                dayMatch = freqMatch && dayIncluded;
+            }
 
             return searchMatch && dayMatch;
         });
@@ -276,12 +276,12 @@ if (filterDay) {
   <div class="progress-text">${paymentPercentage.toFixed(0)}% pagado</div>
   <!-- ⭐ NUEVO: valor de cada cuota -->
 ${(() => {
-    const installmentValue = sale.paymentPerInstallment || 
-        Math.ceil((sale.price - (sale.advancePayment || 0)) / (parseInt(sale.installments) || 1));
-    return `<div style="margin-top:6px;font-size:13px;color:#7f8c8d">
+                    const installmentValue = sale.paymentPerInstallment ||
+                        Math.ceil((sale.price - (sale.advancePayment || 0)) / (parseInt(sale.installments) || 1));
+                    return `<div style="margin-top:6px;font-size:13px;color:#7f8c8d">
         Cuota: $${installmentValue.toLocaleString('es-CO')} ${sale.paymentFrequency}
     </div>`;
-})()}
+                })()}
 </div>
                 </div>
                 <div class="progress-bar">
@@ -313,55 +313,55 @@ ${(() => {
 
 /* ----------  FILTRO INTELIGENTE DE DÍAS  ---------- */
 function buildSmartDayFilter(sales) {
-  const semana = new Set();   // Lunes, Martes…
-  const quin   = new Set();   // "1 y 15", "2 y 16"…
-  const mens   = new Set();   // 1, 2, 3…
+    const semana = new Set();   // Lunes, Martes…
+    const quin = new Set();   // "1 y 15", "2 y 16"…
+    const mens = new Set();   // 1, 2, 3…
 
-  sales.forEach(s => {
-    const freq = s.paymentFrequency || 'mensual';
-    const days = (s.paymentDays || []).map(d => String(d).trim());
+    sales.forEach(s => {
+        const freq = s.paymentFrequency || 'mensual';
+        const days = (s.paymentDays || []).map(d => String(d).trim());
 
-    if (freq === 'semanal') {
-      days.forEach(d => semana.add(d));
-    } else if (freq === 'quincenal') {
-      days.forEach(d => quin.add(d));
-    } else {
-      days.forEach(d => mens.add(d));
-    }
-  });
-
-  // Guardamos para usar después
-  window.availableFilters = {
-    semanal: Array.from(semana).sort(),
-    quincenal: Array.from(quin).sort(),
-    mensual: Array.from(mens).sort((a, b) => a - b)
-  };
-
-  // Poblamos el segundo select apenas cambie el primero
-  const typeSel = document.getElementById('dayFilterType');
-  const daySel  = document.getElementById('dayFilterInput');
-
-  typeSel.onchange = () => {
-    daySel.innerHTML = '<option value="">Elegí un día</option>';
-    daySel.disabled  = false;
-    const tipo = typeSel.value;
-    if (!tipo) { daySel.disabled = true; return; }
-
-    const opciones = window.availableFilters[tipo] || [];
-    opciones.forEach(d => {
-      const opt       = document.createElement('option');
-      opt.value       = d;
-      opt.textContent = d;
-      daySel.appendChild(opt);
+        if (freq === 'semanal') {
+            days.forEach(d => semana.add(d));
+        } else if (freq === 'quincenal') {
+            days.forEach(d => quin.add(d));
+        } else {
+            days.forEach(d => mens.add(d));
+        }
     });
-  };
+
+    // Guardamos para usar después
+    window.availableFilters = {
+        semanal: Array.from(semana).sort(),
+        quincenal: Array.from(quin).sort(),
+        mensual: Array.from(mens).sort((a, b) => a - b)
+    };
+
+    // Poblamos el segundo select apenas cambie el primero
+    const typeSel = document.getElementById('dayFilterType');
+    const daySel = document.getElementById('dayFilterInput');
+
+    typeSel.onchange = () => {
+        daySel.innerHTML = '<option value="">Elegí un día</option>';
+        daySel.disabled = false;
+        const tipo = typeSel.value;
+        if (!tipo) { daySel.disabled = true; return; }
+
+        const opciones = window.availableFilters[tipo] || [];
+        opciones.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            daySel.appendChild(opt);
+        });
+    };
 }
 
 // ✅ NUEVA FUNCIÓN: Limpiar filtro de día
-window.clearDayFilter = function() {
+window.clearDayFilter = function () {
     document.getElementById('dayFilterInput').value = '';
     loadSales(searchInput.value.trim(), '');
-};searchInput.addEventListener
+}; searchInput.addEventListener
 
 
 /* ---------- detalles ---------- */
@@ -386,11 +386,11 @@ async function deleteSale(id) {
 
 /* ---------- editar ---------- */
 async function editSale(sale) {
-    inputId.value         = sale._id;
-    inputClient.value     = sale.clientName;
-    inputProduct.value    = sale.productName;
-    inputDate.value       = new Date(sale.saleDate).toISOString().split('T')[0];
-    inputPrice.value      = sale.price;
+    inputId.value = sale._id;
+    inputClient.value = sale.clientName;
+    inputProduct.value = sale.productName;
+    inputDate.value = new Date(sale.saleDate).toISOString().split('T')[0];
+    inputPrice.value = sale.price;
     inputInstallments.value = sale.installments;
 
     // ✅ Cargar tipo de pago
@@ -410,7 +410,7 @@ async function editSale(sale) {
     // ✅ Habilitar edición de precio total y abono
     inputPrice.removeAttribute('readonly');
     inputAdvance.removeAttribute('readonly');
-    
+
     if (document.getElementById("clientAddress")) {
         document.getElementById("clientAddress").value = sale.clientAddress || '';
     }
@@ -427,7 +427,7 @@ async function editSale(sale) {
 
     // ✅ Cargar productos EXACTOS de la venta con sus precios originales
     selectedProducts = [];
-    
+
     const productNames = sale.productName.split(',').map(p => p.trim()).filter(Boolean);
     const pricePerProduct = Math.round(sale.price / productNames.length);
 
@@ -446,10 +446,10 @@ async function editSale(sale) {
         const token = getToken();
         try {
             const allProducts = await apiFetch('/products', 'GET', null, token);
-            
+
             productNames.forEach(name => {
                 const foundInInventory = allProducts.find(p => p.name.trim() === name);
-                
+
                 selectedProducts.push({
                     _id: foundInInventory?._id || `temp_${Date.now()}_${Math.random()}`,
                     name: name,
@@ -497,7 +497,8 @@ async function loadProductsForSelect() {
 
         select.innerHTML = '<option value="">Selecciona un producto</option>';
 
-        products.filter(p => !p.sold).forEach(product => {
+        // Cambiamos el filtro de !p.sold a p.stock > 0
+        products.filter(p => (p.stock || 0) > 0).forEach(product => {
             const option = document.createElement("option");
             option.value = product.name;
             option.textContent = `${product.name} ($${product.salePrice.toLocaleString()})`;
@@ -523,14 +524,14 @@ async function saveSale() {
     }
 
     // ---------- Recolección SEGURA de campos ----------
-    const clientName    = String(inputClient.value.trim());
-    const productName   = selectedProducts.map(p => p.name).join(', ');
-    const saleDate      = inputDate.value; // yyyy-mm-dd
-    const price         = Number(inputPrice.value);
-    const paymentType   = String(document.getElementById('paymentType').value) || 'cuotas';
-    const installments  = String(inputInstallments.value.trim() || "Sin cuotas");
-    const advance       = Number(inputAdvance.value) || 0;
-    const address       = String(document.getElementById("clientAddress").value.trim() || "Sin dirección");
+    const clientName = String(inputClient.value.trim());
+    const productName = selectedProducts.map(p => p.name).join(', ');
+    const saleDate = inputDate.value; // yyyy-mm-dd
+    const price = Number(inputPrice.value);
+    const paymentType = String(document.getElementById('paymentType').value) || 'cuotas';
+    const installments = String(inputInstallments.value.trim() || "Sin cuotas");
+    const advance = Number(inputAdvance.value) || 0;
+    const address = String(document.getElementById("clientAddress").value.trim() || "Sin dirección");
 
     // ---------- Validación FINAL ----------
     if (!clientName || !productName || !saleDate || !price) {
@@ -538,29 +539,29 @@ async function saveSale() {
         return;
     }
 
-// Extraer número de cuotas (permite decimales con 2 dígitos: 4,44 → 4.44)
-const cuotasMatch = installments.match(/^\d+(?:[.,]\d{1,2})?/);
-const numberOfInstallments = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 1;
+    // Extraer número de cuotas (permite decimales con 2 dígitos: 4,44 → 4.44)
+    const cuotasMatch = installments.match(/^\d+(?:[.,]\d{1,2})?/);
+    const numberOfInstallments = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 1;
 
-// ✅ CORREGIDO: Priorizar el valor manual del usuario
-const manualInstallmentAmount = parseFloat(document.getElementById('installmentAmount').value);
-const remaining = price - advance;
+    // ✅ CORREGIDO: Priorizar el valor manual del usuario
+    const manualInstallmentAmount = parseFloat(document.getElementById('installmentAmount').value);
+    const remaining = price - advance;
 
-let paymentPerInstallment;
-if (manualInstallmentAmount > 0) {
-    // Si el usuario ingresó un valor manualmente, calcular cuotas CON DECIMALES
-    const exactCuotas = remaining / manualInstallmentAmount;
-    paymentPerInstallment = manualInstallmentAmount;
-    
-    // Actualizar el campo de cuotas con el valor decimal
-    document.getElementById('installments').value = exactCuotas.toFixed(2);
-} else {
-    // Si no, calcular automáticamente
-    paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
-}
+    let paymentPerInstallment;
+    if (manualInstallmentAmount > 0) {
+        // Si el usuario ingresó un valor manualmente, calcular cuotas CON DECIMALES
+        const exactCuotas = remaining / manualInstallmentAmount;
+        paymentPerInstallment = manualInstallmentAmount;
+
+        // Actualizar el campo de cuotas con el valor decimal
+        document.getElementById('installments').value = exactCuotas.toFixed(2);
+    } else {
+        // Si no, calcular automáticamente
+        paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
+    }
     // ---------- Construcción del objeto limpio ----------
     const isContado = paymentType === 'contado';
-    
+
     // Construir array de productos con cantidades
     const productsWithQty = selectedProducts.map(p => ({
         productId: p._id,
@@ -571,7 +572,7 @@ if (manualInstallmentAmount > 0) {
         category: p.category,
         size: p.size
     }));
-    
+
     const saleData = {
         clientName,
         productName,
@@ -584,10 +585,10 @@ if (manualInstallmentAmount > 0) {
         numberOfInstallments,        // ⭐ NUEVO
         paymentPerInstallment,       // ⭐ NUEVO
         // ✅ NUEVO: Guardar plan de pago en campos separados
-        ...(collectPaymentPlan() || { 
-            paymentFrequency: 'mensual', 
-            paymentDays: [], 
-            paymentDaysText: '' 
+        ...(collectPaymentPlan() || {
+            paymentFrequency: 'mensual',
+            paymentDays: [],
+            paymentDaysText: ''
         }),
         paymentDays: selectedPaymentPlan.days.join(', '), // "Miércoles, Viernes"
         // ✅ Si es contado, marcar como totalmente pagado
@@ -633,7 +634,7 @@ if (manualInstallmentAmount > 0) {
         // Recargar y mostrar recibo
         await loadSales();
         await loadProductsForDropdown();
-        
+
         try {
             showReceiptModal(receiptData);
         } catch (err) {
@@ -651,13 +652,13 @@ if (manualInstallmentAmount > 0) {
 async function updateSale() {
     const id = inputId.value;
     const plan = collectPaymentPlan();
-    
+
     const paymentType = document.getElementById('paymentType').value || 'cuotas';
     const installments = inputInstallments.value.trim();
     const price = parseFloat(inputPrice.value);
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     const isContado = paymentType === 'contado';
-    
+
     // Extraer número de cuotas (permite decimales)
     const cuotasMatch = installments.match(/^\d+(?:[.,]\d{1,2})?/);
     const numberOfInstallments = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 1;
@@ -674,7 +675,7 @@ async function updateSale() {
     } else {
         paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
     }
-    
+
     const saleData = {
         clientName: inputClient.value.trim(),
         clientAddress: document.getElementById("clientAddress").value.trim(),
@@ -689,13 +690,13 @@ async function updateSale() {
         paidAmount: isContado ? price : advance,
         remainingBalance: isContado ? 0 : (price - advance),
         updateProductPrices: true,
-        ...(plan || { 
-            paymentFrequency: 'mensual', 
-            paymentDays: [], 
-            paymentDaysText: '' 
+        ...(plan || {
+            paymentFrequency: 'mensual',
+            paymentDays: [],
+            paymentDaysText: ''
         })
     };
-    
+
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "PUT", saleData, token);
@@ -713,8 +714,8 @@ let isAddingPayment = false;
 async function addPayment() {
     if (isAddingPayment) return;
     isAddingPayment = true;
-    
-    const id   = document.getElementById("paymentModal").dataset.saleId;
+
+    const id = document.getElementById("paymentModal").dataset.saleId;
     const amount = parseFloat(document.getElementById("paymentAmount").value);
     const date = document.getElementById("paymentDate").value;
 
@@ -735,7 +736,7 @@ async function addPayment() {
                 return;
             }
         }
-        
+
         document.getElementById("paymentModal").classList.remove("show");
         cancelUpdate();
         loadSales();
@@ -755,13 +756,13 @@ function cancelUpdate() {
     btnDelete.classList.add("hidden");
     btnAddPayment.classList.add("hidden");
     document.getElementById("paymentSection").style.display = "none";
-    
+
     // ✅ NUEVO: Limpiar selección de días
     selectedPaymentPlan = { type: '', days: [] };
     paymentPlanType.value = '';
     paymentDaysContainer.style.display = 'none';
     updateSelectedDaysDisplay();
-    
+
     form.reset();
 }
 
@@ -796,43 +797,43 @@ function openPaymentModal(saleId) {
 let isUpdating = false;
 
 // ✅ Listener para cambio de número de cuotas
-document.getElementById('installments').addEventListener('input', function() {
+document.getElementById('installments').addEventListener('input', function () {
     if (isUpdating) return;
-    
+
     const total = parseFloat(document.getElementById('price').value) || 0;
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     const cuotas = parseFloat(this.value.replace(',', '.')) || 0;
-    
+
     if (cuotas <= 0) {
         document.getElementById('installmentAmount').value = '';
         return;
     }
-    
+
     const remaining = total - advance;
     const perInstallment = Math.ceil(remaining / cuotas);
-    
+
     isUpdating = true;
     document.getElementById('installmentAmount').value = perInstallment;
     isUpdating = false;
 });
 
 // ✅ Listener para cambio de valor por cuota (CON DECIMALES)
-document.getElementById('installmentAmount').addEventListener('input', function() {
+document.getElementById('installmentAmount').addEventListener('input', function () {
     if (isUpdating) return;
-    
+
     const total = parseFloat(document.getElementById('price').value) || 0;
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     const perInstallment = parseFloat(this.value) || 0;
-    
+
     if (perInstallment <= 0) {
         document.getElementById('installments').value = '';
         return;
     }
-    
+
     const remaining = total - advance;
     // ✅ CAMBIO CLAVE: No redondear, usar decimales
     const exactCuotas = remaining / perInstallment;
-    
+
     isUpdating = true;
     document.getElementById('installments').value = exactCuotas.toFixed(2);
     isUpdating = false;
@@ -841,16 +842,16 @@ document.getElementById('installmentAmount').addEventListener('input', function(
 // ✅ Listener para cambio de abono inicial
 document.getElementById('advancePayment').addEventListener('input', () => {
     if (isUpdating) return;
-    
+
     const installmentValue = parseFloat(document.getElementById('installmentAmount').value);
-    
+
     if (installmentValue > 0) {
         const total = parseFloat(document.getElementById('price').value) || 0;
         const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
         const remaining = total - advance;
         // ✅ CAMBIO CLAVE: Usar decimales
         const exactCuotas = remaining / installmentValue;
-        
+
         isUpdating = true;
         document.getElementById('installments').value = exactCuotas.toFixed(2);
         isUpdating = false;
@@ -860,22 +861,22 @@ document.getElementById('advancePayment').addEventListener('input', () => {
 });
 
 // ✅ Función para mostrar/ocultar campos de crédito según tipo de pago
-window.togglePaymentFields = function() {
+window.togglePaymentFields = function () {
     const paymentType = document.getElementById('paymentType').value;
     const creditFields = document.querySelectorAll('.credit-fields');
     const advancePaymentInput = document.getElementById('advancePayment');
     const priceInput = document.getElementById('price');
-    
+
     if (paymentType === 'contado') {
         // Ocultar campos de crédito
         creditFields.forEach(field => {
             field.style.display = 'none';
         });
-        
+
         // Auto-fill: Pago inicial = Precio total
         const totalPrice = parseFloat(priceInput.value) || 0;
         advancePaymentInput.value = totalPrice;
-        
+
         // Limpiar cuotas
         document.getElementById('installments').value = '';
         document.getElementById('installmentAmount').value = '';
@@ -885,7 +886,7 @@ window.togglePaymentFields = function() {
         creditFields.forEach(field => {
             field.style.display = '';
         });
-        
+
         // Limpiar pago inicial
         advancePaymentInput.value = '';
     }
@@ -921,16 +922,16 @@ btnAddPayment.addEventListener("click", async () => {
 // Al cargar la página
 document.addEventListener("DOMContentLoaded", async () => {
     verificarModoAdmin();
-    
+
     // Verificar permisos ANTES de mostrar la interfaz
     await verificarPermisosYOcultarElementos();
-    
+
     const today = new Date().toLocaleDateString('en-CA');
     document.getElementById("saleDate").value = today;
     loadSales();
     loadProductsForSelect();
     loadProductsForDropdown();
-    
+
     loadProductsForDropdown();
     document.addEventListener("click", (e) => {
         const dropdown = document.getElementById("productDropdown");
@@ -972,8 +973,8 @@ async function loadProductsForDropdown() {
         const searchInput = document.getElementById("productSearchInput");
         const listContainer = document.getElementById("productDropdownList");
 
-        // ✅ Filtrar solo productos NO vendidos
-        const availableProducts = products.filter(p => !p.sold);
+        // ✅ Filtrar solo productos con stock disponible
+        const availableProducts = products.filter(p => (p.stock || 0) > 0);
 
         // Render inicial
         function renderProducts(filtered = availableProducts) {
@@ -1036,18 +1037,18 @@ async function loadProductsForDropdown() {
 
                 item.addEventListener("click", (e) => {
                     if (e.target.closest('.btn-edit-dropdown')) return;
-                    
+
                     // Solicitar cantidad
                     const availableStock = product.stock || 1;
                     let qty = prompt(`Cantidad de "${product.name}" (Stock disponible: ${availableStock}):`, "1");
                     if (qty === null) return;
-                    
+
                     qty = parseInt(qty) || 1;
                     if (qty <= 0) {
                         alert("La cantidad debe ser mayor a 0");
                         return;
                     }
-                    
+
                     selectProduct(product, qty);
                 });
 
@@ -1079,7 +1080,7 @@ function selectProduct(product, quantity = 1) {
     const availableStock = product.stock || 1;
     const existingProduct = selectedProducts.find(p => p._id === product._id);
     const currentQty = existingProduct ? existingProduct.quantity : 0;
-    
+
     if (currentQty + quantity > availableStock) {
         alert(`Stock insuficiente. Disponible: ${availableStock}, ya seleccionado: ${currentQty}`);
         return;
@@ -1096,14 +1097,14 @@ function selectProduct(product, quantity = 1) {
 }
 
 function renderSelectedProducts() {
-  const container = document.getElementById("selectedProducts");
-  container.innerHTML = "";
+    const container = document.getElementById("selectedProducts");
+    container.innerHTML = "";
 
-  selectedProducts.forEach((product, index) => {
-    const qty = product.quantity || 1;
-    const tag = document.createElement("div");
-    tag.className = "selected-product-tag";
-    tag.innerHTML = `
+    selectedProducts.forEach((product, index) => {
+        const qty = product.quantity || 1;
+        const tag = document.createElement("div");
+        tag.className = "selected-product-tag";
+        tag.innerHTML = `
       <div class="product-name">${product.name} <span style="color: #e74c3c; font-weight: bold;">(x${qty})</span></div>
       <div class="product-bottom">
         <span class="product-price">$${(product.salePrice * qty).toLocaleString('es-CO')}</span>
@@ -1115,22 +1116,22 @@ function renderSelectedProducts() {
       </div>
     `;
 
-    // listeners
-    tag.querySelector('.edit-qty').addEventListener('click', e => {
-      const idx = parseInt(e.currentTarget.dataset.index);
-      editProductQuantity(idx);
-    });
-    tag.querySelector('.edit-price').addEventListener('click', e => {
-      const idx = parseInt(e.currentTarget.dataset.index);
-      editProductPrice(idx);
-    });
-    tag.querySelector('.remove').addEventListener('click', e => {
-      const idx = parseInt(e.currentTarget.dataset.index);
-      removeSelectedProduct(idx);
-    });
+        // listeners
+        tag.querySelector('.edit-qty').addEventListener('click', e => {
+            const idx = parseInt(e.currentTarget.dataset.index);
+            editProductQuantity(idx);
+        });
+        tag.querySelector('.edit-price').addEventListener('click', e => {
+            const idx = parseInt(e.currentTarget.dataset.index);
+            editProductPrice(idx);
+        });
+        tag.querySelector('.remove').addEventListener('click', e => {
+            const idx = parseInt(e.currentTarget.dataset.index);
+            removeSelectedProduct(idx);
+        });
 
-    container.appendChild(tag);
-  });
+        container.appendChild(tag);
+    });
 }
 
 async function editProductPrice(index) {
@@ -1145,7 +1146,7 @@ async function editProductPrice(index) {
     if (newPrice === null || newPrice.trim() === '') return;
 
     const parsedPrice = parseFloat(newPrice);
-    
+
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
         alert('❌ Precio inválido. Debe ser un número mayor a 0.');
         return;
@@ -1153,14 +1154,14 @@ async function editProductPrice(index) {
 
     // Guardar precio original para revertir si falla
     const originalPrice = product.salePrice;
-    
+
     // Actualizar en el array local
     selectedProducts[index].salePrice = parsedPrice;
 
     // Actualizar en la base de datos
     try {
         const token = getToken();
-        
+
         // ✅ CORREGIDO: Preparar datos completos del producto
         const updateData = {
             name: product.name,
@@ -1170,9 +1171,9 @@ async function editProductPrice(index) {
             brand: product.brand || 'Sin marca',
             size: product.size || null
         };
-        
+
         console.log('📤 Enviando actualización de producto:', updateData);
-        
+
         await apiFetch(`/products/${product._id}`, 'PUT', updateData, token);
 
         // Mostrar notificación de éxito
@@ -1184,11 +1185,11 @@ async function editProductPrice(index) {
 
     } catch (error) {
         console.error('Error al actualizar precio del producto:', error);
-        
+
         // Revertir el cambio local si falló el guardado
         selectedProducts[index].salePrice = originalPrice;
         renderSelectedProducts();
-        
+
         // Mostrar error más descriptivo
         let errorMessage = 'No se pudo actualizar el precio';
         if (error.message) {
@@ -1201,22 +1202,22 @@ async function editProductPrice(index) {
 function editProductQuantity(index) {
     const product = selectedProducts[index];
     const availableStock = product.stock || 1;
-    
+
     let newQty = prompt(`Cantidad de "${product.name}" (Stock disponible: ${availableStock}):`, product.quantity || 1);
     if (newQty === null || newQty.trim() === '') return;
-    
+
     newQty = parseInt(newQty) || 1;
-    
+
     if (newQty <= 0) {
         alert('❌ Cantidad inválida. Debe ser mayor a 0.');
         return;
     }
-    
+
     if (newQty > availableStock) {
         alert(`❌ Stock insuficiente. Disponible: ${availableStock}`);
         return;
     }
-    
+
     selectedProducts[index].quantity = newQty;
     renderSelectedProducts();
     updateTotalPrice();
@@ -1239,7 +1240,7 @@ function showPriceUpdateNotification(productName, newPrice) {
         animation: slideInRight 0.3s ease;
         max-width: 300px;
     `;
-    
+
     notification.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-check-circle" style="font-size: 20px;"></i>
@@ -1250,7 +1251,7 @@ function showPriceUpdateNotification(productName, newPrice) {
             </div>
         </div>
     `;
-    
+
     // Agregar animación CSS si no existe
     if (!document.getElementById('priceUpdateAnimation')) {
         const style = document.createElement('style');
@@ -1279,9 +1280,9 @@ function showPriceUpdateNotification(productName, newPrice) {
         `;
         document.head.appendChild(style);
     }
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.style.animation = 'slideOutRight 0.3s ease';
         setTimeout(() => notification.remove(), 300);
@@ -1291,24 +1292,24 @@ function showPriceUpdateNotification(productName, newPrice) {
 
 function updateTotalPrice() {
     if (isUpdating) return;
-    
+
     const total = selectedProducts.reduce((sum, p) => sum + (p.salePrice * (p.quantity || 1)), 0);
     document.getElementById("price").value = total;
 
     const advance = parseFloat(document.getElementById('advancePayment').value) || 0;
     const installmentsText = document.getElementById('installments').value.trim();
-    
+
     // ✅ CAMBIO: Extraer número decimal de cuotas
     const cuotasMatch = installmentsText.match(/^\d+(?:[.,]\d{1,2})?/);
     const cuotas = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 0;
-    
+
     const remaining = total - advance;
-    
+
     if (cuotas > 0) {
         const currentInstallmentValue = parseFloat(document.getElementById('installmentAmount').value);
-        
+
         isUpdating = true;
-        
+
         if (!currentInstallmentValue || currentInstallmentValue === 0) {
             const perInstallment = Math.ceil(remaining / cuotas);
             document.getElementById('installmentAmount').value = perInstallment;
@@ -1317,7 +1318,7 @@ function updateTotalPrice() {
             const exactCuotas = remaining / currentInstallmentValue;
             document.getElementById('installments').value = exactCuotas.toFixed(2);
         }
-        
+
         isUpdating = false;
     }
 }
@@ -1338,7 +1339,7 @@ function toggleDropdown() {
     trigger.classList.toggle("active");
 }
 
-window.editProductFromDropdown = function(productId) {
+window.editProductFromDropdown = function (productId) {
     window.location.href = `productos.html?edit=${productId}`;
 };
 
@@ -1370,8 +1371,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Menú nuevo
     const menuToggle = document.getElementById("menuToggle");
-    const menuItems  = document.getElementById("menuItems");
-    const backdrop   = document.getElementById("backdrop");
+    const menuItems = document.getElementById("menuItems");
+    const backdrop = document.getElementById("backdrop");
     if (menuToggle && menuItems && backdrop) {
         menuToggle.addEventListener("click", () => {
             menuItems.classList.toggle("show");
@@ -1385,10 +1386,10 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ---------- conectar modal nuevo ---------- */
-const modal   = document.getElementById("paymentModal");
+const modal = document.getElementById("paymentModal");
 const btnConf = document.getElementById("confirmPayment");
 const btnCerr = document.getElementById("cancelPayment");
-const btnX    = document.getElementById("closePaymentModal");
+const btnX = document.getElementById("closePaymentModal");
 
 // abrir modal ya está hecho en openPaymentModal
 btnConf.addEventListener("click", async () => {
@@ -1400,7 +1401,7 @@ btnConf.addEventListener("click", async () => {
     }
 });
 btnCerr.addEventListener("click", () => modal.classList.remove("show"));
-btnX.addEventListener("click",   () => modal.classList.remove("show"));
+btnX.addEventListener("click", () => modal.classList.remove("show"));
 
 
 /* ---------- NUEVO SISTEMA DE SELECCIÃ"N DE DÃAS DE PAGO ---------- */
@@ -1421,24 +1422,24 @@ const paymentOptions = {
     diario: ['Todos los días'],
     semanal: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
     quincenal: ["16 y 01", "17 y 02", "18 y 03", "19 y 04", "20 y 05", "21 y 06", "22 y 07", "23 y 08", "24 y 09", "25 y 10", "26 y 11", "27 y 12", "28 y 13", "29 y 14", "30 y 15"],
-    mensual: Array.from({length: 31}, (_, i) => `Día ${i + 1}`)
+    mensual: Array.from({ length: 31 }, (_, i) => `Día ${i + 1}`)
 };
 
 // Listener para cambio de tipo de plan
 // Listener para cambio de tipo de plan
 paymentPlanType.addEventListener('change', (e) => {
     const planType = e.target.value;
-    
+
     if (!planType) {
         paymentDaysContainer.style.display = 'none';
         selectedPaymentPlan = { type: '', days: [] };
         updateSelectedDaysDisplay();
         return;
     }
-    
+
     selectedPaymentPlan.type = planType;
     selectedPaymentPlan.days = [];
-    
+
     // Actualizar label según el tipo
     const labels = {
         diario: 'Confirmación',
@@ -1447,7 +1448,7 @@ paymentPlanType.addEventListener('change', (e) => {
         mensual: 'Selecciona los días del mes (mantén Ctrl/Cmd presionado)'
     };
     paymentDaysLabel.textContent = labels[planType];
-    
+
     // ✅ NUEVO: Configurar si permite múltiple selección
     if (planType === 'diario') {
         paymentDaysSelect.removeAttribute('multiple');
@@ -1456,28 +1457,28 @@ paymentPlanType.addEventListener('change', (e) => {
         paymentDaysSelect.setAttribute('multiple', 'multiple');
         paymentDaysSelect.setAttribute('size', '7'); // Mostrar más opciones
     }
-    
+
     // Llenar el select con las opciones
     paymentDaysSelect.innerHTML = '';
     const options = paymentOptions[planType];
-    
+
     options.forEach((option, index) => {
         const opt = document.createElement('option');
-        opt.value = planType === 'diario' ? 'diario' : 
-                    planType === 'semanal' ? option :
-                    planType === 'quincenal' ? option :
+        opt.value = planType === 'diario' ? 'diario' :
+            planType === 'semanal' ? option :
+                planType === 'quincenal' ? option :
                     (index + 1).toString(); // Para mensual, usar el número
         opt.textContent = option;
         paymentDaysSelect.appendChild(opt);
     });
-    
+
     // Si es diario, autoseleccionar
     if (planType === 'diario') {
         paymentDaysSelect.options[0].selected = true;
         selectedPaymentPlan.days = ['diario'];
         updateSelectedDaysDisplay();
     }
-    
+
     paymentDaysContainer.style.display = 'block';
 });
 
@@ -1491,16 +1492,16 @@ paymentDaysSelect.addEventListener('change', () => {
 // Actualizar visualización de días seleccionados
 function updateSelectedDaysDisplay() {
     selectedDaysDisplay.innerHTML = '';
-    
+
     if (selectedPaymentPlan.days.length === 0) {
         return;
     }
-    
+
     // Crear etiquetas visuales
     selectedPaymentPlan.days.forEach(day => {
         const pill = document.createElement('span');
         pill.className = 'day-pill';
-        
+
         let displayText = day;
         if (selectedPaymentPlan.type === 'diario') {
             displayText = '📅 Todos los días';
@@ -1511,28 +1512,28 @@ function updateSelectedDaysDisplay() {
         } else if (selectedPaymentPlan.type === 'mensual') {
             displayText = `Día ${day}`;
         }
-        
+
         pill.innerHTML = `
             ${displayText}
             <button class="remove-day" data-day="${day}" type="button">×</button>
         `;
-        
+
         selectedDaysDisplay.appendChild(pill);
     });
-    
+
     // Agregar listeners para remover
     selectedDaysDisplay.querySelectorAll('.remove-day').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const dayToRemove = e.target.dataset.day;
             selectedPaymentPlan.days = selectedPaymentPlan.days.filter(d => d !== dayToRemove);
-            
+
             // Desmarcar en el select
             Array.from(paymentDaysSelect.options).forEach(opt => {
                 if (opt.value === dayToRemove) {
                     opt.selected = false;
                 }
             });
-            
+
             updateSelectedDaysDisplay();
         });
     });
@@ -1543,7 +1544,7 @@ function collectPaymentDays() {
     if (!selectedPaymentPlan.type || selectedPaymentPlan.days.length === 0) {
         return '';
     }
-    
+
     // Formato: tipo|dias
     // Ejemplo: "semanal|Lunes,Miércoles,Viernes"
     // Ejemplo: "mensual|1,15,30"
@@ -1560,9 +1561,9 @@ function collectPaymentPlan() {
     };
 
     // Recalcular paymentPerInstallment antes de enviar
-const remaining = saleData.price - (saleData.advancePayment || 0);
-const numInst   = parseInt(saleData.installments) || 1;
-saleData.paymentPerInstallment = Math.ceil(remaining / numInst);
+    const remaining = saleData.price - (saleData.advancePayment || 0);
+    const numInst = parseInt(saleData.installments) || 1;
+    saleData.paymentPerInstallment = Math.ceil(remaining / numInst);
 
 }
 
@@ -1609,15 +1610,15 @@ function loadPaymentDaysFromString(paymentDaysString) {
    LECTOR DE CÓDIGOS DE BARRAS CON FLIP DE CÁMARA
    ========================================================= */
 
-const btnCamera   = document.getElementById('btnBarcodeScanner');
+const btnCamera = document.getElementById('btnBarcodeScanner');
 const btnStopScan = document.getElementById('btnStopScan');
 const btnFlipCamera = document.getElementById('btnFlipCamera');
-const modalScan   = document.getElementById('scannerModal');
-const video       = document.getElementById('scannerVideo');
+const modalScan = document.getElementById('scannerModal');
+const video = document.getElementById('scannerVideo');
 
 let qrScanner = null;
-let scanning   = false;
-let scanCount  = 0;
+let scanning = false;
+let scanCount = 0;
 let availableCameras = [];
 let currentCameraIndex = 0;
 
@@ -1630,14 +1631,14 @@ async function startScanner() {
     modalScan.classList.remove('hidden');
     scanning = true;
     scanCount = 0;
-    
+
     try {
         // Obtener cámaras disponibles
         const devices = await navigator.mediaDevices.enumerateDevices();
         availableCameras = devices.filter(d => d.kind === 'videoinput');
-        
+
         console.log("📷 Cámaras disponibles:", availableCameras.map(d => d.label));
-        
+
         if (availableCameras.length === 0) {
             throw new Error("No se encontraron cámaras disponibles");
         }
@@ -1648,21 +1649,21 @@ async function startScanner() {
         } else {
             btnFlipCamera.style.display = 'none';
         }
-        
+
         // Buscar cámara trasera como predeterminada
         currentCameraIndex = availableCameras.findIndex(d => {
             const label = d.label.toLowerCase();
-            return label.includes('back') || 
-                   label.includes('rear') || 
-                   label.includes('environment') ||
-                   label.includes('camera2') ||
-                   (!label.includes('front') && !label.includes('user'));
+            return label.includes('back') ||
+                label.includes('rear') ||
+                label.includes('environment') ||
+                label.includes('camera2') ||
+                (!label.includes('front') && !label.includes('user'));
         });
-        
+
         if (currentCameraIndex === -1) {
             currentCameraIndex = 0;
         }
-        
+
         await activateCamera(currentCameraIndex);
 
     } catch (e) {
@@ -1689,15 +1690,15 @@ async function activateCamera(cameraIndex) {
 
         // Iniciar nueva cámara
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { 
+            video: {
                 deviceId: selectedCamera.deviceId,
                 facingMode: selectedCamera.label.toLowerCase().includes('back') ? 'environment' : 'user'
             }
         });
-        
+
         video.srcObject = stream;
         await video.play();
-        
+
         // Iniciar escaneo de QR con canvas
         scanQRCode();
 
@@ -1713,25 +1714,25 @@ async function activateCamera(cameraIndex) {
 // Nueva función para escanear QR desde el video
 function scanQRCode() {
     if (!scanning) return;
-    
+
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    
+
     const scan = () => {
         if (!scanning) return;
-        
+
         try {
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            
+
             // Usar jsQR para detectar códigos QR
             const code = jsQR(imageData.data, imageData.width, imageData.height, {
                 inversionAttempts: "dontInvert",
             });
-            
+
             if (code && scanCount === 0) {
                 console.log("✅ ¡Código QR detectado!", code.data);
                 handleSuccessfulScan(code.data);
@@ -1743,7 +1744,7 @@ function scanQRCode() {
             requestAnimationFrame(scan);
         }
     };
-    
+
     requestAnimationFrame(scan);
 }
 
@@ -1761,7 +1762,7 @@ async function flipCamera() {
 
     // Cambiar al siguiente índice (circular)
     currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
-    
+
     await activateCamera(currentCameraIndex);
 }
 
@@ -1783,7 +1784,7 @@ function showCameraFeedback(cameraLabel) {
         animation: fadeInOut 2s ease;
     `;
     indicator.textContent = `📹 ${cameraLabel}`;
-    
+
     // Agregar animación CSS si no existe
     if (!document.getElementById('cameraFeedbackStyles')) {
         const styles = document.createElement('style');
@@ -1796,11 +1797,11 @@ function showCameraFeedback(cameraLabel) {
         `;
         document.head.appendChild(styles);
     }
-    
+
     const scannerBox = document.querySelector('.scanner-box');
     scannerBox.style.position = 'relative';
     scannerBox.appendChild(indicator);
-    
+
     setTimeout(() => indicator.remove(), 2000);
 }
 
@@ -1843,7 +1844,7 @@ function showScanFeedback() {
             "></i>
         </div>
     `;
-    
+
     if (!document.getElementById('scanFeedbackStyles')) {
         const styles = document.createElement('style');
         styles.id = 'scanFeedbackStyles';
@@ -1856,7 +1857,7 @@ function showScanFeedback() {
         `;
         document.head.appendChild(styles);
     }
-    
+
     modalScan.appendChild(overlay);
     setTimeout(() => overlay.remove(), 600);
 }
@@ -1864,12 +1865,12 @@ function showScanFeedback() {
 function stopScanner() {
     scanning = false;
     scanCount = 0;
-    
+
     if (video.srcObject) {
         video.srcObject.getTracks().forEach(track => track.stop());
         video.srcObject = null;
     }
-    
+
     modalScan.classList.add('hidden');
     availableCameras = [];
     currentCameraIndex = 0;
@@ -1879,9 +1880,9 @@ function stopScanner() {
    --------------------------------------------------------- */
 async function handleBarcode(raw) {
     console.log("Código QR raw recibido:", raw);
-    
+
     const cleanCode = raw.trim();
-    
+
     // Verificar formato personalizado (ID|NOMBRE|PRECIO)
     if (cleanCode.includes('|')) {
         const parts = cleanCode.split('|');
@@ -1891,7 +1892,7 @@ async function handleBarcode(raw) {
             return;
         }
     }
-    
+
     // Si no es formato personalizado, buscar en inventario
     console.log("⚠️ Código QR no reconocido, buscando en inventario...");
     await handleStandardBarcode(cleanCode);
@@ -1902,7 +1903,7 @@ async function handleBarcode(raw) {
    --------------------------------------------------------- */
 async function handleCustomBarcode(code) {
     const parts = code.split('|').map(part => part.trim());
-    
+
     if (parts.length < 3) {
         alert(`❌ Código personalizado incompleto.
                
@@ -1912,15 +1913,15 @@ Partes encontradas: ${parts.length}
 Tu código: ${code}`);
         return;
     }
-    
+
     const [id, name, price] = parts;
     const numericPrice = Number(price);
-    
+
     if (isNaN(numericPrice)) {
         alert(`❌ Error: El precio "${price}" no es válido`);
         return;
     }
-    
+
     // Rellenar campos automáticamente
     if (document.getElementById('productName')) {
         document.getElementById('productName').value = name;
@@ -1928,19 +1929,19 @@ Tu código: ${code}`);
     if (document.getElementById('price')) {
         document.getElementById('price').value = numericPrice.toFixed(0);
     }
-    
+
     // Buscar producto completo en BD
     try {
         const token = getToken();
         const products = await apiFetch('/products', 'GET', null, token);
-        
+
         // Buscar por ID completo o parcial
-        const found = products.find(p => 
-            p._id === id || 
-            p._id.includes(id) || 
+        const found = products.find(p =>
+            p._id === id ||
+            p._id.includes(id) ||
             p._id.endsWith(id)
         );
-        
+
         if (found) {
             console.log("✅ Producto encontrado en BD:", found.name);
             selectProductFromBarcode(found);
@@ -1951,7 +1952,7 @@ Tu código: ${code}`);
     } catch (e) {
         console.warn('Error al consultar producto:', e);
     }
-    
+
     showBarcodeSuccess(`🎉 ¡CÓDIGO LEÍDO EXITOSAMENTE!
                        
 📦 Producto: ${name}
@@ -1962,20 +1963,20 @@ Tu código: ${code}`);
 
 async function handleStandardBarcode(code) {
     console.log("Procesando código estándar:", code);
-    
+
     try {
         const token = getToken();
         const products = await apiFetch('/products', 'GET', null, token);
-        
+
         // Intentar buscar por código de barras si tienes ese campo
         let found = products.find(p => p.barcode === code);
-        
+
         if (!found) {
             // Mostrar modal de búsqueda manual
             showProductSearchModal(code, products.filter(p => !p.sold));
             return;
         }
-        
+
         // Si encontró el producto
         if (document.getElementById('productName')) {
             document.getElementById('productName').value = found.name;
@@ -1984,11 +1985,11 @@ async function handleStandardBarcode(code) {
             document.getElementById('price').value = found.salePrice;
         }
         selectProductFromBarcode(found);
-        
+
         showBarcodeSuccess(`✅ ¡Producto encontrado!
                            ${found.name}
                            Precio: $${found.salePrice.toLocaleString('es-CO')}`);
-        
+
     } catch (error) {
         console.error('Error al buscar producto:', error);
         alert('Error al buscar el producto en la base de datos');
@@ -2006,7 +2007,7 @@ function showProductSearchModal(scannedCode, products) {
         background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
         z-index: 10000;
     `;
-    
+
     modal.innerHTML = `
         <div style="
             background: white; border-radius: 15px; padding: 25px;
@@ -2049,20 +2050,20 @@ function showProductSearchModal(scannedCode, products) {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Configurar búsqueda
     const searchInput = document.getElementById('productSearchInput');
     const resultsDiv = document.getElementById('productSearchResults');
-    
+
     function renderSearchResults(filteredProducts) {
         resultsDiv.innerHTML = '';
         if (filteredProducts.length === 0) {
             resultsDiv.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">No se encontraron productos</p>';
             return;
         }
-        
+
         filteredProducts.slice(0, 10).forEach(product => {
             const item = document.createElement('div');
             item.style.cssText = `
@@ -2072,7 +2073,7 @@ function showProductSearchModal(scannedCode, products) {
             `;
             item.onmouseover = () => item.style.background = '#f8f9fa';
             item.onmouseout = () => item.style.background = 'white';
-            
+
             item.innerHTML = `
                 <div>
                     <div style="font-weight: 600; color: #2c3e50;">${product.name}</div>
@@ -2088,16 +2089,16 @@ function showProductSearchModal(scannedCode, products) {
             resultsDiv.appendChild(item);
         });
     }
-    
+
     searchInput.addEventListener('input', () => {
         const query = searchInput.value.toLowerCase();
-        const filtered = products.filter(p => 
+        const filtered = products.filter(p =>
             p.name.toLowerCase().includes(query) ||
             p.brand.toLowerCase().includes(query)
         );
         renderSearchResults(filtered);
     });
-    
+
     // Mostrar productos iniciales
     renderSearchResults(products.slice(0, 10));
 }
@@ -2105,12 +2106,12 @@ function showProductSearchModal(scannedCode, products) {
 /* ---------------------------------------------------------
    FUNCIONES AUXILIARES GLOBALES
    --------------------------------------------------------- */
-window.closeProductSearchModal = function() {
+window.closeProductSearchModal = function () {
     const modal = document.getElementById('productSearchModal');
     if (modal) modal.remove();
 };
 
-window.selectSearchedProduct = function(productId) {
+window.selectSearchedProduct = function (productId) {
     const token = getToken();
     apiFetch('/products', 'GET', null, token).then(products => {
         const product = products.find(p => p._id === productId);
@@ -2131,22 +2132,22 @@ window.selectSearchedProduct = function(productId) {
     closeProductSearchModal();
 };
 
-window.useManualProduct = function(scannedCode) {
+window.useManualProduct = function (scannedCode) {
     const name = document.getElementById('manualProductName').value.trim();
     const price = parseFloat(document.getElementById('manualProductPrice').value);
-    
+
     if (!name || isNaN(price)) {
         alert('Por favor completa nombre y precio');
         return;
     }
-    
+
     if (document.getElementById('productName')) {
         document.getElementById('productName').value = name;
     }
     if (document.getElementById('price')) {
         document.getElementById('price').value = price;
     }
-    
+
     showBarcodeSuccess(`✅ Producto agregado manualmente:
                        ${name} - $${price.toLocaleString('es-CO')}
                        Código original: ${scannedCode}`);
@@ -2159,13 +2160,13 @@ function selectProductFromBarcode(product) {
         const availableStock = product.stock || 1;
         let qty = prompt(`Cantidad de "${product.name}" (Stock disponible: ${availableStock}):`, "1");
         if (qty === null) return;
-        
+
         qty = parseInt(qty) || 1;
         if (qty <= 0) {
             alert("La cantidad debe ser mayor a 0");
             return;
         }
-        
+
         selectProduct(product, qty);
     }
 }
@@ -2184,9 +2185,9 @@ function showBarcodeSuccess(message) {
         <i class="fas fa-check-circle" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
         ${message}
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.style.opacity = '0';
         notification.style.transform = 'translate(-50%, -50%) scale(0.9)';
@@ -2198,38 +2199,38 @@ function showBarcodeSuccess(message) {
 function showReceiptModal(saleData) {
     const receiptNumber = generateReceiptNumber();
     const receiptId = 'receipt_' + Date.now();
-    
+
     // Crear canvas
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = 600;
     canvas.height = 800;
-    
+
     // Fondo blanco
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Header con gradiente
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, 120);
     gradient.addColorStop(0, '#2c3e50');
     gradient.addColorStop(1, '#3498db');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, 120);
-    
+
     // Título principal
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('RECIBO DE VENTA', canvas.width / 2, 50);
-    
+
     // Número de recibo
     ctx.font = 'bold 20px Arial';
     ctx.fillText(`Recibo #${receiptNumber}`, canvas.width / 2, 80);
-    
+
     // Fecha de generación
     ctx.font = '16px Arial';
     ctx.fillText(`Fecha: ${new Date().toLocaleDateString('es-CO')}`, canvas.width / 2, 105);
-    
+
     // Línea decorativa
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
@@ -2237,28 +2238,28 @@ function showReceiptModal(saleData) {
     ctx.moveTo(50, 130);
     ctx.lineTo(canvas.width - 50, 130);
     ctx.stroke();
-    
+
     // Sección cliente
     ctx.fillStyle = '#2c3e50';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'left';
     ctx.fillText('INFORMACIÓN DEL CLIENTE', 50, 170);
-    
+
     ctx.font = '18px Arial';
     ctx.fillStyle = '#34495e';
     ctx.fillText(`Nombre: ${saleData.clientName}`, 50, 210);
     ctx.fillText(`Dirección: ${saleData.clientAddress || 'No especificada'}`, 50, 235);
-    
+
     // Sección productos
     ctx.fillStyle = '#2c3e50';
     ctx.font = 'bold 24px Arial';
     ctx.fillText('PRODUCTOS VENDIDOS', 50, 310);
-    
+
     // Lista de productos
     let yPosition = 350;
     ctx.font = '16px Arial';
     ctx.fillStyle = '#34495e';
-    
+
     if (saleData.products && saleData.products.length > 0) {
         saleData.products.forEach((product, index) => {
             ctx.fillText(`${index + 1}. ${product.name}`, 50, yPosition);
@@ -2270,13 +2271,13 @@ function showReceiptModal(saleData) {
         ctx.fillText(`• ${saleData.productName}`, 50, yPosition);
         yPosition += 30;
     }
-    
+
     // Sección financiera
     yPosition = Math.max(yPosition, 480);
     ctx.fillStyle = '#2c3e50';
     ctx.font = 'bold 24px Arial';
     ctx.fillText('INFORMACIÓN FINANCIERA', 50, yPosition);
-    
+
     yPosition += 40;
     ctx.font = '18px Arial';
     ctx.fillStyle = '#34495e';
@@ -2285,7 +2286,7 @@ function showReceiptModal(saleData) {
     ctx.fillText(`Valor total: $${saleData.price.toLocaleString('es-CO')}`, 50, yPosition);
     yPosition += 30;
     ctx.fillText(`Abono inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}`, 50, yPosition);
-    
+
     const saldoPendiente = saleData.price - (saleData.advancePayment || 0);
     if (saldoPendiente > 0) {
         yPosition += 30;
@@ -2293,11 +2294,11 @@ function showReceiptModal(saleData) {
         ctx.font = 'bold 18px Arial';
         ctx.fillText(`Saldo pendiente: $${saldoPendiente.toLocaleString('es-CO')}`, 50, yPosition);
         yPosition += 30;
-        
+
         ctx.fillStyle = '#34495e';
         ctx.font = '18px Arial';
         ctx.fillText(`Cuotas: ${saleData.installments}`, 50, yPosition);
-        
+
         if (saleData.paymentDays) {
             yPosition += 30;
             ctx.fillText(`Días de pago: ${saleData.paymentDays}`, 50, yPosition);
@@ -2307,7 +2308,7 @@ function showReceiptModal(saleData) {
         ctx.font = 'bold 18px Arial';
         ctx.fillText('✓ PAGADO COMPLETAMENTE', 50, yPosition);
     }
-    
+
     // Footer
     yPosition = canvas.height - 100;
     ctx.fillStyle = '#95a5a6';
@@ -2315,7 +2316,7 @@ function showReceiptModal(saleData) {
     ctx.textAlign = 'center';
     ctx.fillText('Este recibo fue generado automáticamente', canvas.width / 2, yPosition);
     ctx.fillText(`Por el programa JC-C - ${new Date().getFullYear()}`, canvas.width / 2, yPosition + 20);
-    
+
     // Guardar recibo
     const receiptData = {
         id: receiptId,
@@ -2324,7 +2325,7 @@ function showReceiptModal(saleData) {
         createdAt: new Date().toISOString(),
         canvas: canvas.toDataURL('image/png')
     };
-    
+
     saveReceipt(receiptData);
     showReceiptOptions(receiptData);
 }
@@ -2337,47 +2338,47 @@ function generateReceiptNumber() {
 
 // Función para guardar recibo
 function saveReceipt(receiptData) {
-  receiptData.createdAt = Date.now();
+    receiptData.createdAt = Date.now();
 
-  let receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-  receipts.unshift(receiptData);
+    let receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+    receipts.unshift(receiptData);
 
-  try {
-    // ✅ Guardar en localStorage
-    localStorage.setItem('salesReceipts', JSON.stringify(receipts));
-  } catch (e) {
-    if (e.name === 'QuotaExceededError') {
-      receipts.splice(15);
-      localStorage.setItem('salesReceipts', JSON.stringify(receipts));
-      console.warn('🧹 Límite de almacenamiento alcanzado. Se eliminaron recibos antiguos.');
-    } else {
-      console.error('❌ Error al guardar recibo:', e);
+    try {
+        // ✅ Guardar en localStorage
+        localStorage.setItem('salesReceipts', JSON.stringify(receipts));
+    } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+            receipts.splice(15);
+            localStorage.setItem('salesReceipts', JSON.stringify(receipts));
+            console.warn('🧹 Límite de almacenamiento alcanzado. Se eliminaron recibos antiguos.');
+        } else {
+            console.error('❌ Error al guardar recibo:', e);
+        }
     }
-  }
 
-  // ⏱️ Borrar después de 10 s
-  setTimeout(() => {
-    const list = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-    const idx = list.findIndex(r => r.id === receiptData.id);
-    if (idx !== -1) {
-      list.splice(idx, 1);
-      localStorage.setItem('salesReceipts', JSON.stringify(list));
-      console.log('🧹 Recibo auto-eliminado tras 10 s');
-    }
-  }, 10_000);
+    // ⏱️ Borrar después de 10 s
+    setTimeout(() => {
+        const list = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+        const idx = list.findIndex(r => r.id === receiptData.id);
+        if (idx !== -1) {
+            list.splice(idx, 1);
+            localStorage.setItem('salesReceipts', JSON.stringify(list));
+            console.log('🧹 Recibo auto-eliminado tras 10 s');
+        }
+    }, 10_000);
 }
 
 // Función para mostrar opciones del recibo
 function showReceiptOptions(receiptData) {
     // Guardar en variable global para acceso en onclick
     window.currentReceiptData = receiptData;
-    
+
     // Siempre abrir ticket POS (tanto para contado como para cuotas)
     generatePOS(receiptData);
     return;
-    
+
     const isContado = receiptData.saleData.paymentType === 'contado';
-    
+
     const modal = document.createElement('div');
     modal.className = 'receipt-modal';
     modal.style.cssText = `
@@ -2417,25 +2418,25 @@ function showReceiptOptions(receiptData) {
 }
 
 // Funciones globales para acceder al receiptData
-window.generatePOSFromGlobal = function() {
+window.generatePOSFromGlobal = function () {
     if (window.currentReceiptData) {
         generatePOS(window.currentReceiptData);
     }
 };
 
-window.shareReceiptFromGlobal = async function() {
+window.shareReceiptFromGlobal = async function () {
     if (window.currentReceiptData) {
         await shareReceipt(window.currentReceiptData.id);
     }
 };
 
-window.downloadReceiptFromGlobal = function() {
+window.downloadReceiptFromGlobal = function () {
     if (window.currentReceiptData) {
         downloadReceipt(window.currentReceiptData.id);
     }
 };
 
-window.closeReceiptModal = function() {
+window.closeReceiptModal = function () {
     const modal = document.querySelector('.receipt-modal');
     if (modal) {
         modal.remove();
@@ -2443,10 +2444,10 @@ window.closeReceiptModal = function() {
 };
 
 // ✅ Función para generar ticket POS
-window.generatePOS = function(receiptData) {
+window.generatePOS = function (receiptData) {
     const saleData = receiptData.saleData;
     const isContado = saleData.paymentType === 'contado';
-    
+
     // Generar contenido del ticket en texto plano
     const ticketText = `
 ================================
@@ -2465,11 +2466,11 @@ ${saleData.clientAddress || 'Sin dirección'}
 PRODUCTOS
 --------------------------------
 ${saleData.products ? saleData.products.map((p, i) => {
-    const qty = p.quantity || 1;
-    const subtotal = (p.salePrice || 0) * qty;
-    return `${i + 1}. ${p.name} (x${qty})
+        const qty = p.quantity || 1;
+        const subtotal = (p.salePrice || 0) * qty;
+        return `${i + 1}. ${p.name} (x${qty})
    $${p.salePrice.toLocaleString('es-CO')} c/u = $${subtotal.toLocaleString('es-CO')}`;
-}).join('\n') : saleData.productName}
+    }).join('\n') : saleData.productName}
 
 --------------------------------
 DETALLE DE PAGO
@@ -2491,15 +2492,15 @@ Volver pronto
 
 ================================
 `;
-    
+
     // Abrir ventana de impresión
     const printWindow = window.open('', '_blank', 'width=400,height=600');
-    
+
     if (!printWindow) {
         alert("⚠️ El navegador bloquinó la ventana de impresión. Por favor permite las ventanas emergentes e intenta de nuevo.");
         return;
     }
-    
+
     printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -2547,11 +2548,11 @@ ${saleData.clientAddress || 'Sin dirección'}
 PRODUCTOS
 --------------------------------
 ${saleData.products ? saleData.products.map((p, i) => {
-    const qty = p.quantity || 1;
-    const subtotal = (p.salePrice || 0) * qty;
-    return `${i + 1}. ${p.name} (x${qty})
+        const qty = p.quantity || 1;
+        const subtotal = (p.salePrice || 0) * qty;
+        return `${i + 1}. ${p.name} (x${qty})
    $${p.salePrice.toLocaleString('es-CO')} c/u = $${subtotal.toLocaleString('es-CO')}`;
-}).join('\n') : saleData.productName}
+    }).join('\n') : saleData.productName}
 
 --------------------------------
 DETALLE DE PAGO
@@ -2589,15 +2590,15 @@ Volver pronto
 
 // Funciones para compartir y descargar
 async function shareReceipt(receiptId) {
-  const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-  const receipt = receipts.find(r => r.id === receiptId);
-  if (!receipt) return;
+    const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+    const receipt = receipts.find(r => r.id === receiptId);
+    if (!receipt) return;
 
-  // Generar texto del ticket POS
-  const saleData = receipt.saleData;
-  const isContado = saleData.paymentType === 'contado';
-  
-  const ticketText = `================================
+    // Generar texto del ticket POS
+    const saleData = receipt.saleData;
+    const isContado = saleData.paymentType === 'contado';
+
+    const ticketText = `================================
       ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
 ================================
 Fecha: ${new Date().toLocaleDateString('es-CO')}
@@ -2633,22 +2634,22 @@ Gracias por su compra!
 Volver pronto
 ================================`;
 
-  // Intentar compartir como archivo de texto
-  const blob = new Blob([ticketText], { type: 'text/plain' });
-  const file = new File([blob], `recibo-${receipt.receiptNumber}.txt`, { type: 'text/plain' });
+    // Intentar compartir como archivo de texto
+    const blob = new Blob([ticketText], { type: 'text/plain' });
+    const file = new File([blob], `recibo-${receipt.receiptNumber}.txt`, { type: 'text/plain' });
 
-  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-    await navigator.share({
-      title: `Recibo #${receipt.receiptNumber}`,
-      text: ticketText,
-      files: [file]
-    });
-  } else {
-    // Fallback: copiar texto al portapapeles
-    navigator.clipboard.writeText(ticketText).then(() => {
-      alert('Ticket copiado al portapapeles. Pégalo en WhatsApp, email, etc.');
-    });
-  }
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+            title: `Recibo #${receipt.receiptNumber}`,
+            text: ticketText,
+            files: [file]
+        });
+    } else {
+        // Fallback: copiar texto al portapapeles
+        navigator.clipboard.writeText(ticketText).then(() => {
+            alert('Ticket copiado al portapapeles. Pégalo en WhatsApp, email, etc.');
+        });
+    }
 }
 
 function downloadReceipt(receiptId) {
@@ -2659,7 +2660,7 @@ function downloadReceipt(receiptId) {
     // Generar texto del ticket POS
     const saleData = receipt.saleData;
     const isContado = saleData.paymentType === 'contado';
-    
+
     const ticketText = `================================
       ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
 ================================
@@ -2711,7 +2712,7 @@ function viewAllReceipts() {
 function fallbackShare(receipt) {
     const saleData = receipt.saleData;
     const isContado = saleData.paymentType === 'contado';
-    
+
     const text = `================================
       ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
 ================================
@@ -2722,7 +2723,7 @@ Tipo: ${isContado ? 'CONTADO' : 'A CUOTAS'}
 ${isContado ? '✓ PAGO COMPLETO' : `Saldo: $${(saleData.remainingBalance || 0).toLocaleString('es-CO')}`}
 ================================
 Gracias por su compra!`;
-    
+
     if (navigator.share) {
         navigator.share({
             title: `Recibo #${receipt.receiptNumber}`,
@@ -2736,14 +2737,14 @@ Gracias por su compra!`;
 }
 
 // --- hacer globales los botones del modal de recibo ---
-window.shareReceipt     = shareReceipt;
-window.downloadReceipt  = downloadReceipt;
-window.viewAllReceipts  = viewAllReceipts;
+window.shareReceipt = shareReceipt;
+window.downloadReceipt = downloadReceipt;
+window.viewAllReceipts = viewAllReceipts;
 window.handleReceiptAction = handleReceiptAction;
 
 function closeReceiptModal() {
-  const modal = document.querySelector('.receipt-modal');
-  if (modal) modal.remove();
+    const modal = document.querySelector('.receipt-modal');
+    if (modal) modal.remove();
 }
 
 async function saveReceiptToMongo(receiptData) {
@@ -2761,56 +2762,56 @@ async function saveReceiptToMongo(receiptData) {
 }
 
 async function handleReceiptAction(action, receiptId) {
-  const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-  const receiptIndex = receipts.findIndex(r => r.id === receiptId);
-  if (receiptIndex === -1) {
-    alert('❌ Recibo no encontrado');
-    return;
-  }
+    const receipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+    const receiptIndex = receipts.findIndex(r => r.id === receiptId);
+    if (receiptIndex === -1) {
+        alert('❌ Recibo no encontrado');
+        return;
+    }
 
-  const receipt = receipts[receiptIndex];
+    const receipt = receipts[receiptIndex];
 
-  // 1. Guardar en MongoDB (no crítico)
-  try {
-    await saveReceiptToMongo(receipt);
-  } catch (e) {
-    console.warn('⚠️ No se pudo guardar en MongoDB:', e);
-  }
+    // 1. Guardar en MongoDB (no crítico)
+    try {
+        await saveReceiptToMongo(receipt);
+    } catch (e) {
+        console.warn('⚠️ No se pudo guardar en MongoDB:', e);
+    }
 
-  // 2. Ejecutar la acción PRIMERO
-  switch (action) {
-    case 'share':
-      await shareReceipt(receiptId); // <-- espera a que termine
-      break;
-    case 'download':
-      downloadReceipt(receiptId);
-      break;
-    case 'view':
-      viewAllReceipts();
-      break;
-    case 'close':
-      break; // nada que hacer
-  }
+    // 2. Ejecutar la acción PRIMERO
+    switch (action) {
+        case 'share':
+            await shareReceipt(receiptId); // <-- espera a que termine
+            break;
+        case 'download':
+            downloadReceipt(receiptId);
+            break;
+        case 'view':
+            viewAllReceipts();
+            break;
+        case 'close':
+            break; // nada que hacer
+    }
 
-  // 3. Recién AHORA eliminar de localStorage
-  try {
-   
-    console.log('🧹 Recibo eliminado de localStorage tras acción');
-  } catch (e) {
-    console.warn('⚠️ Error al actualizar localStorage:', e);
-  }
+    // 3. Recién AHORA eliminar de localStorage
+    try {
 
-  closeReceiptModal();
+        console.log('🧹 Recibo eliminado de localStorage tras acción');
+    } catch (e) {
+        console.warn('⚠️ Error al actualizar localStorage:', e);
+    }
+
+    closeReceiptModal();
 }
-window.cerrarSesion = function() {
+window.cerrarSesion = function () {
     if (!confirm('¿Estás seguro de que deseas cerrar sesión?')) {
         return;
     }
-    
+
     // Limpiar TODA la información de sesión
     localStorage.clear();
     sessionStorage.clear();
-    
+
     // Mostrar feedback
     const notification = document.createElement('div');
     notification.style.cssText = `
@@ -2832,7 +2833,7 @@ window.cerrarSesion = function() {
         <div>Sesión cerrada correctamente</div>
     `;
     document.body.appendChild(notification);
-    
+
     // Redirigir después de 1 segundo
     setTimeout(() => {
         window.location.href = 'index.html';
@@ -2843,7 +2844,7 @@ window.cerrarSesion = function() {
 setInterval(() => {
     const adminMode = sessionStorage.getItem('adminMode');
     const vendedorId = sessionStorage.getItem('vendedorId');
-    
+
     if (adminMode === 'true' && vendedorId && vendedorId !== 'null') {
         sessionStorage.setItem('adminModeTimestamp', Date.now().toString());
         console.log('🔄 Sesión de administrador renovada');

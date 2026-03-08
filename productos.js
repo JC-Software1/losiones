@@ -31,15 +31,15 @@ async function verificarPermisoCostos() {
         const token = getToken();
         const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
         const { permisosDetallados, tipo } = response;
-        
+
         // Admins y jefes siempre ven costos
         if (tipo === 2 || tipo === 3) {
             return true;
         }
-        
+
         // Vendedores: verificar permiso específico
         return permisosDetallados?.verCostosYGanancias !== false;
-        
+
     } catch (error) {
         console.error('Error al verificar permisos de costos:', error);
         // Por defecto, ocultar en caso de error para mayor seguridad
@@ -54,65 +54,65 @@ function ocultarTexto(texto) {
 
 /* 1️⃣  DECLARAR funciones que se usan después */
 function generateBarcodeImage(id, name, price) {
-  const code = `${id}|${name}|${price}`;
-  
-  console.log("Generando código QR personalizado:", code);
-  
-  // Limpiar canvas anterior
-  const canvas = document.getElementById('barcodeCanvas');
-  canvas.innerHTML = '';
-  
-  // Generar código QR
-  new QRCode(canvas, {
-    text: code,
-    width: 256,
-    height: 256,
-    colorDark: "#000000",
-    colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.H
-  });
-  
-  canvas.dataset.productId = id;
-  canvas.dataset.name = name;
-  canvas.dataset.price = price;
+    const code = `${id}|${name}|${price}`;
+
+    console.log("Generando código QR personalizado:", code);
+
+    // Limpiar canvas anterior
+    const canvas = document.getElementById('barcodeCanvas');
+    canvas.innerHTML = '';
+
+    // Generar código QR
+    new QRCode(canvas, {
+        text: code,
+        width: 256,
+        height: 256,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+
+    canvas.dataset.productId = id;
+    canvas.dataset.name = name;
+    canvas.dataset.price = price;
 }
 
 function showBarcode(id, name, price) {
-  generateBarcodeImage(id, name, price);
-  document.getElementById('barcodeTitle').textContent = name;
-  document.getElementById('barcodePrice').textContent =
-    `Precio: $${Number(price).toLocaleString()}`;
-  document.getElementById('barcodeModal').classList.add('show');
+    generateBarcodeImage(id, name, price);
+    document.getElementById('barcodeTitle').textContent = name;
+    document.getElementById('barcodePrice').textContent =
+        `Precio: $${Number(price).toLocaleString()}`;
+    document.getElementById('barcodeModal').classList.add('show');
 }
 
 function closeBarcodeModal(e) {
-  if (!e || e.target.id === 'barcodeModal') {
-    document.getElementById('barcodeModal').classList.remove('show');
-  }
+    if (!e || e.target.id === 'barcodeModal') {
+        document.getElementById('barcodeModal').classList.remove('show');
+    }
 }
 
 function downloadBarcode() {
-  const container = document.getElementById('barcodeCanvas');
-  const qrCanvas = container.querySelector('canvas');
-  
-  if (qrCanvas) {
-    qrCanvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `QR_${container.dataset.productId}_${container.dataset.name.replace(/[^a-z0-9]/gi,'_')}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
-  }
+    const container = document.getElementById('barcodeCanvas');
+    const qrCanvas = container.querySelector('canvas');
+
+    if (qrCanvas) {
+        qrCanvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `QR_${container.dataset.productId}_${container.dataset.name.replace(/[^a-z0-9]/gi, '_')}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
 }
 
 /* 2️⃣  PUBLICARLAS en window para los onclick inline */
-window.showBarcode       = showBarcode;
+window.showBarcode = showBarcode;
 window.closeBarcodeModal = closeBarcodeModal;
-window.downloadBarcode   = downloadBarcode;
+window.downloadBarcode = downloadBarcode;
 
 
 
@@ -127,20 +127,101 @@ document.addEventListener("DOMContentLoaded", async () => {
             window.location.href = "login.html";
             return;
         }
-        
+
         // ✅ Verificar permisos de costos ANTES de cargar productos
         puedeVerCostos = await verificarPermisoCostos();
-        
+
         await loadProducts();
         showLowStockAlert(); // ✅ Mostrar alerta de stock bajo
         setupEventListeners();
         setupMenuHandlers();
-        
+
+        // ✅ Verificar si venimos de "Inventario" para reinventar
+        const reinventData = localStorage.getItem('reinventarProduct');
+        if (reinventData) {
+            localStorage.removeItem('reinventarProduct');
+            const product = JSON.parse(reinventData);
+            setTimeout(() => {
+                restockProduct(product._id);
+            }, 500);
+        }
+
     } catch (error) {
         console.error("Error al inicializar:", error);
         showError("Error al cargar la aplicación");
     }
 });
+
+// ✅ Función para cargar productos
+async function loadProducts() {
+    try {
+        const token = getToken();
+        let endpoint = "/products";
+
+        // Detectar modo admin
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorId = sessionStorage.getItem('vendedorId');
+
+        if (adminMode && vendedorId) {
+            endpoint = `/products/vendedor/${vendedorId}`;
+        }
+        const data = await apiFetch(endpoint, "GET", null, token);
+
+        // Guardar todos los productos.
+        // El usuario pide que NO desaparezcan cuando se agotan.
+        products = data;
+        filteredProducts = [...products];
+
+        displayProducts(filteredProducts);
+        updateStatistics(filteredProducts);
+
+    } catch (error) {
+        console.error("Error al cargar productos:", error);
+        showError("No se pudieron cargar los productos");
+    }
+}
+
+// ✅ Función para configurar event listeners
+function setupEventListeners() {
+    if (searchInput) {
+        searchInput.addEventListener("input", applyFilters);
+    }
+
+    if (form) {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const id = inputId.value;
+            if (id) {
+                updateProduct();
+            } else {
+                saveProduct();
+            }
+        });
+    }
+
+    if (btnSave) {
+        btnSave.addEventListener("click", saveProduct);
+    }
+
+    if (btnUpdate) {
+        btnUpdate.addEventListener("click", updateProduct);
+    }
+
+    if (btnCancel) {
+        btnCancel.addEventListener("click", cancelUpdate);
+    }
+
+    if (btnDelete) {
+        btnDelete.addEventListener("click", () => {
+            const id = inputId.value;
+            if (id) deleteProduct(id);
+        });
+    }
+
+    // Calcular margen en tiempo real
+    if (inputCostPrice) inputCostPrice.addEventListener("input", calculateMargin);
+    if (inputSalePrice) inputSalePrice.addEventListener("input", calculateMargin);
+}
 
 // Modificar displayProducts para ocultar costos si no tiene permiso
 function displayProducts(productsList) {
@@ -162,27 +243,27 @@ function displayProducts(productsList) {
         productCard.classList.add("product-card");
 
         // Verificar stock
-        const stock = product.stock || 1;
+        const stock = product.stock !== undefined ? product.stock : 0;
         const isOutOfStock = stock <= 0;
         const isLowStock = stock > 0 && stock <= 3; // Alerta si stock <= 3
-        
+
         // Calcular margen solo si puede ver costos
         let margin = 0;
         let profit = 0;
-        
+
         if (puedeVerCostos) {
             margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
             profit = product.salePrice - product.costPrice;
         }
-        
+
         const marginClass = margin >= 30 ? 'success' : margin >= 20 ? 'warning' : 'danger';
         const marginIcon = margin >= 30 ? 'fas fa-trending-up' : margin >= 20 ? 'fas fa-minus' : 'fas fa-trending-down';
 
         // Mostrar u ocultar según permiso
-        const costoPriceHTML = puedeVerCostos 
+        const costoPriceHTML = puedeVerCostos
             ? `Costo: $${product.costPrice.toLocaleString()}`
             : `Costo: <span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>`;
-            
+
         const gananciasHTML = puedeVerCostos
             ? `<div class="profit-margin">
                 <div class="margin-text">
@@ -196,8 +277,8 @@ function displayProducts(productsList) {
                     Margen: <span style="font-style: italic;">●●●●●</span> • Ganancia: <span style="font-style: italic;">●●●●●</span>
                 </div>
             </div>`;
-            
-        const metaItemsHTML = puedeVerCostos 
+
+        const metaItemsHTML = puedeVerCostos
             ? `
             <div class="meta-item">
                 <i class="fas fa-coins"></i>
@@ -256,45 +337,67 @@ function displayProducts(productsList) {
             </div>
             <div class="product-prices">
                 <div class="cost-price">${costoPriceHTML}</div>
-                <div class="sale-price">$${product.salePrice.toLocaleString()}</div>
+                <div class="sale-price">$${product.salePrice.toLocaleString()} COP</div>
             </div>
-            ${isOutOfStock ? `
-            <div class="no-stock-overlay">
-                <button class="btn btn-warning" onclick="restockProduct('${product._id}')">
-                    <i class="fas fa-boxes"></i> Reinventar
+
+            <div class="product-actions" style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
+                ${isOutOfStock ? `
+                <button class="btn btn-info btn-sm" onclick="showProductDetails('${product._id}')" title="Info" style="flex: 1;">
+                    <i class="fas fa-info-circle"></i> Info
                 </button>
+                <button class="btn btn-warning" onclick="restockProduct('${product._id}')" style="flex: 2;">
+                    <i class="fas fa-magic"></i> Reinventar
+                </button>
+                ` : `
+                <button class="btn btn-primary btn-sm" onclick="editProduct('${product._id}')" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-accent btn-sm" onclick="showBarcode('${product._id}')" title="Ver QR">
+                    <i class="fas fa-qrcode"></i>
+                </button>
+                <button class="btn btn-info btn-sm" onclick="showProductDetails('${product._id}')" title="Info">
+                    <i class="fas fa-info-circle"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${product._id}')" title="Eliminar">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                `}
             </div>
-            ` : ''}
-        </div>`;
-        
+        `;
+
         // Agregar clase de stock bajo o agotado
         if (isOutOfStock) {
             productCard.classList.add('out-of-stock');
         } else if (isLowStock) {
             productCard.classList.add('low-stock');
         }
-    }
+
+        productsContainer.appendChild(productCard);
+    })
 }
 
 
 
 // Actualizar estadísticas
 function updateStatistics(productsList) {
+    // Filtrar solo productos con stock para las estadísticas
+    const availableProducts = productsList.filter(p => (p.stock || 0) > 0);
+
     // Total de productos (considerando stock)
-    const totalStock = productsList.reduce((sum, product) => sum + (product.stock || 1), 0);
+    const totalStock = availableProducts.reduce((sum, product) => sum + (product.stock || 1), 0);
     document.getElementById("totalProducts").textContent = totalStock;
-    
-    if (productsList.length > 0) {
+
+    if (availableProducts.length > 0) {
         if (puedeVerCostos) {
             // Margen promedio
-            const avgMargin = (productsList.reduce((sum, product) => {
+            const avgMargin = (availableProducts.reduce((sum, product) => {
                 const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
                 return sum + margin;
-            }, 0) / productsList.length).toFixed(1);
+            }, 0) / availableProducts.length).toFixed(1);
             document.getElementById("avgMargin").textContent = `${avgMargin}%`;
-            
+
             // Valor total del inventario (precio de costo * stock)
-            const totalValue = productsList.reduce((sum, product) => {
+            const totalValue = availableProducts.reduce((sum, product) => {
                 const productStock = product.stock || 1;
                 return sum + (product.costPrice * productStock);
             }, 0);
@@ -314,9 +417,9 @@ function updateStatistics(productsList) {
 function showLowStockAlert() {
     // Ya mostrar solo una vez por sesión
     if (sessionStorage.getItem('lowStockAlertShown')) return;
-    
+
     const lowStockProducts = products.filter(p => !p.sold && p.stock > 0 && p.stock <= 3);
-    
+
     if (lowStockProducts.length > 0) {
         const alertDiv = document.createElement('div');
         alertDiv.id = 'lowStockAlert';
@@ -332,8 +435,9 @@ function showLowStockAlert() {
             z-index: 10001;
             max-width: 350px;
             font-weight: 500;
+            animation: slideIn 0.5s ease-out;
         `;
-        
+
         alertDiv.innerHTML = `
             <div style="display: flex; align-items: flex-start; gap: 12px;">
                 <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-top: 2px;"></i>
@@ -348,7 +452,7 @@ function showLowStockAlert() {
                         style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0; line-height: 1;">✕</button>
             </div>
         `;
-        
+
         document.body.appendChild(alertDiv);
     }
 }
@@ -357,12 +461,11 @@ function showLowStockAlert() {
 // Aplicar filtros
 function applyFilters() {
     const searchText = searchInput.value.toLowerCase().trim();
-    
+
     filteredProducts = products.filter(product => {
-        if (product.sold) return false;
         return searchText === "" || product.name.toLowerCase().includes(searchText);
     });
-    
+
     displayProducts(filteredProducts);
     updateStatistics(filteredProducts);
 }
@@ -371,11 +474,11 @@ function applyFilters() {
 function calculateMargin() {
     const costPrice = parseFloat(inputCostPrice.value) || 0;
     const salePrice = parseFloat(inputSalePrice.value) || 0;
-    
+
     if (costPrice > 0 && salePrice > 0) {
         const margin = ((salePrice - costPrice) / salePrice * 100).toFixed(1);
         const profit = salePrice - costPrice;
-        
+
         // Mostrar información del margen en tiempo real
         showMarginPreview(margin, profit);
     }
@@ -387,9 +490,9 @@ function showMarginPreview(margin, profit) {
     if (!puedeVerCostos) {
         return;
     }
-    
+
     let previewElement = document.getElementById('marginPreview');
-    
+
     if (!previewElement) {
         previewElement = document.createElement('div');
         previewElement.id = 'marginPreview';
@@ -404,14 +507,14 @@ function showMarginPreview(margin, profit) {
         `;
         document.querySelector('.form-grid').appendChild(previewElement);
     }
-    
+
     const marginClass = margin >= 30 ? 'success' : margin >= 20 ? 'warning' : 'danger';
     const marginColor = margin >= 30 ? 'var(--success)' : margin >= 20 ? 'var(--warning)' : 'var(--danger)';
-    
+
     previewElement.style.background = `rgba(${margin >= 30 ? '39,174,96' : margin >= 20 ? '243,156,18' : '231,76,60'}, 0.1)`;
     previewElement.style.border = `1px solid rgba(${margin >= 30 ? '39,174,96' : margin >= 20 ? '243,156,18' : '231,76,60'}, 0.3)`;
     previewElement.style.color = marginColor;
-    
+
     previewElement.innerHTML = `
         <i class="fas ${margin >= 30 ? 'fa-trending-up' : margin >= 20 ? 'fa-minus' : 'fa-trending-down'}"></i>
         Margen: ${margin}% • Ganancia: ${profit.toLocaleString()}
@@ -439,10 +542,10 @@ async function saveProduct() {
     }
 
     // ✅ Validar que los precios sean números válidos (permitir 0)
-if (isNaN(productData.costPrice) || isNaN(productData.salePrice)) {
-    showNotification("Los precios deben ser números válidos.", "error");
-    return;
-}
+    if (isNaN(productData.costPrice) || isNaN(productData.salePrice)) {
+        showNotification("Los precios deben ser números válidos.", "error");
+        return;
+    }
 
     // ✅ Validar que no sean negativos
     if (productData.costPrice < 0 || productData.salePrice < 0) {
@@ -451,15 +554,15 @@ if (isNaN(productData.costPrice) || isNaN(productData.salePrice)) {
     }
 
     // ✅ Solo validar margen si ambos precios son mayores a 0
-// ✅ Solo validar margen si ambos precios son mayores a 0
-// ✅ Solo validar margen si ambos precios son mayores a 0
-if (productData.costPrice > 0 &&
-    productData.salePrice > 0 &&
-    productData.salePrice <= productData.costPrice) {
-  const confirm = window.confirm(
-    "El precio de venta es menor o igual al costo. ¿Deseas continuar?");
-  if (!confirm) return;
-}
+    // ✅ Solo validar margen si ambos precios son mayores a 0
+    // ✅ Solo validar margen si ambos precios son mayores a 0
+    if (productData.costPrice > 0 &&
+        productData.salePrice > 0 &&
+        productData.salePrice <= productData.costPrice) {
+        const confirm = window.confirm(
+            "El precio de venta es menor o igual al costo. ¿Deseas continuar?");
+        if (!confirm) return;
+    }
     try {
         const token = getToken();
 
@@ -502,42 +605,51 @@ if (productData.costPrice > 0 &&
 }
 // Editar producto
 // ✅ Función para reinventar (volver a poner stock)
-window.restockProduct = function(productId) {
+window.restockProduct = function (productId) {
     const product = products.find(p => p._id === productId);
     if (!product) return;
-    
-    // Solicitar cantidad para reinventar
-    let newStock = prompt(`Ingresa la cantidad de stock para "${product.name}":`, "1");
-    if (newStock === null || newStock.trim() === '') return;
-    
-    newStock = parseInt(newStock) || 1;
-    if (newStock <= 0) {
-        alert('La cantidad debe ser mayor a 0');
-        return;
+
+    // Rellenar formulario con info anterior
+    inputId.value = ""; // Es un nuevo producto (reinventado), no una edición del actual si queremos que sea un nuevo registro, 
+    // pero el usuario dijo "reinventar", lo que suele significar volver a listar. 
+    // Si el usuario quiere "volver a reinventarlo" con la info que tenía antes, 
+    // lo más lógico es llenar el formulario como si fuera un nuevo registro para que no pise el ID anterior si es que se guardan como históricos.
+    // Sin embargo, en este sistema parece que los productos tienen stock. 
+    // Si el stock llegó a 0, "reinventar" significa ponerle stock de nuevo al MISMO producto o crear uno nuevo?
+    // El usuario dijo "rellena todos los campos con la informacion que tenia antes para volver a reinventarlo".
+    // Probablemente se refiere a usar el mismo ID para editar el stock, o dejar el ID vacío para crear uno nuevo similar.
+    // Dado que el sistema tiene un campo "stock", lo más normal es editar el stock del producto existente.
+
+    inputId.value = product._id;
+    inputName.value = product.name;
+    inputCostPrice.value = product.costPrice;
+    inputSalePrice.value = product.salePrice;
+    inputCategory.value = product.category;
+    inputBrand.value = product.brand;
+    inputSize.value = product.size || "";
+    inputQuantity.value = 1; // Default 1 para reinventar
+
+    // Cambiar visualmente el formulario
+    formTitle.innerHTML = '<i class="fas fa-magic"></i> Reinventar Producto';
+    btnSave.classList.add('hidden');
+    btnUpdate.classList.remove('hidden');
+    btnCancel.classList.remove('hidden');
+    btnDelete.classList.remove('hidden');
+
+    if (puedeVerCostos) {
+        calculateMargin();
     }
-    
-    // Llamar al servidor para actualizar stock
-    const token = getToken();
-    apiFetch(`/products/${productId}`, "PUT", { 
-        name: product.name,
-        costPrice: product.costPrice,
-        salePrice: product.salePrice,
-        category: product.category,
-        brand: product.brand,
-        size: product.size,
-        stock: newStock
-    }, token).then(() => {
-        alert(`✅ Stock actualizado a ${newStock} unidades`);
-        loadProducts(); // Recargar productos
-    }).catch(err => {
-        alert('❌ Error al actualizar stock: ' + err.message);
-    });
+
+    // Scroll arriba del todo (al formulario)
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    showNotification("Información cargada para reinventar producto", "info");
 };
 
-window.editProduct = function(productId) {
+window.editProduct = function (productId) {
     const product = products.find(p => p._id === productId);
     if (!product) return;
-    
+
     inputId.value = product._id;
     inputName.value = product.name;
     inputCostPrice.value = product.costPrice;
@@ -546,18 +658,18 @@ window.editProduct = function(productId) {
     inputBrand.value = product.brand;
     inputSize.value = product.size || "";
     inputQuantity.value = product.stock || 1;
-    
+
     formTitle.innerHTML = '<i class="fas fa-edit"></i> Editar Producto';
     btnSave.classList.add('hidden');
     btnUpdate.classList.remove('hidden');
     btnCancel.classList.remove('hidden');
     btnDelete.classList.remove('hidden');
-    
+
     // Solo calcular margen si tiene permiso
     if (puedeVerCostos) {
         calculateMargin();
     }
-    
+
     // Scroll al formulario
     document.querySelector('.form-container').scrollIntoView({ behavior: 'smooth' });
 };
@@ -574,7 +686,10 @@ async function updateProduct() {
         category: inputCategory.value.trim(),
         brand: inputBrand.value.trim(),
         size: inputSize.value.trim() || null,
-        stock: stock
+        stock: stock,
+        // Al actualizar/reinventar, si hay stock el producto ya no está "vendido"
+        sold: stock <= 0,
+        soldDate: stock > 0 ? null : undefined
     };
 
     // 1) Solo el nombre es obligatorio
@@ -614,20 +729,20 @@ async function updateProduct() {
 }
 
 // Eliminar producto
-window.deleteProduct = async function(id) {
+window.deleteProduct = async function (id) {
     if (!confirm("¿Estás seguro de que deseas eliminar este producto?\n\nEsta acción no se puede deshacer.")) {
         return;
     }
-    
+
     try {
         const token = getToken();
         await apiFetch(`/products/${id}`, "DELETE", null, token);
         showNotification("Producto eliminado correctamente.", "success");
-        
+
         if (inputId.value === id) {
             cancelUpdate();
         }
-        
+
         await loadProducts();
     } catch (error) {
         console.error("Error al eliminar el producto:", error.message);
@@ -647,14 +762,14 @@ function cancelUpdate() {
 }
 
 // Mostrar detalles del producto
-window.showProductDetails = function(productId) {
+window.showProductDetails = function (productId) {
     const product = products.find(p => p._id === productId);
     if (!product) return;
-    
+
     const margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
     const profit = product.salePrice - product.costPrice;
     const roi = ((profit / product.costPrice) * 100).toFixed(1);
-    
+
     const message = `
 📦 DETALLES DEL PRODUCTO
 
@@ -670,7 +785,7 @@ Producto: ${product.name}
 📈 CLASIFICACIÓN
 ${margin >= 30 ? '🟢 Margen excelente' : margin >= 20 ? '🟡 Margen aceptable' : '🔴 Margen bajo'}
     `;
-    
+
     alert(message);
 };
 
@@ -691,14 +806,14 @@ function showNotification(message, type = 'info') {
         warning: 'var(--warning)',
         info: 'var(--accent)'
     };
-    
+
     const icons = {
         success: 'fas fa-check-circle',
         error: 'fas fa-exclamation-circle',
         warning: 'fas fa-exclamation-triangle',
         info: 'fas fa-info-circle'
     };
-    
+
     notification.style.cssText = `
         position: fixed;
         top: 20px;
@@ -714,7 +829,7 @@ function showNotification(message, type = 'info') {
     `;
     notification.innerHTML = `<i class="${icons[type]}"></i> ${message}`;
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.remove();
     }, 4000);
@@ -779,21 +894,21 @@ function setupMenuHandlers() {
 }
 
 // Función para exportar productos (funcionalidad adicional)
-window.exportProductsData = function() {
+window.exportProductsData = function () {
     if (filteredProducts.length === 0) {
         showNotification("No hay datos para exportar", "warning");
         return;
     }
-    
+
     const csvData = [
         ['Producto', 'Precio Costo', 'Precio Venta', 'Margen %', 'Ganancia', 'ROI %']
     ];
-    
+
     filteredProducts.forEach(product => {
         const margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
         const profit = product.salePrice - product.costPrice;
         const roi = ((profit / product.costPrice) * 100).toFixed(1);
-        
+
         csvData.push([
             product.name,
             product.costPrice,
@@ -803,27 +918,27 @@ window.exportProductsData = function() {
             roi
         ]);
     });
-    
+
     const csvContent = csvData.map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', `productos_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     showNotification("Datos exportados correctamente", "success");
 };
 
 // Hacer disponibles las funciones que llama el HTML
-window.showBarcode        = showBarcode;
-window.closeBarcodeModal  = closeBarcodeModal;
-window.downloadBarcode    = downloadBarcode;
+window.showBarcode = showBarcode;
+window.closeBarcodeModal = closeBarcodeModal;
+window.downloadBarcode = downloadBarcode;
 
 /* =========================================================
    GENERACIÓN MASIVA DE CÓDIGOS DE BARRAS (CON CM)
@@ -832,21 +947,21 @@ window.downloadBarcode    = downloadBarcode;
 
 
 // Actualizar preview del layout
-window.updateLayoutPreview = function() {
+window.updateLayoutPreview = function () {
     const layout = document.querySelector('input[name="layout"]:checked').value;
     const previewText = document.getElementById('previewText');
-    
+
     const previews = {
         grid: '3 columnas × N filas - Ideal para hojas A4',
         list: '1 columna × N filas - Uno debajo del otro',
         compact: '4-5 columnas × N filas - Máxima densidad'
     };
-    
+
     previewText.textContent = previews[layout] || '';
 };
 
 // Generar códigos de barras masivos CON MEDIDAS EN CM
-window.generateBulkBarcodes = async function() {
+window.generateBulkBarcodes = async function () {
     if (bulkSelectedProducts.length === 0) {
         showNotification("Selecciona al menos un producto", "warning");
         return;
@@ -872,7 +987,7 @@ window.generateBulkBarcodes = async function() {
     const containerHeight = cmToPx(containerHeightCm);
 
     // Obtener productos seleccionados
-    const selectedProductsData = allProductsForBulk.filter(p => 
+    const selectedProductsData = allProductsForBulk.filter(p =>
         bulkSelectedProducts.includes(p._id)
     );
 
@@ -961,7 +1076,7 @@ window.generateBulkBarcodes = async function() {
         if (product.category) detailsParts.push(product.category);
         if (product.brand) detailsParts.push(product.brand);
         if (product.size) detailsParts.push(`Talla: ${product.size}`);
-        
+
         details.textContent = detailsParts.join(' • ');
         details.style.cssText = `
             font-size: ${fontSize * 0.65}px;
@@ -975,7 +1090,7 @@ window.generateBulkBarcodes = async function() {
 
         // Canvas para el código
         const canvas = document.createElement('canvas');
-        
+
         wrapper.appendChild(title);
         wrapper.appendChild(details);
         wrapper.appendChild(price);
@@ -987,7 +1102,7 @@ window.generateBulkBarcodes = async function() {
         const cleanName = product.name.replace(/[^\w\s]/g, '').substring(0, 15);
         const code = `${shortId}|${cleanName}|${product.salePrice}`;
 
-try {
+        try {
             // Crear div contenedor para el QR
             const qrDiv = document.createElement('div');
             qrDiv.style.cssText = `
@@ -997,7 +1112,7 @@ try {
                 justify-content: center;
                 align-items: center;
             `;
-            
+
             // Generar código QR en el div
             new QRCode(qrDiv, {
                 text: code,
@@ -1007,10 +1122,10 @@ try {
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.H
             });
-            
+
             // Agregar el div (que contiene el canvas del QR) al wrapper
             wrapper.appendChild(qrDiv);
-            
+
         } catch (error) {
             console.error('Error generando código QR para:', product.name, error);
         }
@@ -1033,12 +1148,12 @@ try {
             canvas.toBlob(blob => {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                const timestamp = new Date().toISOString().slice(0,10);
+                const timestamp = new Date().toISOString().slice(0, 10);
                 link.href = url;
                 link.download = `codigos_barras_${timestamp}_${bulkSelectedProducts.length}productos.png`;
                 link.click();
                 URL.revokeObjectURL(url);
-                
+
                 showNotification(`${bulkSelectedProducts.length} códigos generados correctamente`, "success");
                 closeBulkBarcodeModal();
             }, 'image/png', 1.0);
@@ -1077,19 +1192,19 @@ try {
                             .product-name {
                                 font-weight: 600;
                                 font-size: ${fontSizeCm}cm;
-                                margin-bottom: ${marginCm/2}cm;
+                                margin-bottom: ${marginCm / 2}cm;
                                 color: #2c3e50;
                             }
                             .product-price {
-                                font-size: ${fontSizeCm*0.9}cm;
+                                font-size: ${fontSizeCm * 0.9}cm;
                                 color: #27ae60;
                                 font-weight: 600;
-                                margin-bottom: ${marginCm/2}cm;
+                                margin-bottom: ${marginCm / 2}cm;
                             }
                             .product-details {
-                                font-size: ${fontSizeCm*0.65}cm;
+                                font-size: ${fontSizeCm * 0.65}cm;
                                 color: #7f8c8d;
-                                margin-bottom: ${marginCm/2}cm;
+                                margin-bottom: ${marginCm / 2}cm;
                             }
                             @media print {
                                 body { margin: 0; }
@@ -1112,7 +1227,7 @@ try {
                 </html>
             `);
             printWindow.document.close();
-            
+
             showNotification("Ventana de impresión abierta. Puedes guardar como PDF", "success");
         }
     } catch (error) {
@@ -1146,10 +1261,10 @@ function cmToPx(cm) {
 }
 
 // Abrir modal
-window.openBulkBarcodeModal = function() {
+window.openBulkBarcodeModal = function () {
     // Filtrar solo productos no vendidos
     allProductsForBulk = products.filter(p => !p.sold);
-    
+
     if (allProductsForBulk.length === 0) {
         showNotification("No hay productos disponibles para generar códigos", "warning");
         return;
@@ -1157,19 +1272,19 @@ window.openBulkBarcodeModal = function() {
 
     // Llenar filtros
     populateBulkFilters();
-    
+
     // Mostrar todos los productos inicialmente
     updateBulkSelection();
-    
+
     // Inicializar preview
     updateLayoutPreview();
-    
+
     // Mostrar modal
     document.getElementById('bulkBarcodeModal').classList.add('show');
 };
 
 // Cerrar modal
-window.closeBulkBarcodeModal = function(event) {
+window.closeBulkBarcodeModal = function (event) {
     if (!event || event.target.id === 'bulkBarcodeModal') {
         document.getElementById('bulkBarcodeModal').classList.remove('show');
         bulkSelectedProducts = [];
@@ -1214,7 +1329,7 @@ function populateBulkFilters() {
 }
 
 // Actualizar selección según filtros
-window.updateBulkSelection = function() {
+window.updateBulkSelection = function () {
     const category = document.getElementById('bulkCategory').value;
     const brand = document.getElementById('bulkBrand').value;
     const size = document.getElementById('bulkSize').value;
@@ -1245,7 +1360,7 @@ function renderBulkProductList(productList) {
 
     productList.forEach(product => {
         const isSelected = bulkSelectedProducts.includes(product._id);
-        
+
         const item = document.createElement('div');
         item.className = 'product-item';
         item.innerHTML = `
@@ -1272,7 +1387,7 @@ function renderBulkProductList(productList) {
 }
 
 // Toggle selección de producto
-window.toggleBulkProduct = function(productId) {
+window.toggleBulkProduct = function (productId) {
     const index = bulkSelectedProducts.indexOf(productId);
     if (index === -1) {
         bulkSelectedProducts.push(productId);
@@ -1283,7 +1398,7 @@ window.toggleBulkProduct = function(productId) {
 };
 
 // Seleccionar todos
-window.selectAllBulk = function() {
+window.selectAllBulk = function () {
     const checkboxes = document.querySelectorAll('#bulkProductList input[type="checkbox"]');
     checkboxes.forEach(checkbox => {
         if (!checkbox.checked) {
@@ -1298,7 +1413,7 @@ window.selectAllBulk = function() {
 };
 
 // Deseleccionar todos
-window.deselectAllBulk = function() {
+window.deselectAllBulk = function () {
     const checkboxes = document.querySelectorAll('#bulkProductList input[type="checkbox"]');
     checkboxes.forEach(checkbox => {
         checkbox.checked = false;
@@ -1309,28 +1424,28 @@ window.deselectAllBulk = function() {
 
 // Actualizar contador
 function updateSelectedCount() {
-    document.getElementById('selectedCount').textContent = 
+    document.getElementById('selectedCount').textContent =
         `${bulkSelectedProducts.length} producto${bulkSelectedProducts.length !== 1 ? 's' : ''} seleccionado${bulkSelectedProducts.length !== 1 ? 's' : ''}`;
 }
 
 // Actualizar preview del layout
-window.updateLayoutPreview = function() {
+window.updateLayoutPreview = function () {
     const layout = document.querySelector('input[name="layout"]:checked').value;
     const previewText = document.getElementById('previewText');
-    
+
     const previews = {
         grid: '3 columnas × N filas - Ideal para hojas A4',
         list: '1 columna × N filas - Uno debajo del otro',
         compact: '4-5 columnas × N filas - Máxima densidad'
     };
-    
+
     if (previewText) {
         previewText.textContent = previews[layout] || '';
     }
 };
 
 // Aplicar configuraciones predefinidas (✅ MEJORADO CON VALORES DE ALTA CALIDAD)
-window.applyPreset = function(presetName) {
+window.applyPreset = function (presetName) {
     const presets = {
         standard: {
             width: 0.06,      // ✅ Aumentado para líneas más gruesas
@@ -1374,14 +1489,14 @@ window.applyPreset = function(presetName) {
         document.getElementById('barcodeMargin').value = preset.margin;
         document.getElementById('barcodeContainerWidth').value = preset.containerWidth;
         document.getElementById('barcodeContainerHeight').value = preset.containerHeight;
-        
+
         showNotification(`✅ Preset HD "${presetName}" aplicado`, "success");
     }
 };
 
 
 // ✅ GENERAR CÓDIGOS QR MASIVOS CON DISEÑO MEJORADO Y CENTRADO
-window.generateBulkBarcodes = async function() {
+window.generateBulkBarcodes = async function () {
     if (bulkSelectedProducts.length === 0) {
         showNotification("Selecciona al menos un producto", "warning");
         return;
@@ -1399,7 +1514,7 @@ window.generateBulkBarcodes = async function() {
     const layout = document.querySelector('input[name="layout"]:checked').value;
 
     // Obtener productos seleccionados
-    const selectedProductsData = allProductsForBulk.filter(p => 
+    const selectedProductsData = allProductsForBulk.filter(p =>
         bulkSelectedProducts.includes(p._id)
     );
 
@@ -1411,17 +1526,17 @@ window.generateBulkBarcodes = async function() {
     };
 
     const config = layoutConfigs[layout];
-    
+
     // CONFIGURACIÓN DE PÁGINA A4 Y DPI
     const DPI = 300;
     const pageWidthCm = 21;
     const pageHeightCm = 29.7;
     const pagePaddingCm = 1;
     const gapCm = 0.5;
-    
+
     // Función auxiliar: convertir CM a píxeles a 300 DPI
     const cmToPx300 = (cm) => Math.round((cm / 2.54) * DPI);
-    
+
     // Calcular dimensiones en píxeles
     const pageWidthPx = cmToPx300(pageWidthCm);
     const pageHeightPx = cmToPx300(pageHeightCm);
@@ -1429,35 +1544,35 @@ window.generateBulkBarcodes = async function() {
     const gapPx = cmToPx300(gapCm);
     const containerWidthPx = cmToPx300(containerWidthCm);
     const containerHeightPx = cmToPx300(containerHeightCm);
-    
+
     // CALCULAR CUÁNTOS PRODUCTOS CABEN POR PÁGINA
     const usableWidthCm = pageWidthCm - (2 * pagePaddingCm);
     const usableHeightCm = pageHeightCm - (2 * pagePaddingCm);
-    
+
     const itemsPerRow = config.columns;
     const rowsPerPage = Math.floor(usableHeightCm / (containerHeightCm + gapCm));
     const itemsPerPage = itemsPerRow * rowsPerPage;
-    
+
     console.log(`📄 Configuración:`);
     console.log(`   - ${itemsPerPage} códigos por página`);
     console.log(`   - ${itemsPerRow} columnas × ${rowsPerPage} filas`);
-    
+
     // DIVIDIR PRODUCTOS EN PÁGINAS
     const pages = [];
     for (let i = 0; i < selectedProductsData.length; i += itemsPerPage) {
         pages.push(selectedProductsData.slice(i, i + itemsPerPage));
     }
-    
+
     console.log(`📑 Total de páginas: ${pages.length}`);
-    
+
     // GENERAR CADA PÁGINA
     const images = [];
-    
+
     for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
         const pageProducts = pages[pageIndex];
-        
+
         showNotification(`Generando página ${pageIndex + 1}/${pages.length}...`, "info");
-        
+
         // Crear contenedor para esta página
         const container = document.createElement('div');
         container.style.cssText = `
@@ -1475,11 +1590,11 @@ window.generateBulkBarcodes = async function() {
             align-content: start;
         `;
         document.body.appendChild(container);
-        
+
         // ✅ GENERAR CADA CÓDIGO CON DISEÑO MEJORADO
         for (const product of pageProducts) {
             const wrapper = document.createElement('div');
-            
+
             wrapper.style.cssText = `
                 border: ${cmToPx300(0.05)}px solid #333;
                 padding: ${cmToPx300(marginCm)}px;
@@ -1509,7 +1624,7 @@ window.generateBulkBarcodes = async function() {
                 margin: ${cmToPx300(0.2)}px auto;
                 flex-shrink: 0;
             `;
-            
+
             // Generar código QR
             const shortId = product._id.slice(-8);
             const cleanName = product.name.replace(/[^\w\s]/g, '').substring(0, 15);
@@ -1571,7 +1686,7 @@ window.generateBulkBarcodes = async function() {
 
         // Esperar para renderizado completo
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         // CAPTURAR ESTA PÁGINA
         try {
             const canvas = await html2canvas(container, {
@@ -1589,15 +1704,15 @@ window.generateBulkBarcodes = async function() {
             const blob = await new Promise(resolve => {
                 canvas.toBlob(resolve, 'image/png', 1.0);
             });
-            
+
             images.push({
                 blob: blob,
                 pageNumber: pageIndex + 1,
                 totalPages: pages.length
             });
-            
+
             console.log(`✅ Página ${pageIndex + 1}/${pages.length} generada`);
-            
+
         } catch (error) {
             console.error(`❌ Error en página ${pageIndex + 1}:`, error);
             showNotification(`Error en página ${pageIndex + 1}`, "error");
@@ -1605,34 +1720,34 @@ window.generateBulkBarcodes = async function() {
             document.body.removeChild(container);
         }
     }
-    
+
     // DESCARGAR TODAS LAS IMÁGENES
     if (images.length > 0) {
         const timestamp = new Date().toISOString().slice(0, 10);
-        
+
         for (const img of images) {
             const url = URL.createObjectURL(img.blob);
             const link = document.createElement('a');
-            
+
             let filename = `codigos_QR_${timestamp}`;
-            
+
             if (img.totalPages > 1) {
                 filename += `_pag${img.pageNumber}de${img.totalPages}`;
             }
             filename += '.png';
-            
+
             link.href = url;
             link.download = filename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            
+
             await new Promise(resolve => setTimeout(resolve, 300));
         }
-        
+
         showNotification(
-            `✅ ${images.length} archivo(s) descargado(s) - ${bulkSelectedProducts.length} códigos QR generados`, 
+            `✅ ${images.length} archivo(s) descargado(s) - ${bulkSelectedProducts.length} códigos QR generados`,
             "success"
         );
         closeBulkBarcodeModal();

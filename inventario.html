@@ -417,6 +417,37 @@
             margin-top: 16px;
         }
 
+        /* Stock bajo y agotado */
+        .product-card.low-stock {
+            border-left: 4px solid var(--warning);
+        }
+        .product-card.out-of-stock {
+            opacity: 0.65;
+            background: #fdfdfd;
+            border-left: 4px solid var(--danger);
+            filter: grayscale(0.4);
+        }
+        .low-stock-warning {
+            color: var(--warning);
+            font-weight: 700;
+        }
+        .status-out {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+        .product-meta-custom {
+            font-size: 13px;
+            color: var(--medium-gray);
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
         /* ---------- Botones ---------- */
         .btn {
             display: inline-flex;
