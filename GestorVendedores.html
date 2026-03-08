@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Gestión de Vendedores</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/notifications.css">
     <style>
         * {
             margin: 0;
@@ -519,11 +522,11 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        .toggle-switch input:checked + .toggle-slider {
+        .toggle-switch input:checked+.toggle-slider {
             background-color: #10b981;
         }
 
-        .toggle-switch input:checked + .toggle-slider:before {
+        .toggle-switch input:checked+.toggle-slider:before {
             transform: translateX(22px);
         }
 
@@ -551,6 +554,7 @@
             from {
                 opacity: 0;
             }
+
             to {
                 opacity: 1;
             }
@@ -561,6 +565,7 @@
                 opacity: 0;
                 transform: translateY(40px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -572,6 +577,7 @@
                 opacity: 0;
                 transform: translateY(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -604,17 +610,19 @@
         }
 
         @keyframes slideIn {
-  from {
-    transform: translateX(400px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -631,16 +639,20 @@
                 <div class="section-header">
                     <h2>Mis Vendedores Asignados</h2>
                     <button id="btnRefrescar" class="btn btn-primary" style="padding: 8px 16px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
                         </svg>
                         Refrescar
                     </button>
                 </div>
-                <div id="listaVendedores" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                <div id="listaVendedores"
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
                 </div>
                 <div id="sinVendedores" class="empty-state" style="padding: 40px 20px; display: none;">
-                    <p style="color: #6b7280; font-size: 14px;">No tienes vendedores asignados aún. Busca un vendedor por su ID para asignarlo.</p>
+                    <p style="color: #6b7280; font-size: 14px;">No tienes vendedores asignados aún. Busca un vendedor
+                        por su ID para asignarlo.</p>
                 </div>
             </div>
         </div>
@@ -651,13 +663,10 @@
                 <div class="form-group">
                     <label for="vendedorId">Buscar Nuevo Vendedor por ID</label>
                     <div class="input-group">
-                        <input
-                            type="text"
-                            id="vendedorId"
-                            placeholder="Ej: 507f1f77bcf86cd799439011"
-                        />
+                        <input type="text" id="vendedorId" placeholder="Ej: 507f1f77bcf86cd799439011" />
                         <button id="btnBuscar" class="btn btn-primary">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <path d="m21 21-4.35-4.35"></path>
                             </svg>
@@ -706,7 +715,8 @@
                     <div class="detail-item">
                         <p class="detail-label">ID JC-C</p>
                         <p id="vendedorIdJCC" class="detail-value status-verified">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                             </svg>
@@ -725,14 +735,16 @@
 
                 <div class="actions-grid">
                     <button id="btnPermisos" class="btn btn-success">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                         </svg>
                         Gestionar Permisos
                     </button>
 
                     <button id="btnInspeccionar" class="btn btn-info">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
                         </svg>
@@ -740,9 +752,11 @@
                     </button>
 
                     <button id="btnEliminar" class="btn btn-danger">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                            </path>
                         </svg>
                         Eliminar
                     </button>
@@ -777,17 +791,19 @@
                     </svg>
                 </button>
             </div>
-            
+
             <div class="modal-body">
                 <div class="bulk-actions">
                     <button id="btnActivarTodos" class="btn btn-success">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                         Activar Todos
                     </button>
                     <button id="btnDesactivarTodos" class="btn btn-danger">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
                         </svg>
@@ -1057,24 +1073,24 @@
             </div>
 
             <div class="permisos-section">
-    <div class="permisos-section-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="1" x2="12" y2="23"></line>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-        </svg>
-        Información Financiera
-    </div>
-    <div class="permission-item">
-        <div class="permission-info">
-            <div class="permission-name">Ver Costos y Ganancias</div>
-            <div class="permission-desc">Permite ver precios de costo y márgenes de ganancia</div>
-        </div>
-        <label class="toggle-switch">
-            <input type="checkbox" data-permission="verCostosYGanancias">
-            <span class="toggle-slider"></span>
-        </label>
-    </div>
-</div>
+                <div class="permisos-section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    Información Financiera
+                </div>
+                <div class="permission-item">
+                    <div class="permission-info">
+                        <div class="permission-name">Ver Costos y Ganancias</div>
+                        <div class="permission-desc">Permite ver precios de costo y márgenes de ganancia</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" data-permission="verCostosYGanancias">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
 
             <div class="modal-footer">
                 <button id="btnCancelar" class="btn btn-secondary">Cancelar</button>
@@ -1092,10 +1108,10 @@
 
     <script type="module">
         import { getToken } from './utils/auth.js';
-        import { apiFetch } from './utils/api.js'; 
+        import { apiFetch } from './utils/api.js';
 
         const API_URL = 'https://losiones-1.onrender.com/api/auth';
-        
+
         let vendedorActual = null;
         let permisosActuales = {};
 
@@ -1113,7 +1129,7 @@
         const btnRefrescar = document.getElementById('btnRefrescar');
         const listaVendedores = document.getElementById('listaVendedores');
         const sinVendedores = document.getElementById('sinVendedores');
-        
+
         // Elementos del modal
         const modalPermisos = document.getElementById('modalPermisos');
         const btnCerrarModal = document.getElementById('btnCerrarModal');
@@ -1123,27 +1139,27 @@
         const btnDesactivarTodos = document.getElementById('btnDesactivarTodos');
 
         // Verificar vencimiento al cargar
-async function verificarVencimiento() {
-  try {
-    const response = await apiFetch("/auth/verificar-vencimiento", "GET");
-    
-    if (response.vencido) {
-      mostrarAlertaVencimiento("❌ Tu acceso ha vencido. Contacta al administrador.", "danger");
-      // Opcional: bloquear funcionalidad
-    } else if (response.proximo_vencer) {
-      mostrarAlertaVencimiento(
-        `⚠️ Tu acceso vencerá en ${response.dias_restantes} día(s). Fecha de vencimiento: ${new Date(response.fecha_pago).toLocaleDateString()}`,
-        "warning"
-      );
-    }
-  } catch (error) {
-    console.error("Error verificando vencimiento:", error);
-  }
-}
+        async function verificarVencimiento() {
+            try {
+                const response = await apiFetch("/auth/verificar-vencimiento", "GET");
 
-function mostrarAlertaVencimiento(mensaje, tipo) {
-  const alerta = document.createElement("div");
-  alerta.style.cssText = `
+                if (response.vencido) {
+                    mostrarAlertaVencimiento("❌ Tu acceso ha vencido. Contacta al administrador.", "danger");
+                    // Opcional: bloquear funcionalidad
+                } else if (response.proximo_vencer) {
+                    mostrarAlertaVencimiento(
+                        `⚠️ Tu acceso vencerá en ${response.dias_restantes} día(s). Fecha de vencimiento: ${new Date(response.fecha_pago).toLocaleDateString()}`,
+                        "warning"
+                    );
+                }
+            } catch (error) {
+                console.error("Error verificando vencimiento:", error);
+            }
+        }
+
+        function mostrarAlertaVencimiento(mensaje, tipo) {
+            const alerta = document.createElement("div");
+            alerta.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
@@ -1156,12 +1172,12 @@ function mostrarAlertaVencimiento(mensaje, tipo) {
     max-width: 400px;
     animation: slideIn 0.3s ease;
   `;
-  alerta.textContent = mensaje;
-  document.body.appendChild(alerta);
-}
+            alerta.textContent = mensaje;
+            document.body.appendChild(alerta);
+        }
 
-// Llamar al cargar la página
-document.addEventListener("DOMContentLoaded", verificarVencimiento);
+        // Llamar al cargar la página
+        document.addEventListener("DOMContentLoaded", verificarVencimiento);
 
         function encriptarId(id) {
             let hash = 0;
@@ -1174,18 +1190,22 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
         }
 
         function mostrarError(mensaje) {
+            showNotification(mensaje, 'error');
             textoError.textContent = mensaje;
             mensajeError.classList.add('show');
             mensajeExito.classList.remove('show');
+
             setTimeout(() => {
                 mensajeError.classList.remove('show');
             }, 5000);
         }
 
         function mostrarExito(mensaje) {
+            showNotification(mensaje, 'success');
             textoExito.textContent = mensaje;
             mensajeExito.classList.add('show');
             mensajeError.classList.remove('show');
+
             setTimeout(() => {
                 mensajeExito.classList.remove('show');
             }, 5000);
@@ -1199,10 +1219,10 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
         function mostrarVendedor(vendedor) {
             document.getElementById('vendedorNombre').textContent = vendedor.name;
             document.getElementById('vendedorUsername').textContent = '@' + vendedor.username;
-            
+
             const idEncriptado = encriptarId(vendedor._id);
             document.getElementById('vendedorIdJCC').querySelector('span').textContent = idEncriptado + ' Confirmada';
-            
+
             const estadoElement = document.getElementById('vendedorEstado');
             if (vendedor.bloqueado) {
                 estadoElement.innerHTML = '<span class="status-blocked">Bloqueado</span>';
@@ -1265,10 +1285,10 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
                             <h3>${vendedor.name}</h3>
                             <p>@${vendedor.username}</p>
                             <div>
-                                ${vendedor.permisos ? 
-                                    '<span class="badge badge-success">Con permisos</span>' : 
-                                    '<span class="badge badge-warning">Sin permisos</span>'
-                                }
+                                ${vendedor.permisos ?
+                                '<span class="badge badge-success">Con permisos</span>' :
+                                '<span class="badge badge-warning">Sin permisos</span>'
+                            }
                             </div>
                         `;
                         card.addEventListener('click', () => {
@@ -1299,7 +1319,7 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
 
             try {
                 const token = getToken();
-                
+
                 if (!token) {
                     throw new Error('No hay token de autenticación. Por favor inicia sesión nuevamente.');
                 }
@@ -1319,13 +1339,13 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
 
                 vendedorActual = data;
                 mostrarVendedor(data);
-                
+
                 if (data.asignado) {
                     mostrarExito('Vendedor encontrado (Ya está en tu lista)');
                 } else {
                     mostrarExito('Vendedor encontrado y asignado a tu lista exitosamente');
                 }
-                
+
                 await cargarMisVendedores();
             } catch (error) {
                 console.error('Error:', error);
@@ -1366,7 +1386,7 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
                 }
 
                 permisosActuales = data.permisosDetallados || {};
-                
+
                 // Cargar permisos en los checkboxes
                 document.querySelectorAll('[data-permission]').forEach(checkbox => {
                     const permiso = checkbox.getAttribute('data-permission');
@@ -1429,7 +1449,7 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
 
                 permisosActuales = nuevosPermisos;
                 vendedorActual.permisos = data.permisos;
-                
+
                 // Actualizar el indicador de permisos en la tarjeta
                 const permisosElement = document.getElementById('vendedorPermisos');
                 if (data.permisos) {
@@ -1468,10 +1488,10 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
             });
         }
 
-        function inspeccionarVendedor() {
+        async function inspeccionarVendedor() {
             if (!vendedorActual) return;
 
-            const confirmacion = confirm(
+            const confirmacion = await showConfirm(
                 `Modo Administrador\n\n` +
                 `Vas a acceder al panel de ventas del vendedor:\n` +
                 `${vendedorActual.name} (@${vendedorActual.username})\n\n` +
@@ -1482,7 +1502,7 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
                 sessionStorage.setItem('adminMode', 'true');
                 sessionStorage.setItem('vendedorId', vendedorActual._id);
                 sessionStorage.setItem('vendedorName', vendedorActual.name);
-                
+
                 window.location.href = 'categories.html';
             }
         }
@@ -1490,7 +1510,7 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
         async function eliminarVendedor() {
             if (!vendedorActual) return;
 
-            const confirmacion = confirm(
+            const confirmacion = await showConfirm(
                 `¿Estás seguro de que deseas eliminar al vendedor ${vendedorActual.name}?\n\nEsta acción no se puede deshacer y eliminará al vendedor de la base de datos.`
             );
 
@@ -1519,7 +1539,7 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
                 vendedorActual = null;
                 vendedorIdInput.value = '';
                 ocultarVendedor();
-                
+
                 await cargarMisVendedores();
             } catch (error) {
                 mostrarError(error.message);
@@ -1578,5 +1598,7 @@ document.addEventListener("DOMContentLoaded", verificarVencimiento);
             }
         });
     </script>
+    <script src="utils/notifications.js" type="module"></script>
 </body>
+
 </html>

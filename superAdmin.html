@@ -1,8 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <title>Panel Super-Admin</title>
   <style>
     * {
@@ -18,7 +18,7 @@
       --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
       --danger-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
       --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-      
+
       --glass-bg: rgba(255, 255, 255, 0.1);
       --glass-border: rgba(255, 255, 255, 0.2);
       --text-primary: #2c3e50;
@@ -135,7 +135,7 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
       transition: left 0.6s;
     }
 
@@ -323,7 +323,8 @@
       align-items: flex-end;
     }
 
-    .user-status, .user-type {
+    .user-status,
+    .user-type {
       padding: 6px 16px;
       border-radius: 12px;
       font-size: 11px;
@@ -413,7 +414,7 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
       transition: left 0.4s;
     }
 
@@ -426,11 +427,30 @@
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
 
-    .btn-edit { background: var(--primary-gradient); color: white; }
-    .btn-block { background: var(--danger-gradient); color: white; }
-    .btn-unblock { background: var(--success-gradient); color: white; }
-    .btn-inspect { background: var(--warning-gradient); color: white; }
-    .btn-delete { background: var(--dark-gradient); color: white; }
+    .btn-edit {
+      background: var(--primary-gradient);
+      color: white;
+    }
+
+    .btn-block {
+      background: var(--danger-gradient);
+      color: white;
+    }
+
+    .btn-unblock {
+      background: var(--success-gradient);
+      color: white;
+    }
+
+    .btn-inspect {
+      background: var(--warning-gradient);
+      color: white;
+    }
+
+    .btn-delete {
+      background: var(--dark-gradient);
+      color: white;
+    }
 
     .btn-sm:disabled {
       opacity: 0.5;
@@ -514,7 +534,8 @@
       margin-bottom: 8px;
     }
 
-    .form-input, .form-select {
+    .form-input,
+    .form-select {
       width: 100%;
       padding: 14px 18px;
       border: 2px solid #e9ecef;
@@ -524,7 +545,8 @@
       background: #f8f9fa;
     }
 
-    .form-input:focus, .form-select:focus {
+    .form-input:focus,
+    .form-select:focus {
       outline: none;
       border-color: #667eea;
       background: white;
@@ -538,8 +560,15 @@
       margin-top: 32px;
     }
 
-    .btn-save { background: var(--success-gradient); color: white; }
-    .btn-cancel { background: var(--text-secondary); color: white; }
+    .btn-save {
+      background: var(--success-gradient);
+      color: white;
+    }
+
+    .btn-cancel {
+      background: var(--text-secondary);
+      color: white;
+    }
 
     /* Scroll to top button */
     .scroll-to-top {
@@ -573,9 +602,20 @@
     }
 
     @keyframes bounceIn {
-      0% { opacity: 0; transform: scale(0.3); }
-      50% { opacity: 1; transform: scale(1.1); }
-      100% { opacity: 1; transform: scale(1); }
+      0% {
+        opacity: 0;
+        transform: scale(0.3);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
     /* Loading state */
@@ -590,21 +630,48 @@
 
     /* Responsive */
     @media (max-width: 768px) {
-      .admin-container { padding: 16px; }
-      .users-grid { grid-template-columns: 1fr; }
-      .header-content { grid-template-columns: 1fr; text-align: center; }
-      .dashboard-grid { grid-template-columns: 1fr; }
-      .user-details { grid-template-columns: 1fr; }
-      .header-info h1 { font-size: 2.2rem; }
-      .section-title { font-size: 1.8rem; }
+      .admin-container {
+        padding: 16px;
+      }
+
+      .users-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .user-details {
+        grid-template-columns: 1fr;
+      }
+
+      .header-info h1 {
+        font-size: 2.2rem;
+      }
+
+      .section-title {
+        font-size: 1.8rem;
+      }
     }
 
     @media (max-width: 480px) {
-      .modal-content { padding: 24px; }
-      .user-card { padding: 20px; }
+      .modal-content {
+        padding: 24px;
+      }
+
+      .user-card {
+        padding: 20px;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="admin-container">
     <!-- Header -->
@@ -670,22 +737,22 @@
       </div>
       <form id="editForm">
         <input type="hidden" id="editUserId">
-        
+
         <div class="form-group">
           <label class="form-label">Nombre Completo</label>
           <input type="text" class="form-input" id="editName" required>
         </div>
-        
+
         <div class="form-group">
           <label class="form-label">Nombre de Usuario</label>
           <input type="text" class="form-input" id="editUsername" required>
         </div>
-        
+
         <div class="form-group">
           <label class="form-label">Nueva Contraseña (opcional)</label>
           <input type="password" class="form-input" id="editPassword" placeholder="Dejar vacío para mantener actual">
         </div>
-        
+
         <div class="form-group">
           <label class="form-label">Tipo de Usuario</label>
           <select class="form-select" id="editTipo" required>
@@ -694,7 +761,7 @@
             <option value="3">🛡️ Super Administrador</option>
           </select>
         </div>
-        
+
         <div class="form-actions">
           <button type="button" class="btn btn-cancel" id="cancelEdit">Cancelar</button>
           <button type="submit" class="btn btn-save">💾 Guardar Cambios</button>
@@ -715,17 +782,17 @@
           <label class="form-label">Nombre Completo</label>
           <input type="text" class="form-input" id="addName" required>
         </div>
-        
+
         <div class="form-group">
           <label class="form-label">Nombre de Usuario</label>
           <input type="text" class="form-input" id="addUsername" required>
         </div>
-        
+
         <div class="form-group">
           <label class="form-label">Contraseña</label>
           <input type="password" class="form-input" id="addPassword" required>
         </div>
-        
+
         <div class="form-group">
           <label class="form-label">Tipo de Usuario</label>
           <select class="form-select" id="addTipo" required>
@@ -734,7 +801,7 @@
             <option value="3">🛡️ Super Administrador</option>
           </select>
         </div>
-        
+
         <div class="form-actions">
           <button type="button" class="btn btn-cancel" id="cancelAdd">Cancelar</button>
           <button type="submit" class="btn btn-save">➕ Crear Usuario</button>
@@ -743,6 +810,8 @@
     </div>
   </div>
 
-    <script type="module" src="superAdmin.js"></script>
+  <script src="utils/notifications.js" type="module"></script>
+  <script type="module" src="superAdmin.js"></script>
 </body>
+
 </html>

@@ -372,15 +372,15 @@ function viewSaleDetails(sale) {
 
 /* ---------- eliminar ---------- */
 async function deleteSale(id) {
-    if (!confirm("¿Eliminar esta venta?")) return;
+    if (!await showConfirm("¿Eliminar esta venta?")) return;
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "DELETE", null, token);
-        alert("Venta eliminada correctamente.");
+        showNotification("Venta eliminada correctamente.", "error");
         loadSales();
     } catch (error) {
         console.error("Error al eliminar la venta:", error.message);
-        alert("No se pudo eliminar la venta.");
+        showNotification("No se pudo eliminar la venta.", "error");
     }
 }
 
@@ -513,13 +513,13 @@ async function loadProductsForSelect() {
 async function saveSale() {
     // ---------- Validaciones básicas ----------
     if (!inputDate.value) {
-        alert("Por favor selecciona una fecha de venta.");
+        showNotification("Por favor selecciona una fecha de venta.", "warning");
         inputDate.focus();
         return;
     }
 
     if (selectedProducts.length === 0) {
-        alert("Por favor selecciona al menos un producto.");
+        showNotification("Por favor selecciona al menos un producto.", "warning");
         return;
     }
 
@@ -535,7 +535,7 @@ async function saveSale() {
 
     // ---------- Validación FINAL ----------
     if (!clientName || !productName || !saleDate || !price) {
-        alert("⚠ Faltan datos obligatorios:\nCliente, Producto, Fecha o Precio.");
+        showNotification("⚠ Faltan datos obligatorios:\nCliente, Producto, Fecha o Precio.", "warning");
         return;
     }
 
@@ -616,7 +616,7 @@ async function saveSale() {
         }
 
         await apiFetch(endpoint, 'POST', saleData, token);
-        alert('Venta guardada correctamente.');
+        showNotification('Venta guardada correctamente.', 'success');
 
         // Limpiar todo
         form.reset();
@@ -639,12 +639,12 @@ async function saveSale() {
             showReceiptModal(receiptData);
         } catch (err) {
             console.error('Error al mostrar receipt:', err);
-            alert('Venta guardada, pero hubo un error al generar el recibo.');
+            showNotification('Venta guardada, pero hubo un error al generar el recibo.', 'warning');
         }
 
     } catch (error) {
         console.error('Error al guardar la venta:', error.message);
-        alert('No se pudo guardar la venta: ' + error.message);
+        showNotification('No se pudo guardar la venta: ' + error.message, 'error');
     }
 }
 
@@ -700,37 +700,37 @@ async function updateSale() {
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "PUT", saleData, token);
-        alert("Venta actualizada correctamente.");
+        showNotification("Venta actualizada correctamente.", "success");
         cancelUpdate();
         loadSales();
     } catch (error) {
         console.error("Error al actualizar la venta:", error.message);
-        alert("No se pudo actualizar la venta: " + error.message);
+        showNotification("No se pudo actualizar la venta: " + error.message, "error");
     }
 }
 let isAddingPayment = false;
 
 /* ---------- agregar pago ---------- */
-async function addPayment() {
-    if (isAddingPayment) return;
+async function addPayment(force = false) {
+    if (isAddingPayment && !force) return;
     isAddingPayment = true;
 
     const id = document.getElementById("paymentModal").dataset.saleId;
     const amount = parseFloat(document.getElementById("paymentAmount").value);
     const date = document.getElementById("paymentDate").value;
 
-    if (!id) { alert("No se seleccionó ninguna venta."); isAddingPayment = false; return; }
-    if (!amount || amount <= 0) { alert("Monto inválido"); isAddingPayment = false; return; }
+    if (!id) { showNotification("No se seleccionó ninguna venta.", "warning"); isAddingPayment = false; return; }
+    if (!amount || amount <= 0) { showNotification("Monto inválido", "warning"); isAddingPayment = false; return; }
 
     try {
         const token = getToken();
-        const response = await apiFetch(`/sales/${id}/payment`, "POST", { amount, date }, token);
+        const response = await apiFetch(`/sales/${id}/payment`, "POST", { amount, date, force }, token);
         const formattedAmount = amount.toLocaleString('es-CO');
-        alert(`Abono de $${formattedAmount} registrado correctamente.`);
+        showNotification(`Abono de $${formattedAmount} registrado correctamente.`, "success");
 
         if (response.justSettled || response.settled) {
-            alert("¡Venta liquidada automáticamente!");
-            if (confirm("¿Deseas ir a la sección de ventas liquidadas?")) {
+            showNotification("¡Venta liquidada automáticamente!", "success");
+            if (await showConfirm("¿Deseas ir a la sección de ventas liquidadas?")) {
                 window.location.href = "liquidados.html";
                 isAddingPayment = false;
                 return;
@@ -742,7 +742,15 @@ async function addPayment() {
         loadSales();
     } catch (error) {
         console.error("Error al registrar el abono:", error.message);
-        alert("No se pudo registrar el abono: " + error.message);
+
+        if (error.message.includes("ya fue registrado anteriormente") && !force) {
+            if (await showConfirm("Este abono parece estar duplicado (mismo monto y fecha). ¿Deseas registrarlo de todas formas?")) {
+                isAddingPayment = false;
+                return addPayment(true);
+            }
+        }
+
+        showNotification("No se pudo registrar el abono: " + error.message, "error");
     } finally {
         isAddingPayment = false;
     }
@@ -933,6 +941,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadProductsForDropdown();
 
     loadProductsForDropdown();
+
+    // ✅ Asegurar que el formulario carga con el estado correcto (Contado por defecto)
+    if (typeof window.togglePaymentFields === 'function') {
+        window.togglePaymentFields();
+    }
+
     document.addEventListener("click", (e) => {
         const dropdown = document.getElementById("productDropdown");
         const panel = document.getElementById("productDropdownPanel");
@@ -1045,7 +1059,7 @@ async function loadProductsForDropdown() {
 
                     qty = parseInt(qty) || 1;
                     if (qty <= 0) {
-                        alert("La cantidad debe ser mayor a 0");
+                        showNotification("La cantidad debe ser mayor a 0", "warning");
                         return;
                     }
 
@@ -1082,7 +1096,7 @@ function selectProduct(product, quantity = 1) {
     const currentQty = existingProduct ? existingProduct.quantity : 0;
 
     if (currentQty + quantity > availableStock) {
-        alert(`Stock insuficiente. Disponible: ${availableStock}, ya seleccionado: ${currentQty}`);
+        showNotification(`Stock insuficiente. Disponible: ${availableStock}, ya seleccionado: ${currentQty}`, "warning");
         return;
     }
 
@@ -1148,7 +1162,7 @@ async function editProductPrice(index) {
     const parsedPrice = parseFloat(newPrice);
 
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
-        alert('❌ Precio inválido. Debe ser un número mayor a 0.');
+        showNotification('❌ Precio inválido. Debe ser un número mayor a 0.', 'warning');
         return;
     }
 
@@ -1195,7 +1209,7 @@ async function editProductPrice(index) {
         if (error.message) {
             errorMessage += ': ' + error.message;
         }
-        alert('❌ ' + errorMessage);
+        showNotification('❌ ' + errorMessage, 'error');
     }
 }
 
@@ -1209,12 +1223,12 @@ function editProductQuantity(index) {
     newQty = parseInt(newQty) || 1;
 
     if (newQty <= 0) {
-        alert('❌ Cantidad inválida. Debe ser mayor a 0.');
+        showNotification('❌ Cantidad inválida. Debe ser mayor a 0.', 'warning');
         return;
     }
 
     if (newQty > availableStock) {
-        alert(`❌ Stock insuficiente. Disponible: ${availableStock}`);
+        showNotification(`❌ Stock insuficiente. Disponible: ${availableStock}`, 'warning');
         return;
     }
 
@@ -2803,8 +2817,8 @@ async function handleReceiptAction(action, receiptId) {
 
     closeReceiptModal();
 }
-window.cerrarSesion = function () {
-    if (!confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+window.cerrarSesion = async function () {
+    if (!await showConfirm('¿Estás seguro de que deseas cerrar sesión?')) {
         return;
     }
 

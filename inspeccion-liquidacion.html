@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inspección de Liquidación</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/notifications.css">
     <style>
         :root {
             --primary: #2c3e50;
@@ -19,8 +21,8 @@
             --light-gray: #f8f9fa;
             --medium-gray: #6c757d;
             --border: #e9ecef;
-            --shadow: 0 2px 8px rgba(0,0,0,0.1);
-            --shadow-hover: 0 4px 16px rgba(0,0,0,0.15);
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
             --radius: 8px;
             --radius-lg: 12px;
         }
@@ -128,12 +130,29 @@
             color: var(--primary);
         }
 
-        .icon-cash { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .icon-income { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); }
-        .icon-sales { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
-        .icon-tracking { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); }
-        .icon-inventory { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
-        .icon-final { background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); }
+        .icon-cash {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .icon-income {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+
+        .icon-sales {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .icon-tracking {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .icon-inventory {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .icon-final {
+            background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+        }
 
         .data-field {
             margin-bottom: 15px;
@@ -263,8 +282,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .details-toggle {
@@ -348,6 +372,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -375,7 +400,7 @@
                     </div>
                     <h3>Configuración Inicial</h3>
                 </div>
-                
+
                 <div class="data-field">
                     <div class="data-label">Caja Inicial</div>
                     <div class="data-value" id="initialCash">$0</div>
@@ -595,6 +620,8 @@
         </div>
     </div>
 
+    <script src="utils/notifications.js" type="module"></script>
     <script type="module" src="inspeccion-liquidacion.js"></script>
 </body>
+
 </html>

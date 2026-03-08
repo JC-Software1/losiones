@@ -311,9 +311,7 @@ window.sellProduct = async function (productId) {
     const product = allProducts.find(p => p._id === productId);
     if (!product) return;
 
-    const confirmMessage = `¿Confirmar venta del producto "${product.name}"?\n\nPrecio de venta: $${product.salePrice.toLocaleString()}\nGanancia obtenida: $${(product.salePrice - product.costPrice).toLocaleString()}`;
-
-    if (!confirm(confirmMessage)) return;
+    if (!await showConfirm(confirmMessage)) return;
 
     try {
         const token = getToken();
@@ -380,7 +378,7 @@ DATOS ADICIONALES:
 • Tiempo estimado de recuperación: Inmediato al vender
     `;
 
-    alert(analysisMessage);
+    showNotification(analysisMessage, "info", "Análisis de Inventario");
 };
 
 // Exportar datos del inventario
@@ -453,7 +451,7 @@ window.showLowMarginAlert = function () {
 
     alertMessage += `\n\nRECOMENDACIÓN: Revisa los precios de estos productos para mejorar la rentabilidad.`;
 
-    alert(alertMessage);
+    showNotification(alertMessage, "warning", "Alerta de Stock");
 };
 
 // ✅ Nueva función para mostrar alertas de STOCK BAJO (no invasiva)
@@ -561,7 +559,7 @@ ${highMargin >= totalProducts * 0.6 ? 'Excelente distribución de márgenes' : '
 ${avgMargin >= 25 ? 'Margen promedio saludable' : 'Margen promedio por debajo del objetivo (25%)'}
     `;
 
-    alert(reportMessage);
+    showNotification(reportMessage, "info", "Reporte de Valor");
 };
 
 // Mostrar consejos de optimización
@@ -595,48 +593,24 @@ ACCIONES RÁPIDAS:
 • Mantén actualizada la información de productos
     `;
 
-    alert(tips);
+    showNotification(tips, "info", "Consejos de Optimización");
 };
 
 // Mostrar notificaciones
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    const colors = {
-        success: '#27ae60',
-        error: '#e74c3c',
-        warning: '#f39c12',
-        info: '#3498db'
-    };
-
-    const icons = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle',
-        info: 'fas fa-info-circle'
-    };
-
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${colors[type]};
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 10000;
-        font-weight: 600;
-        max-width: 350px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    `;
-    notification.innerHTML = `<i class="${icons[type]}"></i> ${message}`;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
+function showNotification(message, type = 'info', title = '') {
+    if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type, title);
+    } else {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed; top: 20px; right: 20px;
+            background: #333; color: white; padding: 12px 20px;
+            border-radius: 8px; z-index: 10000;
+        `;
+        notification.innerHTML = message;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+    }
 }
 
 // Mostrar error

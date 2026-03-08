@@ -34,7 +34,7 @@ router.get("/by-date/:date", auth, checkPermission('verVentas'), async (req, res
                 $lte: endOfDay
             }
         };
-        
+
         if (req.user.tipo === 1) {
             query.user = userId;
         }
@@ -61,10 +61,10 @@ router.get("/all", auth, checkPermission('verVentas'), async (req, res) => {
 // Obtener ventas liquidadas
 router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
     try {
-        const query = req.user.tipo === 1 
-            ? { user: req.user.id, settled: true } 
+        const query = req.user.tipo === 1
+            ? { user: req.user.id, settled: true }
             : { settled: true };
-            
+
         const sales = await Sale.find(query).sort({ settledDate: -1 });
         res.json(sales);
     } catch (error) {
@@ -77,13 +77,13 @@ router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
 // Crear nueva venta
 router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
     try {
-        const { 
-            clientName, 
-            productName, 
-            saleDate, 
-            price, 
-            installments, 
-            advancePayment, 
+        const {
+            clientName,
+            productName,
+            saleDate,
+            price,
+            installments,
+            advancePayment,
             clientAddress,
             paymentPerInstallment,  // ✅ RECIBIR DESDE EL FRONTEND
             paymentType,
@@ -97,39 +97,39 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
         }
 
         const isContado = paymentType === 'contado';
-        
+
         // ✅ NUEVO: Descontar stock de los productos
         const Product = require("../models/Product");
         const productIdsToMarkSold = [];
-        
+
         if (products && Array.isArray(products)) {
             for (const prod of products) {
                 const productId = prod.productId;
                 const quantityToSell = prod.quantity || 1;
-                
+
                 // Buscar el producto
                 const product = await Product.findById(productId);
                 if (!product) {
                     return res.status(400).json({ error: `Producto no encontrado: ${prod.name}` });
                 }
-                
+
                 console.log(`📦 Procesando producto: ${product.name}, Stock actual: ${product.stock}, Cantidad a vender: ${quantityToSell}`);
-                
+
                 // Verificar stock (manejar productos sin campo stock)
                 const currentStock = product.stock !== undefined ? product.stock : 1;
                 console.log(`   Stock calculado: ${currentStock}`);
-                
+
                 if (currentStock < quantityToSell) {
                     return res.status(400).json({ error: `Stock insuficiente para "${product.name}". Disponible: ${currentStock}` });
                 }
-                
+
                 // Descontar stock
                 const newStock = currentStock - quantityToSell;
                 console.log(`   Nuevo stock: ${newStock}`);
-                
+
                 // Actualizar stock en el producto
                 product.stock = newStock;
-                
+
                 // NO marcar como vendido si queda stock (solo descuenta)
                 // La venta se registra en cualquier caso
                 if (newStock <= 0) {
@@ -141,11 +141,11 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
                 } else {
                     console.log(`   ✓ Producto con stock remaining: ${newStock}`);
                 }
-                
+
                 await product.save();
             }
         }
-        
+
         const sale = new Sale({
             clientName,
             productName,
@@ -208,18 +208,18 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
 router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
-        
+
         if (req.user.tipo !== 2 && req.user.tipo !== 3) {
             return res.status(403).json({ error: 'No tienes permisos para crear ventas para otros usuarios' });
         }
-        
-        const { 
-            clientName, 
-            productName, 
-            saleDate, 
-            price, 
-            installments, 
-            advancePayment, 
+
+        const {
+            clientName,
+            productName,
+            saleDate,
+            price,
+            installments,
+            advancePayment,
             clientAddress,
             paymentPerInstallment,
             paymentType,
@@ -237,27 +237,27 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
         // ✅ NUEVO: Descontar stock de los productos
         const Product = require("../models/Product");
         const productIdsToMarkSold = [];
-        
+
         if (products && Array.isArray(products)) {
             for (const prod of products) {
                 const productId = prod.productId;
                 const quantityToSell = prod.quantity || 1;
-                
+
                 // Buscar el producto
                 const product = await Product.findById(productId);
                 if (!product) {
                     return res.status(400).json({ error: `Producto no encontrado: ${prod.name}` });
                 }
-                
+
                 // Verificar stock
                 const currentStock = product.stock || 1;
                 if (currentStock < quantityToSell) {
                     return res.status(400).json({ error: `Stock insuficiente para "${product.name}". Disponible: ${currentStock}` });
                 }
-                
+
                 // Descontar stock
                 const newStock = currentStock - quantityToSell;
-                
+
                 // Si el stock llega a 0, marcar como vendido
                 if (newStock <= 0) {
                     product.stock = 0;
@@ -268,7 +268,7 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
                 } else {
                     product.stock = newStock;
                 }
-                
+
                 await product.save();
             }
         }
@@ -334,11 +334,11 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
 router.get('/vendedor/:vendedorId', auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
-        
+
         if (req.user.tipo !== 2 && req.user.tipo !== 3) {
             return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
         }
-        
+
         const sales = await Sale.find({ user: vendedorId }).sort({ saleDate: -1 });
         res.json(sales);
     } catch (error) {
@@ -351,11 +351,11 @@ router.get('/vendedor/:vendedorId', auth, async (req, res) => {
 router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
-        
+
         if (req.user.tipo !== 2 && req.user.tipo !== 3) {
             return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
         }
-        
+
         const sales = await Sale.find({ user: vendedorId, settled: true }).sort({ settledDate: -1 });
         res.json(sales);
     } catch (error) {
@@ -368,10 +368,10 @@ router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
 router.get("/", auth, checkPermission('verVentas'), async (req, res) => {
     try {
         // Filtrar por usuario si es vendedor, todo si es admin
-        const query = req.user.tipo === 1 
+        const query = req.user.tipo === 1
             ? { user: req.user.id }  // Vendedor: todas SUS ventas
             : {};                     // Admin: TODAS las ventas
-            
+
         const sales = await Sale.find(query).sort({ saleDate: -1 });
         res.json(sales);
     } catch (error) {
@@ -391,7 +391,7 @@ router.delete("/:saleId/payment/:paymentId", auth, checkPermission('eliminarAbon
         const { saleId, paymentId } = req.params;
 
         const sale = await findSaleWithAdminPermission(saleId, req.user.id, req.user.tipo);
-        
+
         if (!sale) {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
@@ -408,7 +408,7 @@ router.delete("/:saleId/payment/:paymentId", auth, checkPermission('eliminarAbon
         }
 
         if (sale.settled) {
-        const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
+            const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
             if (totalPaid < sale.price) {
                 sale.settled = false;
                 sale.settledDate = null;
@@ -455,13 +455,13 @@ router.get("/:id", auth, checkPermission('verVentas'), async (req, res) => {
 });
 
 router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
-    const { 
-        clientName, 
-        productName, 
-        saleDate, 
-        price, 
-        installments, 
-        clientAddress, 
+    const {
+        clientName,
+        productName,
+        saleDate,
+        price,
+        installments,
+        clientAddress,
         advancePayment, // ✅ NUEVO
         paymentPerInstallment,
         updateProductPrices,
@@ -481,15 +481,15 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         if (updateProductPrices && productName) {
             const Product = require("../models/Product");
             const productNames = productName.split(',').map(p => p.trim());
-            
+
             for (const name of productNames) {
                 await Product.updateMany(
-                    { 
-                        name: name, 
-                        sold: true, 
-                        user: sale.user 
+                    {
+                        name: name,
+                        sold: true,
+                        user: sale.user
                     },
-                    { 
+                    {
                         $set: { salePrice: Math.round(price / productNames.length) }
                     }
                 );
@@ -501,12 +501,12 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
                 sale.payments = [];
             }
             const saleDateOnly = new Date(sale.saleDate).toISOString().split('T')[0];
-            
+
             let initialPaymentIndex = sale.payments.findIndex(p => {
                 const paymentDateOnly = new Date(p.date).toISOString().split('T')[0];
                 return paymentDateOnly === saleDateOnly;
             });
-            
+
             if (advancePayment > 0) {
                 if (initialPaymentIndex !== -1) {
                     sale.payments[initialPaymentIndex].amount = advancePayment;
@@ -536,17 +536,17 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
         sale.paymentType = paymentType || sale.paymentType || 'cuotas';
         sale.paidAmount = paidAmount !== undefined ? paidAmount : sale.paidAmount;
         sale.remainingBalance = remainingBalance !== undefined ? remainingBalance : sale.remainingBalance;
-        
+
         if (paymentPerInstallment !== undefined) {
             sale.paymentPerInstallment = paymentPerInstallment;
         }
 
         const totalPaid = (sale.payments || []).reduce((sum, payment) => sum + payment.amount, 0);
-        
+
         if (totalPaid >= price && !sale.settled) {
             sale.settled = true;
             sale.settledDate = new Date();
-        } 
+        }
         else if (totalPaid < price && sale.settled) {
             sale.settled = false;
             sale.settledDate = null;
@@ -562,7 +562,7 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
 
 // Agregar abono
 router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, res) => {
-    const { amount, date } = req.body;
+    const { amount, date, force } = req.body;
 
     if (!amount || amount <= 0) {
         return res.status(400).json({ error: "El monto del abono debe ser mayor a cero" });
@@ -581,15 +581,15 @@ router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, 
 
         const paymentDate = date ? new Date(date) : new Date();
         const paymentDateOnly = paymentDate.toISOString().split('T')[0];
-        
+
         const isDuplicate = (sale.payments || []).some(p => {
             const existingDateOnly = new Date(p.date).toISOString().split('T')[0];
             const timeDiff = Math.abs(new Date(p.date) - paymentDate);
             const withinWindow = timeDiff < 5000;
             return p.amount === amount && (existingDateOnly === paymentDateOnly || withinWindow);
         });
-        
-        if (isDuplicate) {
+
+        if (isDuplicate && !force) {
             return res.status(400).json({ error: "Este abono ya fue registrado anteriormente" });
         }
 
@@ -654,7 +654,7 @@ router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) 
                 );
                 if (result.modifiedCount > 0) productsReactivated++;
             }
-        } 
+        }
         // ✅ MÉTODO 2: Fallback para ventas antiguas sin productIds
         else if (sale.productName) {
             const productNames = sale.productName.split(',').map(p => p.trim());
@@ -688,11 +688,11 @@ router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) 
         }
 
         await Sale.findByIdAndDelete(req.params.id);
-        
-        res.json({ 
+
+        res.json({
             message: "Venta eliminada correctamente",
             productsReactivated,
-            details: productsReactivated > 0 
+            details: productsReactivated > 0
                 ? `${productsReactivated} producto(s) reactivado(s)`
                 : "Sin productos para reactivar"
         });

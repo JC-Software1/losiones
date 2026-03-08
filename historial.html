@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historial de Ventas</title>
     <script src="adminMode.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/notifications.css">
     <style>
         :root {
             --primary: #2c3e50;
@@ -22,58 +24,245 @@
             --light-gray: #f8f9fa;
             --medium-gray: #6c757d;
             --border: #e9ecef;
-            --shadow: 0 2px 4px rgba(0,0,0,0.08);
-            --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
             --radius: 8px;
             --radius-lg: 12px;
             --transition: all 0.3s ease;
         }
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{
-            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-            background:linear-gradient(135deg,var(--cream) 0%,var(--light-gray) 100%);
-            color:var(--dark);
-            line-height:1.5;
-            min-height:100vh;
-        }
-        .container{max-width:100%;margin:0 auto;padding:16px;min-height:100vh}
 
-        .header{
-            background:var(--white);
-            border-radius:var(--radius-lg);
-            padding:20px;
-            margin-bottom:20px;
-            box-shadow:var(--shadow);
-            text-align:center;
-            border:1px solid var(--border);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
         }
-        .header h1{color:var(--primary);font-size:24px;font-weight:600;margin-bottom:8px}
-        .header p{color:var(--medium-gray);font-size:14px}
 
-        .menu-toggle{position:fixed;top:18px;right:18px;width:52px;height:52px;background:var(--white);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow);z-index:10010;transition:transform .22s ease,background .22s ease,color .22s ease}
-        .menu-toggle:active{transform:scale(.98)}
-        .menu-toggle:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
-        .menu-toggle .menu-icon{font-size:18px;color:var(--primary)}
-        .menu-toggle.open{background:var(--primary);color:var(--white)}
-        .menu-toggle.open .menu-icon{color:var(--white)}
-        .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10005;opacity:0;visibility:hidden;transition:opacity .28s ease,visibility .28s}
-        .backdrop.show{opacity:1;visibility:visible}
-        .menu-items{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.92);min-width:260px;max-width:92%;background:linear-gradient(180deg,var(--white),#fbfbfb);border-radius:14px;padding:14px;box-shadow:0 20px 50px rgba(0,0,0,.22);z-index:10010;opacity:0;visibility:hidden;transition:transform .32s cubic-bezier(.2,.9,.2,1),opacity .22s ease,visibility .22s;border:1px solid rgba(0,0,0,.03);overflow:hidden;outline:0}
-        .menu-items.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
-        .menu-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px}
-        .menu-head strong{color:var(--primary);font-size:14px}
-        .menu-close{background:transparent;border:none;font-size:16px;color:var(--medium-gray);cursor:pointer;padding:6px;border-radius:8px}
-        .menu-close:hover{color:var(--danger);transform:translateY(-2px)}
-        .menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;align-items:stretch}
-        .menu-link{display:flex;gap:10px;align-items:center;justify-content:center;text-decoration:none;background:linear-gradient(180deg,#fff,var(--light-gray));padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.03);box-shadow:0 6px 18px rgba(0,0,0,.06);transition:transform .18s ease,box-shadow .18s ease,background .18s;color:var(--primary);font-weight:600;font-size:13px;text-align:center}
-        .menu-link i{font-size:16px;width:20px;text-align:center;color:var(--accent)}
-        .menu-link span{display:inline-block;line-height:1}
-        .menu-link:hover{transform:translateY(-6px);box-shadow:0 14px 36px rgba(0,0,0,.14);background:linear-gradient(180deg,var(--accent),#2a86c8);color:#fff}
-        .menu-link:hover i{color:#fff}
-        @media (max-width:420px){.menu-grid{grid-template-columns:repeat(3,1fr);gap:8px}.menu-link{padding:8px;font-size:12px;border-radius:8px}}
-        .menu-link{opacity:0;transform:translateY(6px) scale(.995);transition-property:transform,opacity,box-shadow,background;transition-duration:320ms}
-        .menu-items.show .menu-link{opacity:1;transform:translateY(0) scale(1)}
-        .menu-link:focus{outline:3px solid rgba(52,152,219,.18);transform:translateY(-3px)}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--cream) 0%, var(--light-gray) 100%);
+            color: var(--dark);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 16px;
+            min-height: 100vh
+        }
+
+        .header {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px
+        }
+
+        .header p {
+            color: var(--medium-gray);
+            font-size: 14px
+        }
+
+        .menu-toggle {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            width: 52px;
+            height: 52px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 10010;
+            transition: transform .22s ease, background .22s ease, color .22s ease
+        }
+
+        .menu-toggle:active {
+            transform: scale(.98)
+        }
+
+        .menu-toggle:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover)
+        }
+
+        .menu-toggle .menu-icon {
+            font-size: 18px;
+            color: var(--primary)
+        }
+
+        .menu-toggle.open {
+            background: var(--primary);
+            color: var(--white)
+        }
+
+        .menu-toggle.open .menu-icon {
+            color: var(--white)
+        }
+
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .45);
+            z-index: 10005;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .28s ease, visibility .28s
+        }
+
+        .backdrop.show {
+            opacity: 1;
+            visibility: visible
+        }
+
+        .menu-items {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(.92);
+            min-width: 260px;
+            max-width: 92%;
+            background: linear-gradient(180deg, var(--white), #fbfbfb);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .22);
+            z-index: 10010;
+            opacity: 0;
+            visibility: hidden;
+            transition: transform .32s cubic-bezier(.2, .9, .2, 1), opacity .22s ease, visibility .22s;
+            border: 1px solid rgba(0, 0, 0, .03);
+            overflow: hidden;
+            outline: 0
+        }
+
+        .menu-items.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1)
+        }
+
+        .menu-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px
+        }
+
+        .menu-head strong {
+            color: var(--primary);
+            font-size: 14px
+        }
+
+        .menu-close {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            color: var(--medium-gray);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px
+        }
+
+        .menu-close:hover {
+            color: var(--danger);
+            transform: translateY(-2px)
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            align-items: stretch
+        }
+
+        .menu-link {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            background: linear-gradient(180deg, #fff, var(--light-gray));
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 0, 0, .03);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+            transition: transform .18s ease, box-shadow .18s ease, background .18s;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center
+        }
+
+        .menu-link i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+            color: var(--accent)
+        }
+
+        .menu-link span {
+            display: inline-block;
+            line-height: 1
+        }
+
+        .menu-link:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, .14);
+            background: linear-gradient(180deg, var(--accent), #2a86c8);
+            color: #fff
+        }
+
+        .menu-link:hover i {
+            color: #fff
+        }
+
+        @media (max-width:420px) {
+            .menu-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px
+            }
+
+            .menu-link {
+                padding: 8px;
+                font-size: 12px;
+                border-radius: 8px
+            }
+        }
+
+        .menu-link {
+            opacity: 0;
+            transform: translateY(6px) scale(.995);
+            transition-property: transform, opacity, box-shadow, background;
+            transition-duration: 320ms
+        }
+
+        .menu-items.show .menu-link {
+            opacity: 1;
+            transform: translateY(0) scale(1)
+        }
+
+        .menu-link:focus {
+            outline: 3px solid rgba(52, 152, 219, .18);
+            transform: translateY(-3px)
+        }
 
         /* NUEVO: Contenedor de filtros mejorado */
         .filters-container {
@@ -97,7 +286,7 @@
         .search-input:focus {
             outline: 0;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(52,152,219,.1);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, .1);
         }
 
         .date-filter {
@@ -114,7 +303,7 @@
         .date-filter:focus {
             outline: 0;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(52,152,219,.1);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, .1);
         }
 
         .day-filter-select {
@@ -135,7 +324,7 @@
         .day-filter-select:focus {
             outline: 0;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(52,152,219,.1);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, .1);
         }
 
         .clear-filters-btn {
@@ -176,36 +365,164 @@
             }
         }
 
-        .total-debt{background:linear-gradient(135deg,var(--primary),var(--secondary));color:var(--white);border-radius:var(--radius-lg);padding:24px;text-align:center;margin-bottom:24px}
-        .total-debt h2{font-size:24px;margin-bottom:8px}
-        .total-debt p{opacity:.9;font-size:14px}
-
-        .sales-grid{display:grid;gap:16px;margin-bottom:24px}
-        .sale-card{background:var(--white);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border);transition:var(--transition);position:relative}
-        .sale-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
-        .sale-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
-        .sale-info h3{font-size:16px;font-weight:600;color:var(--primary);margin-bottom:4px}
-        .sale-info p{font-size:14px;color:var(--medium-gray)}
-        .sale-amount{text-align:right}
-        .debt-amount{font-size:18px;font-weight:700;color:var(--danger)}
-        .progress-text{font-size:12px;color:var(--success)}
-        .sale-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
-        .sale-actions .btn{flex:1;min-width:80px;justify-content:center}
-        .progress-bar{width:100%;height:6px;background:var(--light-gray);border-radius:3px;margin:12px 0;overflow:hidden}
-        .progress-fill{height:100%;background:linear-gradient(90deg,var(--success),var(--warning));border-radius:3px;transition:width .3s ease}
-
-        .empty-state{text-align:center;padding:40px 20px;color:var(--medium-gray)}
-        .empty-state i{font-size:48px;margin-bottom:16px;opacity:.5}
-        .loading{display:flex;justify-content:center;align-items:center;padding:40px}
-        .spinner{width:32px;height:32px;border:3px solid var(--light-gray);border-top:3px solid var(--accent);border-radius:50%;animation:spin 1s linear infinite}
-        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-
-        @media (max-width:768px){
-            .container{padding:12px}
-            .sale-actions{flex-direction:column}
-            .sale-actions .btn{flex:none}
+        .total-debt {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 24px
         }
-        .hidden{display:none !important}
+
+        .total-debt h2 {
+            font-size: 24px;
+            margin-bottom: 8px
+        }
+
+        .total-debt p {
+            opacity: .9;
+            font-size: 14px
+        }
+
+        .sales-grid {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px
+        }
+
+        .sale-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+            position: relative
+        }
+
+        .sale-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover)
+        }
+
+        .sale-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px
+        }
+
+        .sale-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px
+        }
+
+        .sale-info p {
+            font-size: 14px;
+            color: var(--medium-gray)
+        }
+
+        .sale-amount {
+            text-align: right
+        }
+
+        .debt-amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--danger)
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: var(--success)
+        }
+
+        .sale-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap
+        }
+
+        .sale-actions .btn {
+            flex: 1;
+            min-width: 80px;
+            justify-content: center
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--light-gray);
+            border-radius: 3px;
+            margin: 12px 0;
+            overflow: hidden
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--warning));
+            border-radius: 3px;
+            transition: width .3s ease
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--medium-gray)
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: .5
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--light-gray);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
+
+        @media (max-width:768px) {
+            .container {
+                padding: 12px
+            }
+
+            .sale-actions {
+                flex-direction: column
+            }
+
+            .sale-actions .btn {
+                flex: none
+            }
+        }
+
+        .hidden {
+            display: none !important
+        }
 
         .btn {
             display: inline-flex;
@@ -230,6 +547,7 @@
             background: linear-gradient(135deg, var(--accent), #2980b9);
             color: var(--white);
         }
+
         .btn-info:hover {
             background: linear-gradient(135deg, #2980b9, var(--accent));
             box-shadow: var(--shadow-hover);
@@ -240,6 +558,7 @@
             background: linear-gradient(135deg, var(--danger), #c0392b);
             color: var(--white);
         }
+
         .btn-danger:hover {
             background: linear-gradient(135deg, #c0392b, var(--danger));
             box-shadow: var(--shadow-hover);
@@ -254,140 +573,168 @@
   Mejora visual y espaciado del menu-toggle
   ============================ */
 
-/* Forzar máximo alto y scroll interno para evitar que el contenido se amontone */
-.menu-items {
-  max-width: 92%;
-  width: auto;
-  max-height: calc(100vh - 120px); /* deja espacio arriba/abajo */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 18px; /* más aire alrededor */
-  gap: 12px;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.2);
-}
+        /* Forzar máximo alto y scroll interno para evitar que el contenido se amontone */
+        .menu-items {
+            max-width: 92%;
+            width: auto;
+            max-height: calc(100vh - 120px);
+            /* deja espacio arriba/abajo */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 18px;
+            /* más aire alrededor */
+            gap: 12px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+        }
 
-/* Cabecera del menú: más separación y tipografía clara */
-.menu-head {
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-.menu-head strong {
-  font-size:15px;
-  letter-spacing:0.2px;
-  color:var(--primary);
-}
+        /* Cabecera del menú: más separación y tipografía clara */
+        .menu-head {
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
 
-/* Ajuste del grid: columnas y gaps más generosos */
-.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr)); /* 2 columnas limpias por defecto */
-  gap: 12px;
-  align-items:stretch;
-}
+        .menu-head strong {
+            font-size: 15px;
+            letter-spacing: 0.2px;
+            color: var(--primary);
+        }
 
-/* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
-@media (max-width:420px) {
-  .menu-grid { grid-template-columns: 1fr; gap: 10px; }
-}
+        /* Ajuste del grid: columnas y gaps más generosos */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            /* 2 columnas limpias por defecto */
+            gap: 12px;
+            align-items: stretch;
+        }
 
-/* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
-.menu-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: flex-start;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: linear-gradient(180deg,#fff,var(--light-gray));
-  border: 1px solid rgba(0,0,0,0.04);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-  min-height: 52px;           /* mayor área táctil */
-  align-items: center;
-  white-space: normal;
-}
+        /* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
+        @media (max-width:420px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+        }
 
-/* Icono: tamaño y contenedor */
-.menu-link i {
-  font-size: 18px;
-  width: 30px;
-  height: 30px;
-  line-height: 30px;
-  text-align: center;
-  color: var(--accent);
-  background: rgba(52,152,219,0.06);
-  border-radius: 8px;
-  flex: 0 0 30px;
-}
+        /* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: flex-start;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #fff, var(--light-gray));
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+            min-height: 52px;
+            /* mayor área táctil */
+            align-items: center;
+            white-space: normal;
+        }
 
-/* Texto: permitir varias líneas y buen espaciado */
-.menu-link span {
-  display: block;
-  text-align: left;
-  line-height: 1.1;
-  font-size: 14px;
-  color: var(--primary);
-  margin: 0;
-  word-break: break-word;
-}
+        /* Icono: tamaño y contenedor */
+        .menu-link i {
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            color: var(--accent);
+            background: rgba(52, 152, 219, 0.06);
+            border-radius: 8px;
+            flex: 0 0 30px;
+        }
 
-/* Estado hover / focus: contraste y sombra más suave */
-.menu-link:hover,
-.menu-link:focus {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.12);
-  background: linear-gradient(180deg,var(--accent),#2a86c8);
-  color: #fff;
-}
-.menu-link:hover i,
-.menu-link:focus i { color: #fff; background: transparent; }
+        /* Texto: permitir varias líneas y buen espaciado */
+        .menu-link span {
+            display: block;
+            text-align: left;
+            line-height: 1.1;
+            font-size: 14px;
+            color: var(--primary);
+            margin: 0;
+            word-break: break-word;
+        }
 
-/* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
-.menu-grid .btn-go-liquidation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  min-height: 52px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  text-decoration: none;
-}
+        /* Estado hover / focus: contraste y sombra más suave */
+        .menu-link:hover,
+        .menu-link:focus {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+            background: linear-gradient(180deg, var(--accent), #2a86c8);
+            color: #fff;
+        }
 
-/* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
-.menu-items .menu-grid { margin-top: 6px; }
+        .menu-link:hover i,
+        .menu-link:focus i {
+            color: #fff;
+            background: transparent;
+        }
 
-/* indicadores de focus accesible */
-.menu-link:focus { outline: 3px solid rgba(52,152,219,0.12); }
+        /* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
+        .menu-grid .btn-go-liquidation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            min-height: 52px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            text-decoration: none;
+        }
 
-/* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
-.menu-link > *:first-child { margin-left: 2px; }
+        /* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
+        .menu-items .menu-grid {
+            margin-top: 6px;
+        }
 
-/* Si quieres dividir opciones por secciones (opcional) */
-.menu-section {
-  display:block;
-  margin-bottom: 8px;
-}
-.menu-section + .menu-section { border-top: 1px dashed rgba(0,0,0,0.04); padding-top: 8px; margin-top: 8px; }
+        /* indicadores de focus accesible */
+        .menu-link:focus {
+            outline: 3px solid rgba(52, 152, 219, 0.12);
+        }
 
-/* Scrollbar más discreto (WebKit) */
-.menu-items::-webkit-scrollbar { width: 8px; }
-.menu-items::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 6px; }
+        /* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
+        .menu-link>*:first-child {
+            margin-left: 2px;
+        }
 
+        /* Si quieres dividir opciones por secciones (opcional) */
+        .menu-section {
+            display: block;
+            margin-bottom: 8px;
+        }
 
+        .menu-section+.menu-section {
+            border-top: 1px dashed rgba(0, 0, 0, 0.04);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        /* Scrollbar más discreto (WebKit) */
+        .menu-items::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .menu-items::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 6px;
+        }
     </style>
 </head>
+
 <body>
 
     <button class="menu-toggle" id="menuToggle">
@@ -424,9 +771,10 @@
         <!-- FILTROS MEJORADOS -->
         <div class="filters-container">
             <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar cliente o producto...">
-            
-            <input style="display: none;" type="date" class="date-filter" id="dateFilter" title="Filtrar por fecha de venta">
-            
+
+            <input style="display: none;" type="date" class="date-filter" id="dateFilter"
+                title="Filtrar por fecha de venta">
+
             <select style="display: none;" class="day-filter-select" id="dayFilter">
                 <option value="">📅 Día de pago</option>
                 <option value="1">Día 1</option>
@@ -462,10 +810,11 @@
                 <option value="31">Día 31</option>
             </select>
 
-            <button. style="display: none;" class="clear-filters-btn" onclick="clearAllFilters()" title="Limpiar todos los filtros">
+            <button. style="display: none;" class="clear-filters-btn" onclick="clearAllFilters()"
+                title="Limpiar todos los filtros">
                 <i class="fas fa-times-circle"></i>
                 <span>Limpiar</span>
-            </button>
+                </button>
         </div>
 
         <div class="sales-grid" id="salesHistory">
@@ -475,6 +824,8 @@
         </div>
     </div>
 
+    <script src="utils/notifications.js" type="module"></script>
     <script type="module" src="historial.js"></script>
 </body>
+
 </html>

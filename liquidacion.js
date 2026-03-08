@@ -9,25 +9,25 @@ let pendingData = null;
 document.addEventListener("DOMContentLoaded", async () => {
     const dateElement = document.getElementById("currentDate");
     const today = new Date();
-    dateElement.textContent = today.toLocaleDateString('es-CO', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+    dateElement.textContent = today.toLocaleDateString('es-CO', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
     });
 
     // ✅ Cargar comisiones PRIMERO
     await loadSavedCommissions();
-    
+
     // ✅ Luego cargar datos pendientes (que también llama updateSummary)
     await loadPendingData();
 
     // Event listeners
     // Event listeners (updateSummary se llamará después de cargar la caja inicial)
-const initialCashInput = document.getElementById("initialCash");
+    const initialCashInput = document.getElementById("initialCash");
 
-// ✅ Llamar updateSummary después de prellenar
-setTimeout(() => updateSummary(), 100);
+    // ✅ Llamar updateSummary después de prellenar
+    setTimeout(() => updateSummary(), 100);
     document.getElementById("paymentsCommission").addEventListener("input", updateSummary);
     document.getElementById("salesCommission").addEventListener("input", updateSummary);
 });
@@ -40,11 +40,11 @@ async function loadPendingData() {
 
         /* ===== NUEVO: elegir ruta según modo admin ===== */
         const vendedorId = window.adminModeUtils?.isActive()
-                         ? window.adminModeUtils.getVendedorId()
-                         : null;
+            ? window.adminModeUtils.getVendedorId()
+            : null;
         const endPoint = vendedorId
-                       ? `/liquidation/vendedor/${vendedorId}/pending`
-                       : '/liquidation/pending';
+            ? `/liquidation/vendedor/${vendedorId}/pending`
+            : '/liquidation/pending';
         /* =============================================== */
 
         const response = await apiFetch(endPoint, "GET", null, token);
@@ -79,14 +79,14 @@ async function loadSavedCommissions() {
     try {
         const token = getToken();
         const vendedorId = window.adminModeUtils?.isActive()
-                         ? window.adminModeUtils.getVendedorId()
-                         : null;
+            ? window.adminModeUtils.getVendedorId()
+            : null;
 
         // Comisión de abonos
         try {
             const endPoint = vendedorId
-                           ? `/commission/vendedor/${vendedorId}`
-                           : '/commission';
+                ? `/commission/vendedor/${vendedorId}`
+                : '/commission';
             const paymentsComm = await apiFetch(endPoint, 'GET', null, token);
             document.getElementById('paymentsCommission').value = paymentsComm.percentage || 0;
         } catch (e) {
@@ -96,8 +96,8 @@ async function loadSavedCommissions() {
         // Comisión de ventas
         try {
             const endPoint = vendedorId
-                           ? `/sales-commission/vendedor/${vendedorId}`
-                           : '/sales-commission';
+                ? `/sales-commission/vendedor/${vendedorId}`
+                : '/sales-commission';
             const salesComm = await apiFetch(endPoint, 'GET', null, token);
             document.getElementById('salesCommission').value = salesComm.percentage || 0;
         } catch (e) {
@@ -119,28 +119,28 @@ function displayPendingData() {
     document.getElementById("paymentsCount").textContent = payments.count;
     document.getElementById("paymentsTotal").textContent = `$${payments.total.toLocaleString('es-CO')}`;
     // ✅ NUEVO: Mostrar total de señas
-document.getElementById("initialPaymentsTotal").textContent = `$${(payments.totalInitialPayments || 0).toLocaleString('es-CO')}`;
-    
+    document.getElementById("initialPaymentsTotal").textContent = `$${(payments.totalInitialPayments || 0).toLocaleString('es-CO')}`;
+
     // Detalles de abonos
-// Detalles de abonos
-const paymentsDetailsHTML = payments.data.map(p => {
-    const badge = p.isInitialPayment 
-        ? '<span style="background: #9b59b6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Seña</span>' 
-        : '';
-    
-    return `
+    // Detalles de abonos
+    const paymentsDetailsHTML = payments.data.map(p => {
+        const badge = p.isInitialPayment
+            ? '<span style="background: #9b59b6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Seña</span>'
+            : '';
+
+        return `
         <div class="detail-item">
             <span>${p.clientName}${badge}</span>
             <strong>$${p.amount.toLocaleString('es-CO')}</strong>
         </div>
     `;
-}).join('');
+    }).join('');
     document.getElementById("paymentsDetails").innerHTML = paymentsDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay abonos pendientes</p>';
 
     // Ventas
     document.getElementById("salesCount").textContent = sales.count;
     document.getElementById("salesTotal").textContent = `$${sales.total.toLocaleString('es-CO')}`;
-    
+
     // Detalles de ventas
     const salesDetailsHTML = sales.data.map(s => `
         <div class="detail-item">
@@ -162,7 +162,7 @@ const paymentsDetailsHTML = payments.data.map(p => {
     // Inventario
     document.getElementById("inventoryCount").textContent = inventory.count;
     document.getElementById("inventoryCost").textContent = `$${inventory.totalCost.toLocaleString('es-CO')}`;
-    
+
     // Detalles de inventario
     const inventoryDetailsHTML = inventory.data.map(p => `
         <div class="detail-item">
@@ -173,24 +173,24 @@ const paymentsDetailsHTML = payments.data.map(p => {
     document.getElementById("inventoryDetails").innerHTML = inventoryDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay productos pendientes</p>';
 
     // Gastos
-document.getElementById("expensesCount").textContent = pendingData.expenses?.count || 0;
-document.getElementById("expensesTotal").textContent = `$${(pendingData.expenses?.total || 0).toLocaleString('es-CO')}`;
+    document.getElementById("expensesCount").textContent = pendingData.expenses?.count || 0;
+    document.getElementById("expensesTotal").textContent = `$${(pendingData.expenses?.total || 0).toLocaleString('es-CO')}`;
 
-// Detalles de gastos
-const expensesDetailsHTML = (pendingData.expenses?.data || []).map(expense => {
-    const expenseDate = new Date(expense.date);
-    const localDate = new Date(expenseDate.getTime() + expenseDate.getTimezoneOffset() * 60000);
-    const formattedDate = localDate.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
-    
-    return expense.items.map(item => `
+    // Detalles de gastos
+    const expensesDetailsHTML = (pendingData.expenses?.data || []).map(expense => {
+        const expenseDate = new Date(expense.date);
+        const localDate = new Date(expenseDate.getTime() + expenseDate.getTimezoneOffset() * 60000);
+        const formattedDate = localDate.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
+
+        return expense.items.map(item => `
         <div class="detail-item">
             <span>${item.description} <small style="color: var(--medium-gray);">(${formattedDate})</small></span>
             <strong>$${item.amount.toLocaleString('es-CO')}</strong>
         </div>
     `).join('');
-}).join('');
+    }).join('');
 
-document.getElementById("expensesDetails").innerHTML = expensesDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay gastos pendientes</p>';
+    document.getElementById("expensesDetails").innerHTML = expensesDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay gastos pendientes</p>';
 
 }
 
@@ -225,7 +225,7 @@ function updateSummary() {
 
     // ✅ INGRESOS = abonos después de comisión + señas completas
     const totalIncome = Math.round(paymentsAfterComm + initialPayments);
-    
+
     const expensesTotal = pendingData.expenses?.total || 0;
     const totalExpenses = Math.round(inventory.totalCost + expensesTotal);
     const finalCash = Math.round(initialCash + totalIncome - totalExpenses);
@@ -245,9 +245,9 @@ const cajaActualTxt = document.getElementById('cajaActual');
 const inputValor = document.getElementById('valorMovimiento');
 
 function refrescarCajaActual() {
-  // Tomamos la caja que ya está pintada en el resumen
-  const texto = document.getElementById('summaryFinal').textContent;
-  cajaActualTxt.textContent = texto;
+    // Tomamos la caja que ya está pintada en el resumen
+    const texto = document.getElementById('summaryFinal').textContent;
+    cajaActualTxt.textContent = texto;
 }
 
 btnAbrir.onclick = () => { modal.style.display = 'block'; refrescarCajaActual(); };
@@ -255,39 +255,39 @@ btnCerrar.onclick = () => { modal.style.display = 'none'; };
 window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
 
 async function enviarMovimiento(tipo) {
-  const valor = parseInt(inputValor.value);
-  if (!valor || valor <= 0) return alert('Ingresa un valor válido');
+    const valor = parseInt(inputValor.value);
+    if (!valor || valor <= 0) return showNotification('Ingresa un valor válido', 'warning');
 
-  const token = getToken();
-  const vendedorId = window.adminModeUtils?.isActive()
-                   ? window.adminModeUtils.getVendedorId()
-                   : null;
-  const body = { tipo, valor, vendedorId };
+    const token = getToken();
+    const vendedorId = window.adminModeUtils?.isActive()
+        ? window.adminModeUtils.getVendedorId()
+        : null;
+    const body = { tipo, valor, vendedorId };
 
-  try {
-    const endpoint = '/cash-movement';
-    const res = await apiFetch(endpoint, 'POST', body, token);
+    try {
+        const endpoint = '/cash-movement';
+        const res = await apiFetch(endpoint, 'POST', body, token);
 
-    // Actualizamos la caja inicial con el nuevo valor
-    document.getElementById('initialCash').value = res.newCash;
-    updateSummary();               // Recalcula todo
-    refrescarCajaActual();         // Actualiza modal
-    inputValor.value = '';
-    alert(`Movimiento registrado: ${tipo} $${valor.toLocaleString('es-CO')}`);
-  } catch (e) {
-    alert('Error: ' + e.message);
-  }
+        // Actualizamos la caja inicial con el nuevo valor
+        document.getElementById('initialCash').value = res.newCash;
+        updateSummary();               // Recalcula todo
+        refrescarCajaActual();         // Actualiza modal
+        inputValor.value = '';
+        showNotification(`Movimiento registrado: ${tipo} $${valor.toLocaleString('es-CO')}`, 'success');
+    } catch (e) {
+        showNotification('Error: ' + e.message, 'error');
+    }
 }
 
 document.getElementById('btnIngresar').onclick = () => enviarMovimiento('INGRESO');
 document.getElementById('btnRetirar').onclick = () => enviarMovimiento('RETIRO');
 // Toggle detalles
-window.toggleDetails = function(id) {
+window.toggleDetails = function (id) {
     const element = document.getElementById(id);
     const icon = element.previousElementSibling.querySelector('i');
-    
+
     element.classList.toggle('open');
-    
+
     if (element.classList.contains('open')) {
         icon.style.transform = 'rotate(180deg)';
     } else {
@@ -296,39 +296,39 @@ window.toggleDetails = function(id) {
 };
 
 // Liquidar día
-window.liquidateDay = async function() {
+window.liquidateDay = async function () {
     const initialCash = parseFloat(document.getElementById("initialCash").value);
     const paymentsCommission = parseFloat(document.getElementById("paymentsCommission").value) || 0;
     const salesCommission = parseFloat(document.getElementById("salesCommission").value) || 0;
     const notes = document.getElementById("notes").value.trim();
 
     // Validaciones
-// Validaciones
-if (isNaN(initialCash)) {
-    alert("Error: La caja inicial no tiene un valor válido");
-    return;
-}
-
-// Permitir caja inicial negativa pero advertir al usuario
-if (initialCash < 0) {
-    if (!confirm(`La caja inicial es negativa ($${initialCash.toLocaleString('es-CO')}). ¿Deseas continuar con la liquidación?`)) {
+    // Validaciones
+    if (isNaN(initialCash)) {
+        showNotification("Error: La caja inicial no tiene un valor válido", "error");
         return;
     }
-}
 
-    if (!pendingData || (pendingData.payments.count === 0 && pendingData.sales.count === 0)) {
-        if (!confirm("No hay abonos ni ventas pendientes. ¿Deseas continuar con la liquidación?")) {
+    // Permitir caja inicial negativa pero advertir al usuario
+    if (initialCash < 0) {
+        if (!await showConfirm(`La caja inicial es negativa ($${initialCash.toLocaleString('es-CO')}). ¿Deseas continuar con la liquidación?`)) {
             return;
         }
     }
 
-    if (!confirm("¿Estás seguro de liquidar el día? Esta acción marcará todos los datos actuales como procesados.")) {
+    if (!pendingData || (pendingData.payments.count === 0 && pendingData.sales.count === 0)) {
+        if (!await showConfirm("No hay abonos ni ventas pendientes. ¿Deseas continuar con la liquidación?")) {
+            return;
+        }
+    }
+
+    if (!await showConfirm("¿Estás seguro de liquidar el día? Esta acción marcará todos los datos actuales como procesados.")) {
         return;
     }
 
     try {
         const token = getToken();
-        
+
         const liquidationData = {
             initialCash,
             paymentsCommission,
@@ -337,25 +337,25 @@ if (initialCash < 0) {
         };
 
         // Detectar modo admin
-const vendedorId = window.adminModeUtils?.isActive()
-                 ? window.adminModeUtils.getVendedorId()
-                 : null;
+        const vendedorId = window.adminModeUtils?.isActive()
+            ? window.adminModeUtils.getVendedorId()
+            : null;
 
-const endpoint = vendedorId
-               ? `/liquidation/vendedor/${vendedorId}/new`
-               : '/liquidation/new';
+        const endpoint = vendedorId
+            ? `/liquidation/vendedor/${vendedorId}/new`
+            : '/liquidation/new';
 
-const response = await apiFetch(endpoint, "POST", liquidationData, token);
+        const response = await apiFetch(endpoint, "POST", liquidationData, token);
 
         // Mostrar mensaje de éxito
-        alert(`¡Liquidación completada exitosamente!\n\nCaja Final: $${response.liquidation.finalCash.toLocaleString('es-CO')}`);
+        showNotification(`¡Liquidación completada exitosamente!\n\nCaja Final: $${response.liquidation.finalCash.toLocaleString('es-CO')}`, 'success');
 
         // Redirigir al historial
         window.location.href = "historial-liquidaciones.html";
 
     } catch (error) {
         console.error("Error al liquidar día:", error);
-        alert("Error al procesar la liquidación: " + error.message);
+        showNotification("Error al procesar la liquidación: " + error.message, "error");
     }
 };
 
@@ -368,11 +368,11 @@ async function loadLastLiquidation() {
 
         /* ===== NUEVO: elegir ruta según modo admin ===== */
         const vendedorId = window.adminModeUtils?.isActive()
-                         ? window.adminModeUtils.getVendedorId()
-                         : null;
+            ? window.adminModeUtils.getVendedorId()
+            : null;
         const endPoint = vendedorId
-                       ? `/liquidation/vendedor/${vendedorId}/history`
-                       : '/liquidation/history';
+            ? `/liquidation/vendedor/${vendedorId}/history`
+            : '/liquidation/history';
         /* =============================================== */
 
         const liquidations = await apiFetch(endPoint, "GET", null, token);

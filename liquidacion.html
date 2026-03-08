@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liquidación del Día</title>
-        <script src="adminMode.js"></script>
+    <script src="adminMode.js"></script>
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/notifications.css">
     <style>
         :root {
             --primary: #2c3e50;
@@ -21,8 +23,8 @@
             --light-gray: #f8f9fa;
             --medium-gray: #6c757d;
             --border: #e9ecef;
-            --shadow: 0 2px 8px rgba(0,0,0,0.1);
-            --shadow-hover: 0 4px 16px rgba(0,0,0,0.15);
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
             --radius: 8px;
             --radius-lg: 12px;
         }
@@ -123,12 +125,29 @@
         }
 
         /* Colores de iconos */
-        .icon-cash { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .icon-income { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); }
-        .icon-sales { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
-        .icon-tracking { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); }
-        .icon-inventory { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
-        .icon-final { background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); }
+        .icon-cash {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .icon-income {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+
+        .icon-sales {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .icon-tracking {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .icon-inventory {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .icon-final {
+            background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+        }
 
         /* Campos de datos */
         .data-field {
@@ -300,8 +319,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         /* Responsive */
@@ -395,174 +419,194 @@
         }
 
         /* ---------- Modal Control de Caja ---------- */
-.modal-cc {
-  display: none;
-  position: fixed;
-  z-index: 9999;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(5px);
-  animation: fadeIn 0.3s ease;
-}
+        .modal-cc {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
 
-.modal-cc-content {
-  background: var(--white);
-  margin: 5% auto;
-  width: 90%;
-  max-width: 480px;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-  overflow: hidden;
-  animation: slideDown 0.3s ease;
-}
+            to {
+                opacity: 1;
+            }
+        }
 
-@keyframes slideDown {
-  from { transform: translateY(-30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
+        .modal-cc-content {
+            background: var(--white);
+            margin: 5% auto;
+            width: 90%;
+            max-width: 480px;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            animation: slideDown 0.3s ease;
+        }
 
-.modal-cc-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 18px 22px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+        @keyframes slideDown {
+            from {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
 
-.modal-cc-header h4 { margin: 0; font-size: 18px; }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
 
-.modal-cc-close {
-  font-size: 24px;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
+        .modal-cc-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-.modal-cc-close:hover { transform: scale(1.2); }
+        .modal-cc-header h4 {
+            margin: 0;
+            font-size: 18px;
+        }
 
-.modal-cc-body { padding: 22px; }
+        .modal-cc-close {
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
 
-/* Caja actual */
-.caja-actual-box {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  color: white;
-  padding: 20px;
-  border-radius: var(--radius-lg);
-  text-align: center;
-  margin-bottom: 22px;
-}
+        .modal-cc-close:hover {
+            transform: scale(1.2);
+        }
 
-.caja-actual-label {
-  font-size: 14px;
-  opacity: 0.9;
-  margin-bottom: 6px;
-}
+        .modal-cc-body {
+            padding: 22px;
+        }
 
-.caja-actual-value {
-  font-size: 32px;
-  font-weight: 700;
-}
+        /* Caja actual */
+        .caja-actual-box {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            text-align: center;
+            margin-bottom: 22px;
+        }
 
-/* Formulario */
-.movimiento-form {
-  background: var(--light-gray);
-  padding: 18px;
-  border-radius: var(--radius-lg);
-  margin-bottom: 22px;
-}
+        .caja-actual-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 6px;
+        }
 
-.movimiento-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 12px;
-}
+        .caja-actual-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
 
-.movimiento-actions .btn {
-  flex: 1;
-  justify-content: center;
-}
+        /* Formulario */
+        .movimiento-form {
+            background: var(--light-gray);
+            padding: 18px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 22px;
+        }
 
-/* Historial */
-.historial-box h5 {
-  margin-bottom: 12px;
-  font-size: 16px;
-  color: var(--primary);
-}
+        .movimiento-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
 
-.historial-lista {
-  max-height: 280px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
+        .movimiento-actions .btn {
+            flex: 1;
+            justify-content: center;
+        }
 
-/* Item de movimiento */
-.movimiento-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  border-radius: var(--radius);
-  background: white;
-  box-shadow: var(--shadow);
-  animation: fadeIn 0.3s ease;
-}
+        /* Historial */
+        .historial-box h5 {
+            margin-bottom: 12px;
+            font-size: 16px;
+            color: var(--primary);
+        }
 
-.movimiento-item.ingreso {
-  border-left: 5px solid var(--success);
-}
+        .historial-lista {
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
 
-.movimiento-item.retiro {
-  border-left: 5px solid var(--danger);
-}
+        /* Item de movimiento */
+        .movimiento-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-radius: var(--radius);
+            background: white;
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.3s ease;
+        }
 
-.movimiento-item-info {
-  display: flex;
-  flex-direction: column;
-}
+        .movimiento-item.ingreso {
+            border-left: 5px solid var(--success);
+        }
 
-.movimiento-item-type {
-  font-weight: 600;
-  font-size: 14px;
-}
+        .movimiento-item.retiro {
+            border-left: 5px solid var(--danger);
+        }
 
-.movimiento-item-date {
-  font-size: 12px;
-  color: var(--medium-gray);
-}
+        .movimiento-item-info {
+            display: flex;
+            flex-direction: column;
+        }
 
-.movimiento-item-amount {
-  font-size: 16px;
-  font-weight: 700;
-}
+        .movimiento-item-type {
+            font-weight: 600;
+            font-size: 14px;
+        }
 
-.movimiento-item.ingreso .movimiento-item-amount {
-  color: var(--success);
-}
+        .movimiento-item-date {
+            font-size: 12px;
+            color: var(--medium-gray);
+        }
 
-.movimiento-item.retiro .movimiento-item-amount {
-  color: var(--danger);
-}
+        .movimiento-item-amount {
+            font-size: 16px;
+            font-weight: 700;
+        }
 
-/* Scroll personalizado */
-.historial-lista::-webkit-scrollbar {
-  width: 6px;
-}
-.historial-lista::-webkit-scrollbar-thumb {
-  background: var(--medium-gray);
-  border-radius: 4px;
-}
-        
+        .movimiento-item.ingreso .movimiento-item-amount {
+            color: var(--success);
+        }
+
+        .movimiento-item.retiro .movimiento-item-amount {
+            color: var(--danger);
+        }
+
+        /* Scroll personalizado */
+        .historial-lista::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .historial-lista::-webkit-scrollbar-thumb {
+            background: var(--medium-gray);
+            border-radius: 4px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -581,56 +625,56 @@
         </div>
 
         <!-- Botón que dispara el modal -->
-<div style="margin-bottom: 12px;">
-  <button id="btnControlCaja" class="btn btn-gradient">
-    <i class="fas fa-cash-register"></i> Control de Caja
-  </button>
-</div>
-
-<!-- Modal flotante -->
-<div id="modalControlCaja" class="modal-cc">
-  <div class="modal-cc-content">
-    <div class="modal-cc-header">
-      <h4><i class="fas fa-coins"></i> Control de Caja</h4>
-      <span id="cerrarModal" class="modal-cc-close">&times;</span>
-    </div>
-
-    <div class="modal-cc-body">
-      <!-- Caja actual -->
-      <div class="caja-actual-box">
-        <div class="caja-actual-label">Caja Actual</div>
-        <div class="caja-actual-value" id="cajaActual">$0</div>
-      </div>
-
-      <!-- Formulario de movimiento -->
-      <div class="movimiento-form">
-        <div class="input-group">
-          <label for="valorMovimiento">
-            <i class="fas fa-dollar-sign"></i> Valor
-          </label>
-          <input type="number" id="valorMovimiento" placeholder="0" min="1" step="100">
+        <div style="margin-bottom: 12px;">
+            <button id="btnControlCaja" class="btn btn-gradient">
+                <i class="fas fa-cash-register"></i> Control de Caja
+            </button>
         </div>
 
-        <div class="movimiento-actions">
-          <button id="btnIngresar" class="btn btn-success">
-            <i class="fas fa-arrow-down"></i> Ingresar
-          </button>
-          <button id="btnRetirar" class="btn btn-danger">
-            <i class="fas fa-arrow-up"></i> Retirar
-          </button>
-        </div>
-      </div>
+        <!-- Modal flotante -->
+        <div id="modalControlCaja" class="modal-cc">
+            <div class="modal-cc-content">
+                <div class="modal-cc-header">
+                    <h4><i class="fas fa-coins"></i> Control de Caja</h4>
+                    <span id="cerrarModal" class="modal-cc-close">&times;</span>
+                </div>
 
-      <!-- Historial -->
-      <div class="historial-box">
-        <h5><i class="fas fa-history"></i> Historial de Movimientos</h5>
-        <div id="historialLista" class="historial-lista">
-          <!-- Se llena dinámicamente -->
+                <div class="modal-cc-body">
+                    <!-- Caja actual -->
+                    <div class="caja-actual-box">
+                        <div class="caja-actual-label">Caja Actual</div>
+                        <div class="caja-actual-value" id="cajaActual">$0</div>
+                    </div>
+
+                    <!-- Formulario de movimiento -->
+                    <div class="movimiento-form">
+                        <div class="input-group">
+                            <label for="valorMovimiento">
+                                <i class="fas fa-dollar-sign"></i> Valor
+                            </label>
+                            <input type="number" id="valorMovimiento" placeholder="0" min="1" step="100">
+                        </div>
+
+                        <div class="movimiento-actions">
+                            <button id="btnIngresar" class="btn btn-success">
+                                <i class="fas fa-arrow-down"></i> Ingresar
+                            </button>
+                            <button id="btnRetirar" class="btn btn-danger">
+                                <i class="fas fa-arrow-up"></i> Retirar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Historial -->
+                    <div class="historial-box">
+                        <h5><i class="fas fa-history"></i> Historial de Movimientos</h5>
+                        <div id="historialLista" class="historial-lista">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
 
         <!-- Contenido principal (oculto inicialmente) -->
         <div id="mainContent" style="display: none;">
@@ -642,16 +686,17 @@
                     </div>
                     <h3>Configuración Inicial</h3>
                 </div>
-                
-               <div class="input-group">
-    <label for="initialCash">
-        <i class="fas fa-money-bill-wave"></i> Caja Inicial (Automática)
-    </label>
-    <input type="number" id="initialCash" placeholder="0" step="1000" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
-    <small style="color: var(--medium-gray); font-size: 12px; margin-top: 5px; display: block;">
-        <i class="fas fa-info-circle"></i> Se carga automáticamente desde la liquidación anterior
-    </small>
-</div>
+
+                <div class="input-group">
+                    <label for="initialCash">
+                        <i class="fas fa-money-bill-wave"></i> Caja Inicial (Automática)
+                    </label>
+                    <input type="number" id="initialCash" placeholder="0" step="1000" readonly
+                        style="background-color: #f0f0f0; cursor: not-allowed;">
+                    <small style="color: var(--medium-gray); font-size: 12px; margin-top: 5px; display: block;">
+                        <i class="fas fa-info-circle"></i> Se carga automáticamente desde la liquidación anterior
+                    </small>
+                </div>
 
                 <div class="input-group">
                     <label for="paymentsCommission">
@@ -690,9 +735,9 @@
                     </div>
 
                     <div class="data-field">
-    <div class="data-label">Señas/Pagos Iniciales</div>
-    <div class="data-value" style="color: #9b59b6;" id="initialPaymentsTotal">$0</div>
-</div>
+                        <div class="data-label">Señas/Pagos Iniciales</div>
+                        <div class="data-value" style="color: #9b59b6;" id="initialPaymentsTotal">$0</div>
+                    </div>
 
                     <div class="data-field">
                         <div class="data-label">Después de Comisión</div>
@@ -740,43 +785,43 @@
                 </div>
 
                 <!-- Seguimiento de Clientes -->
-<!-- Seguimiento de Clientes -->
-<div class="section-card">
-    <div class="section-header">
-        <div class="section-icon icon-tracking">
-            <i class="fas fa-users"></i>
-        </div>
-        <h3>Seguimiento de Clientes</h3>
-    </div>
+                <!-- Seguimiento de Clientes -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-icon icon-tracking">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>Seguimiento de Clientes</h3>
+                    </div>
 
-    <div class="data-field">
-        <div class="data-label">Total Clientes Activos</div>
-        <div class="data-value" id="totalActiveClients">0</div>
-        <div class="sub-data">Con deudas pendientes</div>
-    </div>
+                    <div class="data-field">
+                        <div class="data-label">Total Clientes Activos</div>
+                        <div class="data-value" id="totalActiveClients">0</div>
+                        <div class="sub-data">Con deudas pendientes</div>
+                    </div>
 
-    <div class="data-field">
-        <div class="data-label">Pagaron Hoy</div>
-        <div class="data-value success" id="clientsPaidToday">0</div>
-    </div>
+                    <div class="data-field">
+                        <div class="data-label">Pagaron Hoy</div>
+                        <div class="data-value success" id="clientsPaidToday">0</div>
+                    </div>
 
-    <div class="data-field">
-        <div class="data-label">No Pagaron Hoy</div>
-        <div class="data-value danger" id="clientsDidNotPay">0</div>
-    </div>
+                    <div class="data-field">
+                        <div class="data-label">No Pagaron Hoy</div>
+                        <div class="data-value danger" id="clientsDidNotPay">0</div>
+                    </div>
 
-    <div class="data-field">
-        <div class="data-label">Efectividad de Cobro</div>
-        <div class="data-value warning" id="effectivenessPercentage">0%</div>
-        <div class="sub-data">Porcentaje de clientes que pagaron</div>
-    </div>
+                    <div class="data-field">
+                        <div class="data-label">Efectividad de Cobro</div>
+                        <div class="data-value warning" id="effectivenessPercentage">0%</div>
+                        <div class="sub-data">Porcentaje de clientes que pagaron</div>
+                    </div>
 
-    <div style="display: none;" class="data-field">
-        <div class="data-label">Total Recaudado Hoy</div>
-        <div class="data-value success" id="totalCustomerIncome">$0</div>
-        <div class="sub-data">Suma de todos los abonos</div>
-    </div>
-</div>
+                    <div style="display: none;" class="data-field">
+                        <div class="data-label">Total Recaudado Hoy</div>
+                        <div class="data-value success" id="totalCustomerIncome">$0</div>
+                        <div class="sub-data">Suma de todos los abonos</div>
+                    </div>
+                </div>
 
 
                 <!-- Inventario -->
@@ -807,30 +852,30 @@
             </div>
 
             <!-- Gastos -->
-<div class="section-card">
-    <div class="section-header">
-        <div class="section-icon" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
-            <i class="fas fa-receipt"></i>
-        </div>
-        <h3>Gastos Operacionales</h3>
-    </div>
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <h3>Gastos Operacionales</h3>
+                </div>
 
-    <div class="data-field">
-        <div class="data-label">Cantidad de Gastos</div>
-        <div class="data-value" id="expensesCount">0</div>
-    </div>
+                <div class="data-field">
+                    <div class="data-label">Cantidad de Gastos</div>
+                    <div class="data-value" id="expensesCount">0</div>
+                </div>
 
-    <div class="data-field">
-        <div class="data-label">Total Gastos</div>
-        <div class="data-value danger" id="expensesTotal">$0</div>
-    </div>
+                <div class="data-field">
+                    <div class="data-label">Total Gastos</div>
+                    <div class="data-value danger" id="expensesTotal">$0</div>
+                </div>
 
-    <div class="details-toggle" onclick="toggleDetails('expensesDetails')">
-        <span>Ver detalles</span>
-        <i class="fas fa-chevron-down"></i>
-    </div>
-    <div class="details-content" id="expensesDetails"></div>
-</div>
+                <div class="details-toggle" onclick="toggleDetails('expensesDetails')">
+                    <span>Ver detalles</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="details-content" id="expensesDetails"></div>
+            </div>
 
             <!-- Resumen Final -->
             <div class="final-summary">
@@ -866,7 +911,8 @@
                     </div>
                     <h3>Notas (Opcional)</h3>
                 </div>
-                <textarea id="notes" placeholder="Agregar observaciones o comentarios sobre la liquidación del día..."></textarea>
+                <textarea id="notes"
+                    placeholder="Agregar observaciones o comentarios sobre la liquidación del día..."></textarea>
             </div>
 
             <!-- Botones de acción -->
@@ -887,6 +933,8 @@
         </div>
     </div>
 
+    <script src="utils/notifications.js" type="module"></script>
     <script type="module" src="liquidacion.js"></script>
 </body>
+
 </html>

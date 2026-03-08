@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Productos Vendidos</title>
     <script src="adminMode.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/notifications.css">
     <style>
         /* ========== Variables CSS (copiadas de liquidados.html) ========== */
         :root {
@@ -23,203 +25,550 @@
             --light-gray: #f8f9fa;
             --medium-gray: #6c757d;
             --border: #e9ecef;
-            --shadow: 0 2px 4px rgba(0,0,0,0.08);
-            --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
             --radius: 8px;
             --radius-lg: 12px;
             --transition: all 0.3s ease;
         }
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{
-            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-            background:linear-gradient(135deg,var(--cream) 0%,var(--light-gray) 100%);
-            color:var(--dark);
-            line-height:1.5;
-            min-height:100vh;
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
         }
-        .container{max-width:100%;margin:0 auto;padding:16px;min-height:100vh}
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--cream) 0%, var(--light-gray) 100%);
+            color: var(--dark);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 16px;
+            min-height: 100vh
+        }
 
         /* ---------- Header ---------- */
-        .header{
-            background:var(--white);
-            border-radius:var(--radius-lg);
-            padding:20px;
-            margin-bottom:20px;
-            box-shadow:var(--shadow);
-            text-align:center;
-            border:1px solid var(--border);
+        .header {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border: 1px solid var(--border);
         }
-        .header h1{color:var(--primary);font-size:24px;font-weight:600;margin-bottom:8px}
-        .header p{color:var(--medium-gray);font-size:14px}
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px
+        }
+
+        .header p {
+            color: var(--medium-gray);
+            font-size: 14px
+        }
 
         /* ---------- Menú (mismo que liquidados) ---------- */
-        .menu-toggle{
-            position:fixed;
-            top:18px;
-            right:18px;
-            width:52px;
-            height:52px;
-            background:var(--white);
-            border:1px solid var(--border);
-            border-radius:50%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            cursor:pointer;
-            box-shadow:var(--shadow);
-            z-index:10010;
-            transition:transform .22s ease,background .22s ease,color .22s ease;
+        .menu-toggle {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            width: 52px;
+            height: 52px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 10010;
+            transition: transform .22s ease, background .22s ease, color .22s ease;
         }
-        .menu-toggle:active{transform:scale(.98)}
-        .menu-toggle:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
-        .menu-toggle .menu-icon{font-size:18px;color:var(--primary)}
-        .menu-toggle.open{background:var(--primary);color:var(--white)}
-        .menu-toggle.open .menu-icon{color:var(--white)}
-        .backdrop{
-            position:fixed;
-            inset:0;
-            background:rgba(0,0,0,.45);
-            z-index:10005;
-            opacity:0;
-            visibility:hidden;
-            transition:opacity .28s ease,visibility .28s;
+
+        .menu-toggle:active {
+            transform: scale(.98)
         }
-        .backdrop.show{opacity:1;visibility:visible}
-        .menu-items{
-            position:fixed;
-            left:50%;
-            top:50%;
-            transform:translate(-50%,-50%) scale(.92);
-            min-width:260px;
-            max-width:92%;
-            background:linear-gradient(180deg,var(--white),#fbfbfb);
-            border-radius:14px;
-            padding:14px;
-            box-shadow:0 20px 50px rgba(0,0,0,.22);
-            z-index:10010;
-            opacity:0;
-            visibility:hidden;
-            transition:transform .32s cubic-bezier(.2,.9,.2,1),opacity .22s ease,visibility .22s;
-            border:1px solid rgba(0,0,0,.03);
-            overflow:hidden;
-            outline:0;
+
+        .menu-toggle:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover)
         }
-        .menu-items.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
-        .menu-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px}
-        .menu-head strong{color:var(--primary);font-size:14px}
-        .menu-close{background:transparent;border:none;font-size:16px;color:var(--medium-gray);cursor:pointer;padding:6px;border-radius:8px}
-        .menu-close:hover{color:var(--danger);transform:translateY(-2px)}
-        .menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;align-items:stretch}
-        .menu-link{display:flex;gap:10px;align-items:center;justify-content:center;text-decoration:none;background:linear-gradient(180deg,#fff,var(--light-gray));padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.03);box-shadow:0 6px 18px rgba(0,0,0,.06);transition:transform .18s ease,box-shadow .18s ease,background .18s;color:var(--primary);font-weight:600;font-size:13px;text-align:center}
-        .menu-link i{font-size:16px;width:20px;text-align:center;color:var(--accent)}
-        .menu-link span{display:inline-block;line-height:1}
-        .menu-link:hover{transform:translateY(-6px);box-shadow:0 14px 36px rgba(0,0,0,.14);background:linear-gradient(180deg,var(--accent),#2a86c8);color:#fff}
-        .menu-link:hover i{color:#fff}
-        @media (max-width:420px){.menu-grid{grid-template-columns:repeat(3,1fr);gap:8px}.menu-link{padding:8px;font-size:12px;border-radius:8px}}
-        .menu-link{opacity:0;transform:translateY(6px) scale(.995);transition-property:transform,opacity,box-shadow,background;transition-duration:320ms}
-        .menu-items.show .menu-link{opacity:1;transform:translateY(0) scale(1)}
-        .menu-link:focus{outline:3px solid rgba(52,152,219,.18);transform:translateY(-3px)}
+
+        .menu-toggle .menu-icon {
+            font-size: 18px;
+            color: var(--primary)
+        }
+
+        .menu-toggle.open {
+            background: var(--primary);
+            color: var(--white)
+        }
+
+        .menu-toggle.open .menu-icon {
+            color: var(--white)
+        }
+
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .45);
+            z-index: 10005;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .28s ease, visibility .28s;
+        }
+
+        .backdrop.show {
+            opacity: 1;
+            visibility: visible
+        }
+
+        .menu-items {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(.92);
+            min-width: 260px;
+            max-width: 92%;
+            background: linear-gradient(180deg, var(--white), #fbfbfb);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .22);
+            z-index: 10010;
+            opacity: 0;
+            visibility: hidden;
+            transition: transform .32s cubic-bezier(.2, .9, .2, 1), opacity .22s ease, visibility .22s;
+            border: 1px solid rgba(0, 0, 0, .03);
+            overflow: hidden;
+            outline: 0;
+        }
+
+        .menu-items.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1)
+        }
+
+        .menu-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px
+        }
+
+        .menu-head strong {
+            color: var(--primary);
+            font-size: 14px
+        }
+
+        .menu-close {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            color: var(--medium-gray);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px
+        }
+
+        .menu-close:hover {
+            color: var(--danger);
+            transform: translateY(-2px)
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            align-items: stretch
+        }
+
+        .menu-link {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            background: linear-gradient(180deg, #fff, var(--light-gray));
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 0, 0, .03);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+            transition: transform .18s ease, box-shadow .18s ease, background .18s;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center
+        }
+
+        .menu-link i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+            color: var(--accent)
+        }
+
+        .menu-link span {
+            display: inline-block;
+            line-height: 1
+        }
+
+        .menu-link:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, .14);
+            background: linear-gradient(180deg, var(--accent), #2a86c8);
+            color: #fff
+        }
+
+        .menu-link:hover i {
+            color: #fff
+        }
+
+        @media (max-width:420px) {
+            .menu-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px
+            }
+
+            .menu-link {
+                padding: 8px;
+                font-size: 12px;
+                border-radius: 8px
+            }
+        }
+
+        .menu-link {
+            opacity: 0;
+            transform: translateY(6px) scale(.995);
+            transition-property: transform, opacity, box-shadow, background;
+            transition-duration: 320ms
+        }
+
+        .menu-items.show .menu-link {
+            opacity: 1;
+            transform: translateY(0) scale(1)
+        }
+
+        .menu-link:focus {
+            outline: 3px solid rgba(52, 152, 219, .18);
+            transform: translateY(-3px)
+        }
 
         /* ---------- Resumen total ---------- */
-        .total-summary{
-            background:linear-gradient(135deg,var(--accent),#2980b9);
-            color:var(--white);
-            border-radius:var(--radius-lg);
-            padding:24px;
-            text-align:center;
-            margin-bottom:24px;
+        .total-summary {
+            background: linear-gradient(135deg, var(--accent), #2980b9);
+            color: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 24px;
         }
-        .total-summary h2{font-size:24px;margin-bottom:8px}
-        .total-summary p{opacity:.9;font-size:14px}
+
+        .total-summary h2 {
+            font-size: 24px;
+            margin-bottom: 8px
+        }
+
+        .total-summary p {
+            opacity: .9;
+            font-size: 14px
+        }
 
         /* ---------- Estadísticas ---------- */
-        .stats-grid{
-            display:grid;
-            grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-            gap:16px;
-            margin-bottom:24px;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
         }
-        .stat-card{
-            background:var(--white);
-            border-radius:var(--radius-lg);
-            padding:20px;
-            box-shadow:var(--shadow);
-            border:1px solid var(--border);
-            text-align:center;
-            transition:var(--transition);
+
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            text-align: center;
+            transition: var(--transition);
         }
-        .stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
-        .stat-icon{
-            width:48px;
-            height:48px;
-            border-radius:50%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            margin:0 auto 12px;
-            font-size:20px;
-            color:var(--white);
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover)
         }
-        .stat-icon.success{background:linear-gradient(135deg,var(--success),#2ecc71)}
-        .stat-icon.warning{background:linear-gradient(135deg,var(--warning),#e67e22)}
-        .stat-icon.info{background:linear-gradient(135deg,var(--accent),#2980b9)}
-        .stat-icon.danger{background:linear-gradient(135deg,var(--danger),#c0392b)}
-        .stat-value{font-size:20px;font-weight:700;color:var(--primary);margin-bottom:4px}
-        .stat-label{font-size:14px;color:var(--medium-gray)}
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 20px;
+            color: var(--white);
+        }
+
+        .stat-icon.success {
+            background: linear-gradient(135deg, var(--success), #2ecc71)
+        }
+
+        .stat-icon.warning {
+            background: linear-gradient(135deg, var(--warning), #e67e22)
+        }
+
+        .stat-icon.info {
+            background: linear-gradient(135deg, var(--accent), #2980b9)
+        }
+
+        .stat-icon.danger {
+            background: linear-gradient(135deg, var(--danger), #c0392b)
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--medium-gray)
+        }
 
         /* ---------- Búsqueda y filtros ---------- */
-        .search-container{margin:20px 0;display:flex;gap:12px;flex-wrap:wrap}
-        .search-input{flex:1;min-width:200px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--white);font-size:16px;transition:var(--transition)}
-        .search-input:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px rgba(52,152,219,.1)}
-        .category-filter{flex:0 0 150px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--white);font-size:16px;transition:var(--transition)}
-        .category-filter:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px rgba(52,152,219,.1)}
+        .search-container {
+            margin: 20px 0;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 16px;
+            transition: var(--transition)
+        }
+
+        .search-input:focus {
+            outline: 0;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, .1)
+        }
+
+        .category-filter {
+            flex: 0 0 150px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 16px;
+            transition: var(--transition)
+        }
+
+        .category-filter:focus {
+            outline: 0;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, .1)
+        }
 
         /* ---------- Productos vendidos (mismo estilo que liquidados) ---------- */
-        .products-grid{display:grid;gap:16px;margin-bottom:24px}
-        .product-card{background:var(--white);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border);transition:var(--transition);position:relative}
-        .product-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
-        .product-card.sold{border-left:4px solid var(--success)}
-        .product-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
-        .product-info h3{font-size:16px;font-weight:600;color:var(--primary);margin-bottom:4px}
-        .product-info p{font-size:14px;color:var(--medium-gray)}
-        .product-amount{text-align:right}
-        .sale-price{font-size:18px;font-weight:700;color:var(--success)}
-        .sold-badge{
-            background:linear-gradient(135deg,var(--success),#2ecc71);
-            color:var(--white);
-            padding:4px 12px;
-            border-radius:20px;
-            font-size:12px;
-            font-weight:600;
-            margin-bottom:8px;
-            display:inline-block;
+        .products-grid {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px
         }
-        .product-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:16px 0}
-        .meta-item{display:flex;align-items:center;gap:8px;font-size:14px}
-        .meta-item i{width:16px;color:var(--accent)}
-        .meta-value{font-weight:600;color:var(--primary)}
-        .profit-section{
-            background:linear-gradient(135deg,rgba(39,174,96,0.1),rgba(46,204,113,0.05));
-            border:1px solid rgba(39,174,96,0.2);
-            border-radius:var(--radius);
-            padding:12px;
-            margin:12px 0;
+
+        .product-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+            position: relative
         }
-        .profit-text{font-size:14px;color:var(--success);font-weight:600;text-align:center}
-        .profit-high .profit-section{background:linear-gradient(135deg,rgba(39,174,96,0.15),rgba(46,204,113,0.08))}
-        .profit-medium .profit-section{background:linear-gradient(135deg,rgba(243,156,18,0.1),rgba(230,126,34,0.05));border-color:rgba(243,156,18,0.2)}
-        .profit-medium .profit-text{color:var(--warning)}
-        .profit-low .profit-section{background:linear-gradient(135deg,rgba(231,76,60,0.1),rgba(192,57,43,0.05));border-color:rgba(231,76,60,0.2)}
-        .profit-low .profit-text{color:var(--danger)}
-        .product-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
-        .product-actions .btn{flex:1;min-width:80px;justify-content:center}
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover)
+        }
+
+        .product-card.sold {
+            border-left: 4px solid var(--success)
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px
+        }
+
+        .product-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px
+        }
+
+        .product-info p {
+            font-size: 14px;
+            color: var(--medium-gray)
+        }
+
+        .product-amount {
+            text-align: right
+        }
+
+        .sale-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--success)
+        }
+
+        .sold-badge {
+            background: linear-gradient(135deg, var(--success), #2ecc71);
+            color: var(--white);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        .product-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin: 16px 0
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px
+        }
+
+        .meta-item i {
+            width: 16px;
+            color: var(--accent)
+        }
+
+        .meta-value {
+            font-weight: 600;
+            color: var(--primary)
+        }
+
+        .profit-section {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.1), rgba(46, 204, 113, 0.05));
+            border: 1px solid rgba(39, 174, 96, 0.2);
+            border-radius: var(--radius);
+            padding: 12px;
+            margin: 12px 0;
+        }
+
+        .profit-text {
+            font-size: 14px;
+            color: var(--success);
+            font-weight: 600;
+            text-align: center
+        }
+
+        .profit-high .profit-section {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.15), rgba(46, 204, 113, 0.08))
+        }
+
+        .profit-medium .profit-section {
+            background: linear-gradient(135deg, rgba(243, 156, 18, 0.1), rgba(230, 126, 34, 0.05));
+            border-color: rgba(243, 156, 18, 0.2)
+        }
+
+        .profit-medium .profit-text {
+            color: var(--warning)
+        }
+
+        .profit-low .profit-section {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(192, 57, 43, 0.05));
+            border-color: rgba(231, 76, 60, 0.2)
+        }
+
+        .profit-low .profit-text {
+            color: var(--danger)
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap
+        }
+
+        .product-actions .btn {
+            flex: 1;
+            min-width: 80px;
+            justify-content: center
+        }
 
         /* ---------- Estados vacíos / loading ---------- */
-        .empty-state{text-align:center;padding:40px 20px;color:var(--medium-gray)}
-        .empty-state i{font-size:48px;margin-bottom:16px;opacity:.5}
-        .loading{display:flex;justify-content:center;align-items:center;padding:40px}
-        .spinner{width:32px;height:32px;border:3px solid var(--light-gray);border-top:3px solid var(--accent);border-radius:50%;animation:spin 1s linear infinite}
-        @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--medium-gray)
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: .5
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--light-gray);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg)
+            }
+
+            100% {
+                transform: rotate(360deg)
+            }
+        }
 
         /* ---------- Botones de acción ---------- */
         .btn {
@@ -236,47 +585,82 @@
             transition: var(--transition);
             box-shadow: var(--shadow);
         }
-        .btn i {font-size: 15px;}
+
+        .btn i {
+            font-size: 15px;
+        }
+
         .btn-info {
             background: linear-gradient(135deg, var(--accent), #2980b9);
             color: var(--white);
         }
+
         .btn-info:hover {
             background: linear-gradient(135deg, #2980b9, var(--accent));
             box-shadow: var(--shadow-hover);
             transform: translateY(-2px);
         }
+
         .btn-danger {
             background: linear-gradient(135deg, var(--danger), #c0392b);
             color: var(--white);
         }
+
         .btn-danger:hover {
             background: linear-gradient(135deg, #c0392b, var(--danger));
             box-shadow: var(--shadow-hover);
             transform: translateY(-2px);
         }
+
         .btn-success {
             background: linear-gradient(135deg, var(--success), #27ae60);
             color: var(--white);
         }
+
         .btn-success:hover {
             background: linear-gradient(135deg, #27ae60, var(--success));
             box-shadow: var(--shadow-hover);
             transform: translateY(-2px);
         }
-        .btn:active {transform: scale(0.96);}
+
+        .btn:active {
+            transform: scale(0.96);
+        }
 
         /* ---------- Responsive ---------- */
-        @media (max-width:768px){
-            .container{padding:12px}
-            .product-actions{flex-direction:column}
-            .product-actions .btn{flex:none}
-            .stats-grid{grid-template-columns:1fr}
-            .product-meta{grid-template-columns:1fr}
-            .search-container{flex-direction:column}
-            .search-container > *{flex:none}
+        @media (max-width:768px) {
+            .container {
+                padding: 12px
+            }
+
+            .product-actions {
+                flex-direction: column
+            }
+
+            .product-actions .btn {
+                flex: none
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr
+            }
+
+            .product-meta {
+                grid-template-columns: 1fr
+            }
+
+            .search-container {
+                flex-direction: column
+            }
+
+            .search-container>* {
+                flex: none
+            }
         }
-        .hidden{display:none !important}
+
+        .hidden {
+            display: none !important
+        }
 
         .deleting {
             transform: scale(0.95);
@@ -284,287 +668,348 @@
             pointer-events: none;
         }
 
-        
-  /* ===== MODAL COMISIÓN VENTAS (igual al de abonos) ===== */
-  .modal{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.5);
-    z-index:2000;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    opacity:0;
-    visibility:hidden;
-    transition:all .3s ease;
-  }
-  .modal.show{
-    opacity:1;
-    visibility:visible;
-  }
-  .modal-content{
-    background:var(--white);
-    border-radius:var(--radius-lg);
-    padding:24px;
-    max-width:400px;
-    width:calc(100% - 32px);
-    max-height:80vh;
-    overflow-y:auto;
-    position:relative;
-    box-shadow:0 20px 50px rgba(0,0,0,.22);
-    border:1px solid rgba(0,0,0,.03);
-  }
-  .modal-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:20px;
-    padding-bottom:12px;
-    border-bottom:1px solid var(--border);
-  }
-  .modal-title{
-    font-size:18px;
-    font-weight:600;
-    color:var(--primary);
-  }
-  .modal-close{
-    background:transparent;
-    border:none;
-    font-size:20px;
-    cursor:pointer;
-    color:var(--medium-gray);
-    padding:4px;
-  }
-  .modal-close:hover{
-    color:var(--danger);
-  }
-  .form-group{
-    display:flex;
-    flex-direction:column;
-    margin-bottom:16px;
-  }
-  .form-group label{
-    font-weight:500;
-    color:var(--dark);
-    margin-bottom:6px;
-    font-size:14px;
-  }
-  .form-group input{
-    padding:12px;
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    background:var(--white);
-    font-size:16px;
-    transition:var(--transition);
-  }
-  .form-group input:focus{
-    outline:none;
-    border-color:var(--accent);
-    box-shadow:0 0 0 3px rgba(52,152,219,.1);
-  }
-  .button-group{
-    display:flex;
-    gap:12px;
-    justify-content:center;
-    margin-top:20px;
-  }
-  .btn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:6px;
-    padding:10px 16px;
-    border-radius:var(--radius);
-    border:none;
-    font-size:14px;
-    font-weight:600;
-    cursor:pointer;
-    transition:var(--transition);
-    box-shadow:var(--shadow);
-  }
-  .btn i{
-    font-size:15px;
-  }
-  .btn-primary{
-    background:linear-gradient(135deg,var(--accent),#2980b9);
-    color:var(--white);
-  }
-  .btn-primary:hover{
-    background:linear-gradient(135deg,#2980b9,var(--accent));
-    box-shadow:var(--shadow-hover);
-    transform:translateY(-2px);
-  }
-  .btn-success{
-    background:linear-gradient(135deg,var(--success),#27ae60);
-    color:var(--white);
-  }
-  .btn-success:hover{
-    background:linear-gradient(135deg,#27ae60,var(--success));
-    box-shadow:var(--shadow-hover);
-    transform:translateY(-2px);
-  }
-  .btn-secondary{
-    background:var(--light-gray);
-    color:var(--dark);
-  }
-  .btn-secondary:hover{
-    background:#e2e6ea;
-    transform:translateY(-2px);
-  }
-  .btn:active{
-    transform:scale(.96);
-  }
 
-  /* Animaciones */
-  @keyframes slideIn{
-    from{transform:translateY(-20px);opacity:0}
-    to{transform:translateY(0);opacity:1}
-  }
-  @keyframes fadeOut{
-    from{opacity:1}
-    to{opacity:0}
-  }
+        /* ===== MODAL COMISIÓN VENTAS (igual al de abonos) ===== */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .5);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all .3s ease;
+        }
 
-  /* ============================
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            max-width: 400px;
+            width: calc(100% - 32px);
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .22);
+            border: 1px solid rgba(0, 0, 0, .03);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--medium-gray);
+            padding: 4px;
+        }
+
+        .modal-close:hover {
+            color: var(--danger);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: var(--dark);
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, .1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+
+        .btn i {
+            font-size: 15px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #2980b9);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2980b9, var(--accent));
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #27ae60);
+            color: var(--white);
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #27ae60, var(--success));
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--light-gray);
+            color: var(--dark);
+        }
+
+        .btn-secondary:hover {
+            background: #e2e6ea;
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: scale(.96);
+        }
+
+        /* Animaciones */
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1
+            }
+
+            to {
+                opacity: 0
+            }
+        }
+
+        /* ============================
   Mejora visual y espaciado del menu-toggle
   ============================ */
 
-/* Forzar máximo alto y scroll interno para evitar que el contenido se amontone */
-.menu-items {
-  max-width: 92%;
-  width: auto;
-  max-height: calc(100vh - 120px); /* deja espacio arriba/abajo */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 18px; /* más aire alrededor */
-  gap: 12px;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.2);
-}
+        /* Forzar máximo alto y scroll interno para evitar que el contenido se amontone */
+        .menu-items {
+            max-width: 92%;
+            width: auto;
+            max-height: calc(100vh - 120px);
+            /* deja espacio arriba/abajo */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 18px;
+            /* más aire alrededor */
+            gap: 12px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+        }
 
-/* Cabecera del menú: más separación y tipografía clara */
-.menu-head {
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-.menu-head strong {
-  font-size:15px;
-  letter-spacing:0.2px;
-  color:var(--primary);
-}
+        /* Cabecera del menú: más separación y tipografía clara */
+        .menu-head {
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
 
-/* Ajuste del grid: columnas y gaps más generosos */
-.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr)); /* 2 columnas limpias por defecto */
-  gap: 12px;
-  align-items:stretch;
-}
+        .menu-head strong {
+            font-size: 15px;
+            letter-spacing: 0.2px;
+            color: var(--primary);
+        }
 
-/* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
-@media (max-width:420px) {
-  .menu-grid { grid-template-columns: 1fr; gap: 10px; }
-}
+        /* Ajuste del grid: columnas y gaps más generosos */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            /* 2 columnas limpias por defecto */
+            gap: 12px;
+            align-items: stretch;
+        }
 
-/* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
-.menu-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: flex-start;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: linear-gradient(180deg,#fff,var(--light-gray));
-  border: 1px solid rgba(0,0,0,0.04);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-  min-height: 52px;           /* mayor área táctil */
-  align-items: center;
-  white-space: normal;
-}
+        /* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
+        @media (max-width:420px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+        }
 
-/* Icono: tamaño y contenedor */
-.menu-link i {
-  font-size: 18px;
-  width: 30px;
-  height: 30px;
-  line-height: 30px;
-  text-align: center;
-  color: var(--accent);
-  background: rgba(52,152,219,0.06);
-  border-radius: 8px;
-  flex: 0 0 30px;
-}
+        /* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: flex-start;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #fff, var(--light-gray));
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+            min-height: 52px;
+            /* mayor área táctil */
+            align-items: center;
+            white-space: normal;
+        }
 
-/* Texto: permitir varias líneas y buen espaciado */
-.menu-link span {
-  display: block;
-  text-align: left;
-  line-height: 1.1;
-  font-size: 14px;
-  color: var(--primary);
-  margin: 0;
-  word-break: break-word;
-}
+        /* Icono: tamaño y contenedor */
+        .menu-link i {
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            color: var(--accent);
+            background: rgba(52, 152, 219, 0.06);
+            border-radius: 8px;
+            flex: 0 0 30px;
+        }
 
-/* Estado hover / focus: contraste y sombra más suave */
-.menu-link:hover,
-.menu-link:focus {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.12);
-  background: linear-gradient(180deg,var(--accent),#2a86c8);
-  color: #fff;
-}
-.menu-link:hover i,
-.menu-link:focus i { color: #fff; background: transparent; }
+        /* Texto: permitir varias líneas y buen espaciado */
+        .menu-link span {
+            display: block;
+            text-align: left;
+            line-height: 1.1;
+            font-size: 14px;
+            color: var(--primary);
+            margin: 0;
+            word-break: break-word;
+        }
 
-/* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
-.menu-grid .btn-go-liquidation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  min-height: 52px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  text-decoration: none;
-}
+        /* Estado hover / focus: contraste y sombra más suave */
+        .menu-link:hover,
+        .menu-link:focus {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+            background: linear-gradient(180deg, var(--accent), #2a86c8);
+            color: #fff;
+        }
 
-/* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
-.menu-items .menu-grid { margin-top: 6px; }
+        .menu-link:hover i,
+        .menu-link:focus i {
+            color: #fff;
+            background: transparent;
+        }
 
-/* indicadores de focus accesible */
-.menu-link:focus { outline: 3px solid rgba(52,152,219,0.12); }
+        /* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
+        .menu-grid .btn-go-liquidation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            min-height: 52px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            text-decoration: none;
+        }
 
-/* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
-.menu-link > *:first-child { margin-left: 2px; }
+        /* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
+        .menu-items .menu-grid {
+            margin-top: 6px;
+        }
 
-/* Si quieres dividir opciones por secciones (opcional) */
-.menu-section {
-  display:block;
-  margin-bottom: 8px;
-}
-.menu-section + .menu-section { border-top: 1px dashed rgba(0,0,0,0.04); padding-top: 8px; margin-top: 8px; }
+        /* indicadores de focus accesible */
+        .menu-link:focus {
+            outline: 3px solid rgba(52, 152, 219, 0.12);
+        }
 
-/* Scrollbar más discreto (WebKit) */
-.menu-items::-webkit-scrollbar { width: 8px; }
-.menu-items::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 6px; }
+        /* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
+        .menu-link>*:first-child {
+            margin-left: 2px;
+        }
 
+        /* Si quieres dividir opciones por secciones (opcional) */
+        .menu-section {
+            display: block;
+            margin-bottom: 8px;
+        }
 
-</style>
+        .menu-section+.menu-section {
+            border-top: 1px dashed rgba(0, 0, 0, 0.04);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        /* Scrollbar más discreto (WebKit) */
+        .menu-items::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .menu-items::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 6px;
+        }
+    </style>
 
 
 </head>
+
 <body>
 
     <!-- ========== MENÚ (igual que liquidados) ========== -->
@@ -584,7 +1029,8 @@
             <a href="productos.html" class="menu-link"><i class="fas fa-box-open"></i><span>Agregar producto</span></a>
             <a href="inventario.html" class="menu-link"><i class="fas fa-warehouse"></i><span>Inventario</span></a>
             <a href="liquidados.html" class="menu-link"><i class="fas fa-check-circle"></i><span>Liquidados</span></a>
-            <center><a href="recibos.html" class="menu-link"><i class="fas fa-file-alt"></i><span>Recibos</span></a></center>
+            <center><a href="recibos.html" class="menu-link"><i class="fas fa-file-alt"></i><span>Recibos</span></a>
+            </center>
         </div>
     </nav>
 
@@ -596,11 +1042,11 @@
         </div>
 
         <!-- ---------- RESUMEN TOTAL ---------- -->
-<!-- Reemplaza el bloque .total-summary completo por: -->
-<div class="total-summary" id="salesSummaryCard" style="cursor:pointer;transition:transform .2s">
-    <h2 id="totalRevenue">$0</h2>
-    <p>Ingresos totales por ventas</p>
-</div>
+        <!-- Reemplaza el bloque .total-summary completo por: -->
+        <div class="total-summary" id="salesSummaryCard" style="cursor:pointer;transition:transform .2s">
+            <h2 id="totalRevenue">$0</h2>
+            <p>Ingresos totales por ventas</p>
+        </div>
         <!-- ---------- ESTADÍSTICAS ---------- -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -640,7 +1086,7 @@
                 <option value="">Todas las rentabilidades</option>
                 <option value="high">Alta rentabilidad (≥30%)</option>
                 <option value="medium">Media rentabilidad (15-29%)</option>
-                <option value="low">Baja rentabilidad (<15%)</option>
+                <option value="low">Baja rentabilidad (<15%)< /option>
             </select>
             <button class="btn btn-info" onclick="showSalesAnalysis()" title="Ver análisis de ventas">
                 <i class="fas fa-chart-bar"></i> Análisis
@@ -659,57 +1105,82 @@
     </div>
 
     <!-- Modal comisión ventas -->
-<div id="salesCommissionModal" class="modal">
-  <div class="modal-content" style="max-width:450px">
-    <div class="modal-header">
-      <h3 class="modal-title"><i class="fas fa-percentage"></i> Calcular Comisión del Vendedor</h3>
-      <button class="modal-close" onclick="closeSalesCommissionModal()"><i class="fas fa-times"></i></button>
-    </div>
+    <div id="salesCommissionModal" class="modal">
+        <div class="modal-content" style="max-width:450px">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-percentage"></i> Calcular Comisión del Vendedor</h3>
+                <button class="modal-close" onclick="closeSalesCommissionModal()"><i class="fas fa-times"></i></button>
+            </div>
 
-    <div style="padding:20px 0">
-      <div class="form-group">
-        <label style="font-size:16px;margin-bottom:10px;display:block">
-          ¿Qué porcentaje pagas al vendedor por venta?
-        </label>
-        <input type="number" id="salesCommissionPercentage" placeholder="Ej: 10" min="0" max="100" step="0.1"
-               style="width:100%;padding:12px;font-size:18px;text-align:center;border:2px solid var(--accent);border-radius:var(--radius)">
-        <small style="display:block;text-align:center;color:var(--medium-gray);margin-top:8px">Ingresa solo el número (sin %)</small>
-      </div>
+            <div style="padding:20px 0">
+                <div class="form-group">
+                    <label style="font-size:16px;margin-bottom:10px;display:block">
+                        ¿Qué porcentaje pagas al vendedor por venta?
+                    </label>
+                    <input type="number" id="salesCommissionPercentage" placeholder="Ej: 10" min="0" max="100"
+                        step="0.1"
+                        style="width:100%;padding:12px;font-size:18px;text-align:center;border:2px solid var(--accent);border-radius:var(--radius)">
+                    <small style="display:block;text-align:center;color:var(--medium-gray);margin-top:8px">Ingresa solo
+                        el número (sin %)</small>
+                </div>
 
-      <div style="margin-top:30px;padding:20px;background:var(--light-gray);border-radius:var(--radius);text-align:center">
-        <div style="font-size:14px;color:var(--medium-gray);margin-bottom:8px">Ingresos totales</div>
-        <div id="salesTotalDisplay" style="font-size:28px;font-weight:700;color:var(--primary);margin-bottom:20px">$0</div>
+                <div
+                    style="margin-top:30px;padding:20px;background:var(--light-gray);border-radius:var(--radius);text-align:center">
+                    <div style="font-size:14px;color:var(--medium-gray);margin-bottom:8px">Ingresos totales</div>
+                    <div id="salesTotalDisplay"
+                        style="font-size:28px;font-weight:700;color:var(--primary);margin-bottom:20px">$0</div>
 
-        <div id="salesCommissionResult" style="display:none;margin-top:20px;padding:20px;background:linear-gradient(135deg,var(--success),#2ecc71);border-radius:var(--radius);color:white">
-          <div style="font-size:14px;margin-bottom:8px;opacity:.9">Comisión del Vendedor</div>
-          <div id="salesCommissionAmount" style="font-size:32px;font-weight:700">$0</div>
-          <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.3)">
-            <div style="font-size:14px;opacity:.9;margin-bottom:4px">Tu ganancia neta</div>
-            <div id="salesNetAmount" style="font-size:24px;font-weight:600">$0</div>
-          </div>
+                    <div id="salesCommissionResult"
+                        style="display:none;margin-top:20px;padding:20px;background:linear-gradient(135deg,var(--success),#2ecc71);border-radius:var(--radius);color:white">
+                        <div style="font-size:14px;margin-bottom:8px;opacity:.9">Comisión del Vendedor</div>
+                        <div id="salesCommissionAmount" style="font-size:32px;font-weight:700">$0</div>
+                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.3)">
+                            <div style="font-size:14px;opacity:.9;margin-bottom:4px">Tu ganancia neta</div>
+                            <div id="salesNetAmount" style="font-size:24px;font-weight:600">$0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group" style="margin-top:20px">
+                <button class="btn btn-primary" onclick="calculateSalesCommission()">
+                    <i class="fas fa-calculator"></i> Calcular
+                </button>
+                <button class="btn btn-success" onclick="saveSalesCommissionPercentage()" style="display:none"
+                    id="saveSalesCommissionBtn">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+                <button class="btn btn-secondary" onclick="closeSalesCommissionModal()">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+            </div>
         </div>
-      </div>
     </div>
 
-    <div class="button-group" style="margin-top:20px">
-      <button class="btn btn-primary" onclick="calculateSalesCommission()">
-        <i class="fas fa-calculator"></i> Calcular
-      </button>
-      <button class="btn btn-success" onclick="saveSalesCommissionPercentage()" style="display:none" id="saveSalesCommissionBtn">
-        <i class="fas fa-save"></i> Guardar
-      </button>
-      <button class="btn btn-secondary" onclick="closeSalesCommissionModal()">
-        <i class="fas fa-times"></i> Cerrar
-      </button>
-    </div>
-  </div>
-</div>
+    <!-- Animaciones -->
+    <style>
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0
+            }
 
-<!-- Animaciones -->
-<style>
-@keyframes slideIn{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
-@keyframes fadeOut{from{opacity:1}to{opacity:0}}
-</style>
+            to {
+                transform: translateY(0);
+                opacity: 1
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1
+            }
+
+            to {
+                opacity: 0
+            }
+        }
+    </style>
 
     <!-- ---------- SCRIPTS ---------- -->
     <script type="module">
@@ -723,115 +1194,115 @@
 
         let puedeVerCostos = true;
 
-async function verificarPermisoCostos() {
-    try {
-        const token = getToken();
-        const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
-        const { permisosDetallados, tipo } = response;
-        
-        if (tipo === 2 || tipo === 3) {
-            return true;
-        }
-        
-        return permisosDetallados?.verCostosYGanancias !== false;
-        
-    } catch (error) {
-        console.error('Error al verificar permisos de costos:', error);
-        return false;
-    }
-}
+        async function verificarPermisoCostos() {
+            try {
+                const token = getToken();
+                const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
+                const { permisosDetallados, tipo } = response;
 
-function ocultarTexto() {
-    return '<span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>';
-}
+                if (tipo === 2 || tipo === 3) {
+                    return true;
+                }
 
+                return permisosDetallados?.verCostosYGanancias !== false;
 
-const salesSummaryCard = document.getElementById('salesSummaryCard');
-const salesTotalDisplay = document.getElementById('salesTotalDisplay');
-
-// Abrir modal y cargar % guardado
-salesSummaryCard.addEventListener('click', () => {
-    const total = parseInt(document.getElementById('totalRevenue').textContent.replace(/[^\d]/g,'')) || 0;
-    salesTotalDisplay.textContent = '$' + total.toLocaleString('es-CO');
-    document.getElementById('salesCommissionModal').classList.add('show');
-    loadSavedSalesCommission();
-    document.getElementById('salesCommissionPercentage').focus();
-});
-
-// Cerrar modal
-window.closeSalesCommissionModal = () => {
-    const m = document.getElementById('salesCommissionModal');
-    m.style.animation = 'fadeOut .2s ease';
-    setTimeout(() => m.classList.remove('show'), 200);
-};
-
-// Calcular
-window.calculateSalesCommission = () => {
-    const pct = parseFloat(document.getElementById('salesCommissionPercentage').value);
-    if (isNaN(pct) || pct < 0 || pct > 100) { alert('Porcentaje inválido'); return; }
-    const total = parseInt(salesTotalDisplay.textContent.replace(/[^\d]/g,'')) || 0;
-    const commission = Math.round(total * pct / 100);
-    const net = total - commission;
-    document.getElementById('salesCommissionAmount').textContent = '$' + commission.toLocaleString('es-CO');
-    document.getElementById('salesNetAmount').textContent = '$' + net.toLocaleString('es-CO');
-    const res = document.getElementById('salesCommissionResult');
-    res.style.display = 'block';
-    res.style.animation = 'slideIn .3s ease';
-    document.getElementById('saveSalesCommissionBtn').style.display = 'inline-flex';
-};
-
-// Guardar %
-window.saveSalesCommissionPercentage = async () => {
-    const pct = parseFloat(document.getElementById('salesCommissionPercentage').value);
-    if (isNaN(pct) || pct < 0 || pct > 100) { alert('Porcentaje inválido'); return; }
-    try {
-        const token = getToken();
-        await apiFetch('/sales-commission', 'POST', { percentage: pct }, token);
-        const btn = document.getElementById('saveSalesCommissionBtn');
-        const old = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-check"></i> ¡Guardado!';
-        btn.style.background = '#27ae60';
-        setTimeout(() => { btn.innerHTML = old; btn.style.background = ''; }, 2000);
-    } catch (e) {
-        alert('No se pudo guardar: ' + e.message);
-    }
-};
-
-// Cargar % guardado
-async function loadSavedSalesCommission() {
-    try {
-        const token = getToken();
-        const res = await apiFetch('/sales-commission', 'GET', null, token);
-        if (res && res.percentage != null)
-            document.getElementById('salesCommissionPercentage').value = res.percentage;
-    } catch (e) { /* no hay guardado */ }
-}
-
-// Permitir calcular con Enter
-document.getElementById('salesCommissionPercentage').addEventListener('keypress', e => {
-    if (e.key === 'Enter') calculateSalesCommission();
-});
-
-
-       document.addEventListener("DOMContentLoaded", async () => {
-    const productsList = document.getElementById("productsList");
-    const searchInput = document.getElementById("searchInput");
-    const profitFilter = document.getElementById("profitFilter");
-
-    try {
-        const token = getToken();
-        if (!token) {
-            window.location.href = "login.html";
-            return;
+            } catch (error) {
+                console.error('Error al verificar permisos de costos:', error);
+                return false;
+            }
         }
 
-        // ✅ Verificar permisos antes de cargar
-        puedeVerCostos = await verificarPermisoCostos();
+        function ocultarTexto() {
+            return '<span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>';
+        }
 
-        const products = await apiFetch("/products", "GET", null, token);
+
+        const salesSummaryCard = document.getElementById('salesSummaryCard');
+        const salesTotalDisplay = document.getElementById('salesTotalDisplay');
+
+        // Abrir modal y cargar % guardado
+        salesSummaryCard.addEventListener('click', () => {
+            const total = parseInt(document.getElementById('totalRevenue').textContent.replace(/[^\d]/g, '')) || 0;
+            salesTotalDisplay.textContent = '$' + total.toLocaleString('es-CO');
+            document.getElementById('salesCommissionModal').classList.add('show');
+            loadSavedSalesCommission();
+            document.getElementById('salesCommissionPercentage').focus();
+        });
+
+        // Cerrar modal
+        window.closeSalesCommissionModal = () => {
+            const m = document.getElementById('salesCommissionModal');
+            m.style.animation = 'fadeOut .2s ease';
+            setTimeout(() => m.classList.remove('show'), 200);
+        };
+
+        // Calcular
+        window.calculateSalesCommission = () => {
+            const pct = parseFloat(document.getElementById('salesCommissionPercentage').value);
+            if (isNaN(pct) || pct < 0 || pct > 100) { showNotification('Por favor ingresa un porcentaje válido entre 0 y 100', 'warning'); return; }
+            const total = parseInt(salesTotalDisplay.textContent.replace(/[^\d]/g, '')) || 0;
+            const commission = Math.round(total * pct / 100);
+            const net = total - commission;
+            document.getElementById('salesCommissionAmount').textContent = '$' + commission.toLocaleString('es-CO');
+            document.getElementById('salesNetAmount').textContent = '$' + net.toLocaleString('es-CO');
+            const res = document.getElementById('salesCommissionResult');
+            res.style.display = 'block';
+            res.style.animation = 'slideIn .3s ease';
+            document.getElementById('saveSalesCommissionBtn').style.display = 'inline-flex';
+        };
+
+        // Guardar %
+        window.saveSalesCommissionPercentage = async () => {
+            const pct = parseFloat(document.getElementById('salesCommissionPercentage').value);
+            if (isNaN(pct) || pct < 0 || pct > 100) { showNotification('Por favor ingresa un porcentaje válido entre 0 y 100', 'warning'); return; }
+            try {
+                const token = getToken();
+                await apiFetch('/sales-commission', 'POST', { percentage: pct }, token);
+                const btn = document.getElementById('saveSalesCommissionBtn');
+                const old = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> ¡Guardado!';
+                btn.style.background = '#27ae60';
+                setTimeout(() => { btn.innerHTML = old; btn.style.background = ''; }, 2000);
+            } catch (e) {
+                showNotification('No se pudo guardar: ' + e.message, 'error');
+            }
+        };
+
+        // Cargar % guardado
+        async function loadSavedSalesCommission() {
+            try {
+                const token = getToken();
+                const res = await apiFetch('/sales-commission', 'GET', null, token);
+                if (res && res.percentage != null)
+                    document.getElementById('salesCommissionPercentage').value = res.percentage;
+            } catch (e) { /* no hay guardado */ }
+        }
+
+        // Permitir calcular con Enter
+        document.getElementById('salesCommissionPercentage').addEventListener('keypress', e => {
+            if (e.key === 'Enter') calculateSalesCommission();
+        });
+
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const productsList = document.getElementById("productsList");
+            const searchInput = document.getElementById("searchInput");
+            const profitFilter = document.getElementById("profitFilter");
+
+            try {
+                const token = getToken();
+                if (!token) {
+                    window.location.href = "login.html";
+                    return;
+                }
+
+                // ✅ Verificar permisos antes de cargar
+                puedeVerCostos = await verificarPermisoCostos();
+
+                const products = await apiFetch("/products", "GET", null, token);
                 soldProducts = products.filter(product => product.sold);
                 filteredProducts = [...soldProducts];
-                
+
                 displayProducts(filteredProducts);
                 updateStatistics(filteredProducts);
                 setupMenuHandlers();
@@ -854,14 +1325,14 @@ document.getElementById('salesCommissionPercentage').addEventListener('keypress'
         function applyFilters() {
             const searchText = document.getElementById("searchInput").value.toLowerCase().trim();
             const profitCategory = document.getElementById("profitFilter").value;
-            
+
             filteredProducts = soldProducts.filter(product => {
                 const matchesSearch = searchText === "" || product.name.toLowerCase().includes(searchText);
-                
+
                 let matchesProfit = true;
                 if (profitCategory) {
                     const profitPercentage = ((product.salePrice - product.costPrice) / product.costPrice) * 100;
-                    switch(profitCategory) {
+                    switch (profitCategory) {
                         case 'high':
                             matchesProfit = profitPercentage >= 30;
                             break;
@@ -873,7 +1344,7 @@ document.getElementById('salesCommissionPercentage').addEventListener('keypress'
                             break;
                     }
                 }
-                
+
                 return matchesSearch && matchesProfit;
             });
 
@@ -881,57 +1352,57 @@ document.getElementById('salesCommissionPercentage').addEventListener('keypress'
             updateStatistics(filteredProducts);
         }
 
-function displayProducts(products) {
-    const productsList = document.getElementById("productsList");
-    productsList.innerHTML = "";
+        function displayProducts(products) {
+            const productsList = document.getElementById("productsList");
+            productsList.innerHTML = "";
 
-    if (products.length === 0) {
-        productsList.innerHTML = `
+            if (products.length === 0) {
+                productsList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-search"></i>
                 <h3>No se encontraron resultados</h3>
                 <p>No hay productos vendidos que coincidan con los filtros aplicados.</p>
             </div>`;
-        return;
-    }
+                return;
+            }
 
-    products.forEach((product) => {
-        const productCard = document.createElement("div");
-        productCard.classList.add("product-card", "sold");
+            products.forEach((product) => {
+                const productCard = document.createElement("div");
+                productCard.classList.add("product-card", "sold");
 
-        // ✅ Calcular solo si tiene permiso
-        let profit = 0;
-        let profitPercentage = 0;
-        
-        if (puedeVerCostos) {
-            profit = product.salePrice - product.costPrice;
-            profitPercentage = Math.round((profit / product.costPrice) * 100);
-        }
-        
-        let profitClass = "profit-medium";
-        if (profitPercentage >= 30) profitClass = "profit-high";
-        else if (profitPercentage < 15) profitClass = "profit-low";
+                // ✅ Calcular solo si tiene permiso
+                let profit = 0;
+                let profitPercentage = 0;
 
-        const profitIcon = profitPercentage >= 30 ? 'fas fa-arrow-up' : 
-                         profitPercentage >= 15 ? 'fas fa-minus' : 'fas fa-arrow-down';
+                if (puedeVerCostos) {
+                    profit = product.salePrice - product.costPrice;
+                    profitPercentage = Math.round((profit / product.costPrice) * 100);
+                }
 
-        productCard.classList.add(profitClass);
-        
-        // ✅ Mostrar u ocultar costos
-        const costoPriceHTML = puedeVerCostos 
-            ? `$${product.costPrice.toLocaleString()}`
-            : ocultarTexto();
-            
-        const profitSectionHTML = puedeVerCostos
-            ? `<div class="profit-section">
+                let profitClass = "profit-medium";
+                if (profitPercentage >= 30) profitClass = "profit-high";
+                else if (profitPercentage < 15) profitClass = "profit-low";
+
+                const profitIcon = profitPercentage >= 30 ? 'fas fa-arrow-up' :
+                    profitPercentage >= 15 ? 'fas fa-minus' : 'fas fa-arrow-down';
+
+                productCard.classList.add(profitClass);
+
+                // ✅ Mostrar u ocultar costos
+                const costoPriceHTML = puedeVerCostos
+                    ? `$${product.costPrice.toLocaleString()}`
+                    : ocultarTexto();
+
+                const profitSectionHTML = puedeVerCostos
+                    ? `<div class="profit-section">
                 <div class="profit-text">
                     <i class="${profitIcon}"></i> 
                     Ganancia: $${profit.toLocaleString()} (${profitPercentage}%)
                 </div>
             </div>`
-            : '';
-        
-        productCard.innerHTML = `
+                    : '';
+
+                productCard.innerHTML = `
             <div class="product-header">
                 <div class="product-info">
                     <span class="sold-badge"><i class="fas fa-check"></i> Vendido</span>
@@ -981,49 +1452,49 @@ function displayProducts(products) {
             </div>
         `;
 
-        productsList.appendChild(productCard);
-    });
-}
+                productsList.appendChild(productCard);
+            });
+        }
 
 
-function updateStatistics(products) {
-    const totalRevenue = products.reduce((sum, product) => sum + product.salePrice, 0);
-    const totalProfit = products.reduce((sum, product) => sum + (product.salePrice - product.costPrice), 0);
-    const avgMargin = products.length > 0 ? 
-        Math.round(products.reduce((sum, product) => sum + ((product.salePrice - product.costPrice) / product.costPrice * 100), 0) / products.length) : 0;
-    
-    const bestProduct = products.length > 0 ? 
-        products.reduce((best, product) => (product.salePrice - product.costPrice) > (best.salePrice - best.costPrice) ? product : best).name : 'N/A';
+        function updateStatistics(products) {
+            const totalRevenue = products.reduce((sum, product) => sum + product.salePrice, 0);
+            const totalProfit = products.reduce((sum, product) => sum + (product.salePrice - product.costPrice), 0);
+            const avgMargin = products.length > 0 ?
+                Math.round(products.reduce((sum, product) => sum + ((product.salePrice - product.costPrice) / product.costPrice * 100), 0) / products.length) : 0;
 
-    document.getElementById("totalRevenue").textContent = `$${totalRevenue.toLocaleString()}`;
-    document.getElementById("totalProducts").textContent = products.length;
-    
-    // ✅ Ocultar ganancia total y margen si no tiene permiso
-    if (puedeVerCostos) {
-        document.getElementById("totalProfit").textContent = `$${totalProfit.toLocaleString()}`;
-        document.getElementById("avgMargin").textContent = `${avgMargin}%`;
-    } else {
-        document.getElementById("totalProfit").textContent = '●●●●●';
-        document.getElementById("avgMargin").textContent = '●●●●●';
-    }
-    
-    document.getElementById("bestProduct").textContent = bestProduct;
-}
+            const bestProduct = products.length > 0 ?
+                products.reduce((best, product) => (product.salePrice - product.costPrice) > (best.salePrice - best.costPrice) ? product : best).name : 'N/A';
+
+            document.getElementById("totalRevenue").textContent = `$${totalRevenue.toLocaleString()}`;
+            document.getElementById("totalProducts").textContent = products.length;
+
+            // ✅ Ocultar ganancia total y margen si no tiene permiso
+            if (puedeVerCostos) {
+                document.getElementById("totalProfit").textContent = `$${totalProfit.toLocaleString()}`;
+                document.getElementById("avgMargin").textContent = `${avgMargin}%`;
+            } else {
+                document.getElementById("totalProfit").textContent = '●●●●●';
+                document.getElementById("avgMargin").textContent = '●●●●●';
+            }
+
+            document.getElementById("bestProduct").textContent = bestProduct;
+        }
         // Funciones globales
- window.showProductDetails = function(productId) {
-    const product = soldProducts.find(p => p._id === productId);
-    if (!product) return;
-    
-    // ✅ Versión sin información financiera si no tiene permiso
-    if (!puedeVerCostos) {
-        const soldDate = product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        }) : 'Fecha no registrada';
-        
-        alert(`
+        window.showProductDetails = function (productId) {
+            const product = soldProducts.find(p => p._id === productId);
+            if (!product) return;
+
+            // ✅ Versión sin información financiera si no tiene permiso
+            if (!puedeVerCostos) {
+                const soldDate = product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : 'Fecha no registrada';
+
+                alert(`
 DETALLES DEL PRODUCTO VENDIDO
 
 📦 Producto: ${product.name}
@@ -1031,20 +1502,20 @@ DETALLES DEL PRODUCTO VENDIDO
 💵 Precio de venta: $${product.salePrice.toLocaleString()} COP
 📅 Fecha de venta: ${soldDate}
         `);
-        return;
-    }
-    
-    // Versión completa con información financiera
-    const profit = product.salePrice - product.costPrice;
-    const profitPercentage = Math.round((profit / product.costPrice) * 100);
-    const soldDate = product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    }) : 'Fecha no registrada';
-    
-    alert(`
+                return;
+            }
+
+            // Versión completa con información financiera
+            const profit = product.salePrice - product.costPrice;
+            const profitPercentage = Math.round((profit / product.costPrice) * 100);
+            const soldDate = product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : 'Fecha no registrada';
+
+            alert(`
 DETALLES DEL PRODUCTO VENDIDO
 
 📦 Producto: ${product.name}
@@ -1057,23 +1528,23 @@ DETALLES DEL PRODUCTO VENDIDO
 📅 Fecha de venta: ${soldDate}
 ${product.description ? `📝 Descripción: ${product.description}` : ''}
 
-${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' : 
-  profitPercentage >= 15 ? '📊 Rentabilidad moderada' : '⚠️ Rentabilidad baja'}
+${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
+                    profitPercentage >= 15 ? '📊 Rentabilidad moderada' : '⚠️ Rentabilidad baja'}
     `);
-};
-        window.deleteProduct = async function(productId) {
+        };
+        window.deleteProduct = async function (productId) {
             if (!confirm("¿Estás seguro de que deseas eliminar este producto vendido?\n\nEsta acción no se puede deshacer.")) {
                 return;
             }
-            
+
             try {
                 const token = getToken();
                 await apiFetch(`/products/${productId}`, "DELETE", null, token);
-                
+
                 // Eliminar el producto del array y actualizar la vista
                 soldProducts = soldProducts.filter(product => product._id !== productId);
                 applyFilters();
-                
+
                 // Mostrar mensaje de éxito
                 const notification = document.createElement('div');
                 notification.style.cssText = `
@@ -1090,11 +1561,11 @@ ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
                 `;
                 notification.innerHTML = '<i class="fas fa-check"></i> Producto eliminado correctamente';
                 document.body.appendChild(notification);
-                
+
                 setTimeout(() => {
                     notification.remove();
                 }, 3000);
-                
+
             } catch (error) {
                 console.error("Error al eliminar el producto:", error);
                 alert("❌ No se pudo eliminar el producto. Intenta nuevamente.");
@@ -1147,21 +1618,21 @@ ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
         }
 
         // Función para exportar datos
-        window.exportSoldProducts = function() {
+        window.exportSoldProducts = function () {
             if (filteredProducts.length === 0) {
                 alert("No hay datos para exportar");
                 return;
             }
-            
+
             const csvData = [
                 ['Producto', 'Categoría', 'Precio Costo', 'Precio Venta', 'Ganancia', 'Margen %', 'Fecha Venta']
             ];
-            
+
             filteredProducts.forEach(product => {
                 const profit = product.salePrice - product.costPrice;
                 const profitPercentage = Math.round((profit / product.costPrice) * 100);
                 const soldDate = product.soldDate ? new Date(product.soldDate).toLocaleDateString('es-ES') : 'N/A';
-                
+
                 csvData.push([
                     product.name,
                     product.category || 'Sin categoría',
@@ -1172,16 +1643,16 @@ ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
                     soldDate
                 ]);
             });
-            
+
             const csvContent = csvData.map(row => row.join(',')).join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
-            
+
             link.setAttribute('href', url);
             link.setAttribute('download', `productos_vendidos_${new Date().toISOString().split('T')[0]}.csv`);
             link.style.visibility = 'hidden';
-            
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -1190,35 +1661,35 @@ ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
         // Función para análisis avanzado de ventas
         function getSalesAnalysis() {
             if (soldProducts.length === 0) return null;
-            
+
             const highProfitProducts = soldProducts.filter(p => ((p.salePrice - p.costPrice) / p.costPrice * 100) >= 30).length;
             const mediumProfitProducts = soldProducts.filter(p => {
                 const margin = (p.salePrice - p.costPrice) / p.costPrice * 100;
                 return margin >= 15 && margin < 30;
             }).length;
             const lowProfitProducts = soldProducts.filter(p => ((p.salePrice - p.costPrice) / p.costPrice * 100) < 15).length;
-            
+
             // Categorías más vendidas
             const categoryStats = {};
             soldProducts.forEach(product => {
                 const category = product.category || 'Sin categoría';
                 categoryStats[category] = (categoryStats[category] || 0) + 1;
             });
-            
+
             const topCategory = Object.entries(categoryStats)
-                .sort(([,a], [,b]) => b - a)[0];
-            
+                .sort(([, a], [, b]) => b - a)[0];
+
             // Producto más rentable
-            const mostProfitable = soldProducts.length > 0 ? 
+            const mostProfitable = soldProducts.length > 0 ?
                 soldProducts.reduce((best, product) => {
                     const currentProfit = (product.salePrice - product.costPrice) / product.costPrice * 100;
                     const bestProfit = (best.salePrice - best.costPrice) / best.costPrice * 100;
                     return currentProfit > bestProfit ? product : best;
                 }) : null;
-            
+
             // Ticket promedio
             const avgTicket = Math.round(soldProducts.reduce((sum, product) => sum + product.salePrice, 0) / soldProducts.length);
-            
+
             return {
                 highProfitProducts,
                 mediumProfitProducts,
@@ -1232,23 +1703,23 @@ ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
         }
 
         // Función para mostrar análisis de ventas
-window.showSalesAnalysis = function() {
-    // ✅ Verificar permisos antes de mostrar análisis
-    if (!puedeVerCostos) {
-        alert("No tienes permisos para ver el análisis financiero detallado");
-        return;
-    }
-    
-    const analysis = getSalesAnalysis();
-    if (!analysis) {
-        alert("No hay datos suficientes para mostrar el análisis");
-        return;
-    }
-    
-            
-            const mostProfitableMargin = analysis.mostProfitable ? 
+        window.showSalesAnalysis = function () {
+            // ✅ Verificar permisos antes de mostrar análisis
+            if (!puedeVerCostos) {
+                alert("No tienes permisos para ver el análisis financiero detallado");
+                return;
+            }
+
+            const analysis = getSalesAnalysis();
+            if (!analysis) {
+                alert("No hay datos suficientes para mostrar el análisis");
+                return;
+            }
+
+
+            const mostProfitableMargin = analysis.mostProfitable ?
                 Math.round(((analysis.mostProfitable.salePrice - analysis.mostProfitable.costPrice) / analysis.mostProfitable.costPrice) * 100) : 0;
-            
+
             const message = `
 📊 ANÁLISIS AVANZADO DE VENTAS
 
@@ -1265,16 +1736,19 @@ window.showSalesAnalysis = function() {
 🏆 Producto más rentable: ${analysis.mostProfitable?.name || 'N/A'} (${mostProfitableMargin}% margen)
 
 💡 RECOMENDACIONES:
-${analysis.lowProfitProducts > analysis.highProfitProducts ? 
-  '• Considera revisar los precios de productos con baja rentabilidad' : 
-  '• Excelente gestión de precios y márgenes'}
-${analysis.topCategory ? 
-  `• Enfócate en la categoría "${analysis.topCategory.name}" que muestra mejor desempeño` : 
-  '• Considera organizar mejor tus productos por categorías'}
+${analysis.lowProfitProducts > analysis.highProfitProducts ?
+                    '• Considera revisar los precios de productos con baja rentabilidad' :
+                    '• Excelente gestión de precios y márgenes'}
+${analysis.topCategory ?
+                    `• Enfócate en la categoría "${analysis.topCategory.name}" que muestra mejor desempeño` :
+                    '• Considera organizar mejor tus productos por categorías'}
             `;
-            
-            alert(message);
+
+            showNotification(message, 'info', 'Análisis de Ventas');
         };
     </script>
+    <script src="utils/notifications.js" type="module"></script>
+    <script type="module" src="vendidos.js"></script>
 </body>
+
 </html>

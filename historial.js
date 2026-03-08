@@ -4,10 +4,10 @@ import { getToken } from "./utils/auth.js";
 import "./authCheck.js";
 
 /* ---------- referencias DOM ---------- */
-const salesHistory   = document.getElementById("salesHistory");
-const searchInput    = document.getElementById("searchInput");
-const dateInput      = document.getElementById("dateFilter");
-const dayFilter      = document.getElementById("dayFilter");
+const salesHistory = document.getElementById("salesHistory");
+const searchInput = document.getElementById("searchInput");
+const dateInput = document.getElementById("dateFilter");
+const dayFilter = document.getElementById("dayFilter");
 const totalDebtElement = document.getElementById("totalDebt");
 
 let sales = [];
@@ -18,8 +18,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const token = getToken();
 
         /* === MODO ADMIN: ¿estoy inspeccionando un vendedor? === */
-        const adminMode   = sessionStorage.getItem('adminMode') === 'true';
-        const vendedorId  = sessionStorage.getItem('vendedorId');
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorId = sessionStorage.getItem('vendedorId');
 
         let endpoint = '/sales/all';          // default
         if (adminMode && vendedorId) {
@@ -45,10 +45,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Menú
     const menuToggle = document.getElementById("menuToggle");
-    const menuItems  = document.getElementById("menuItems");
-    const backdrop   = document.getElementById("backdrop");
-    const menuClose  = document.getElementById("menuClose"); // ✅ AGREGAR
-    
+    const menuItems = document.getElementById("menuItems");
+    const backdrop = document.getElementById("backdrop");
+    const menuClose = document.getElementById("menuClose"); // ✅ AGREGAR
+
     if (menuToggle && menuItems && backdrop) {
         menuToggle.addEventListener("click", () => {
             menuItems.classList.toggle("show");
@@ -79,12 +79,12 @@ function applyFilters() {
 
     const filtered = sales.filter(sale => {
         // Filtro por texto
-        const matchesText = sale.clientName.toLowerCase().includes(text) || 
-                          sale.productName.toLowerCase().includes(text);
-        
+        const matchesText = sale.clientName.toLowerCase().includes(text) ||
+            sale.productName.toLowerCase().includes(text);
+
         // Filtro por fecha de venta
         const matchesDate = date ? new Date(sale.saleDate).toISOString().split("T")[0] === date : true;
-        
+
         // Filtro por día de pago
         let matchesDay = true;
         if (day) {
@@ -96,7 +96,7 @@ function applyFilters() {
                 matchesDay = false;
             }
         }
-        
+
         return !sale.settled && matchesText && matchesDate && matchesDay;
     });
 
@@ -110,7 +110,7 @@ function renderSales(list) {
 
     if (!list.length) {
         const day = dayFilter.value;
-        const message = day 
+        const message = day
             ? `<div class="empty-state">
                 <i class="fas fa-calendar-times"></i>
                 <h3>No hay préstamos para el día ${day}</h3>
@@ -134,7 +134,7 @@ function renderSales(list) {
         card.setAttribute("data-sale-id", sale._id);
 
         // Mostrar días de pago si existen
-        const paymentDaysInfo = sale.paymentDays 
+        const paymentDaysInfo = sale.paymentDays
             ? `<p><i class="fas fa-calendar-check"></i> Días de pago: ${sale.paymentDays}</p>`
             : '';
 
@@ -163,7 +163,7 @@ function renderSales(list) {
         `;
 
         card.querySelector(".btn-info").onclick = () => viewSaleDetails(sale);
-        card.querySelector(".btn-danger").onclick  = () => deleteSale(sale._id, card);
+        card.querySelector(".btn-danger").onclick = () => deleteSale(sale._id, card);
 
         salesHistory.appendChild(card);
     });
@@ -186,24 +186,24 @@ function viewSaleDetails(sale) {
 
 /* ---------- eliminar ---------- */
 async function deleteSale(id, card) {
-    if (!confirm("¿Eliminar esta venta?")) return;
+    if (!await showConfirm("¿Eliminar esta venta?")) return;
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "DELETE", null, token);
         card.remove();
-        alert("Venta eliminada correctamente.");
-        
+        showNotification("Venta eliminada correctamente.", "error");
+
         // Actualizar el array local
         sales = sales.filter(s => s._id !== id);
         applyFilters(); // recalcula deuda y reaplica filtros
     } catch (error) {
         console.error("Error al eliminar la venta:", error);
-        alert("No se pudo eliminar la venta.");
+        showNotification("No se pudo eliminar la venta.", "error");
     }
 }
 
 /* ---------- limpiar todos los filtros ---------- */
-window.clearAllFilters = function() {
+window.clearAllFilters = function () {
     searchInput.value = "";
     dateInput.value = "";
     dayFilter.value = "";

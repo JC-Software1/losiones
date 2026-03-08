@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
@@ -7,302 +8,411 @@
   <script src="loader.js"></script>
 
   <!-- Fuentes -->
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Poppins:wght@300;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/notifications.css">
 
   <style>
-    :root{
+    :root {
       --dark-1: #0f0f11;
       --dark-2: #141418;
       --panel-dark: #151416;
-      --orange-1: #d96a39;   /* highlight */
-      --orange-2: #ff7f3d;   /* gradient */
-      --glass: rgba(255,255,255,0.03);
+      --orange-1: #d96a39;
+      /* highlight */
+      --orange-2: #ff7f3d;
+      /* gradient */
+      --glass: rgba(255, 255, 255, 0.03);
       --text-light: #f2efe9;
-      --muted: rgba(255,255,255,0.55);
+      --muted: rgba(255, 255, 255, 0.55);
       --card-radius: 18px;
     }
 
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
-    body{
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
       font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
       background: linear-gradient(180deg, #0b0b0c 0%, #0b0b0c 100%);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-      color:var(--text-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      color: var(--text-light);
     }
 
     /* Contenedor principal con borde naranja tenue */
     .card {
-      width:100%;
-      max-width:1100px;
-      height:calc(100vh - 80px);
-      max-height:720px;
-      border-radius:var(--card-radius);
-      overflow:hidden;
-      position:relative;
-      display:flex;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 0 2px rgba(217,106,57,0.06);
-      border: 3px solid rgba(217,106,57,0.06);
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+      width: 100%;
+      max-width: 1100px;
+      height: calc(100vh - 80px);
+      max-height: 720px;
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 2px rgba(217, 106, 57, 0.06);
+      border: 3px solid rgba(217, 106, 57, 0.06);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.02));
     }
 
     /* borde exterior lumínico */
-    .card::after{
-      content:"";
-      position:absolute;
-      inset:6px;
-      border-radius:calc(var(--card-radius) - 6px);
-      pointer-events:none;
-      box-shadow: 0 0 0 2px rgba(217,106,57,0.04) inset, 0 0 30px rgba(217,106,57,0.06);
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border-radius: calc(var(--card-radius) - 6px);
+      pointer-events: none;
+      box-shadow: 0 0 0 2px rgba(217, 106, 57, 0.04) inset, 0 0 30px rgba(217, 106, 57, 0.06);
     }
 
     /* SECCION IZQUIERDA - Login */
     .left {
       flex: 1;
-      min-width:360px;
-      background: linear-gradient(135deg, rgba(21,21,22,0.95) 0%, rgba(22,22,24,0.95) 100%);
-      padding:54px 48px;
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      position:relative;
+      min-width: 360px;
+      background: linear-gradient(135deg, rgba(21, 21, 22, 0.95) 0%, rgba(22, 22, 24, 0.95) 100%);
+      padding: 54px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
     }
 
     /* Triángulo oscuro sobre la derecha para mimetizar la imagen */
-    .left::before{
-      content:"";
-      position:absolute;
-      right:0;
-      top:0;
-      bottom:0;
-      width:55%;
-      background: linear-gradient(135deg, rgba(0,0,0,0.12), rgba(255,255,255,0.02));
+    .left::before {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 55%;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.02));
       clip-path: polygon(0 0, 100% 0, 100% 100%);
-      pointer-events:none;
-      transform:translateX(12%);
-      opacity:0.18;
+      pointer-events: none;
+      transform: translateX(12%);
+      opacity: 0.18;
     }
 
     h1.logo {
       font-family: 'Montserrat', sans-serif;
-      font-weight:800;
-      font-size:40px;
-      color:var(--text-light);
-      margin-bottom:38px;
-      letter-spacing:1px;
-      text-align:left;
+      font-weight: 800;
+      font-size: 40px;
+      color: var(--text-light);
+      margin-bottom: 38px;
+      letter-spacing: 1px;
+      text-align: left;
     }
 
     /* Formulario */
-    form.login-form{
-      width:100%;
-      max-width:420px;
-      display:flex;
-      flex-direction:column;
-      gap:18px;
+    form.login-form {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
 
-    .input-wrap{
-      position:relative;
-      padding-top:6px;
+    .input-wrap {
+      position: relative;
+      padding-top: 6px;
     }
 
-    .input-wrap input{
-      width:100%;
-      background:transparent;
-      border:none;
-      padding:16px 46px 10px 0;
-      color:var(--text-light);
-      font-size:16px;
-      border-bottom:2px solid rgba(255,255,255,0.08);
-      outline:none;
+    .input-wrap input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: 16px 46px 10px 0;
+      color: var(--text-light);
+      font-size: 16px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+      outline: none;
       transition: all .25s ease;
     }
 
-    .input-wrap input::placeholder{ color: transparent; }
+    .input-wrap input::placeholder {
+      color: transparent;
+    }
 
-    .input-wrap label{
-      position:absolute;
-      left:0;
-      top:18px;
-      transform-origin:left top;
-      color:var(--muted);
-      font-size:16px;
-      pointer-events:none;
+    .input-wrap label {
+      position: absolute;
+      left: 0;
+      top: 18px;
+      transform-origin: left top;
+      color: var(--muted);
+      font-size: 16px;
+      pointer-events: none;
       transition: all .22s ease;
     }
 
     .input-wrap input:focus,
-    .input-wrap input:not(:placeholder-shown){
-      border-bottom-color:var(--orange-1);
+    .input-wrap input:not(:placeholder-shown) {
+      border-bottom-color: var(--orange-1);
     }
 
-    .input-wrap input:focus + label,
-    .input-wrap input:not(:placeholder-shown) + label{
-      top:-8px;
-      font-size:12px;
-      color:var(--orange-1);
+    .input-wrap input:focus+label,
+    .input-wrap input:not(:placeholder-shown)+label {
+      top: -8px;
+      font-size: 12px;
+      color: var(--orange-1);
     }
 
     /* icono a la derecha */
     .input-wrap .icon {
-      position:absolute;
-      right:6px;
-      top:16px;
-      width:36px;
-      height:36px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:rgba(255,255,255,0.45);
-      font-size:18px;
-      pointer-events:none;
+      position: absolute;
+      right: 6px;
+      top: 16px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 18px;
+      pointer-events: none;
     }
 
     /* linea naranja fina debajo del username (más prominente) */
-    .input-wrap.username input{
-      padding-left:0;
+    .input-wrap.username input {
+      padding-left: 0;
     }
 
     /* Botón grande con gradiente y selado interior */
-    .btn-login{
-      margin-top:6px;
-      width:100%;
-      max-width:420px;
-      height:58px;
-      border-radius:40px;
+    .btn-login {
+      margin-top: 6px;
+      width: 100%;
+      max-width: 420px;
+      height: 58px;
+      border-radius: 40px;
       border: none;
-      cursor:pointer;
-      font-weight:700;
-      font-size:18px;
-      letter-spacing:0.6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.6px;
       background: linear-gradient(180deg, var(--orange-2), var(--orange-1));
-      color:white;
+      color: white;
       box-shadow:
-        0 12px 30px rgba(217,106,57,0.22),
-        inset 0 2px 0 rgba(255,255,255,0.08),
-        inset 0 -8px 24px rgba(0,0,0,0.25);
+        0 12px 30px rgba(217, 106, 57, 0.22),
+        inset 0 2px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -8px 24px rgba(0, 0, 0, 0.25);
       transition: transform .18s ease, box-shadow .18s ease;
     }
 
-    .btn-login:active{ transform: translateY(1px) scale(.998); }
-    .btn-login:hover{ transform: translateY(-3px); box-shadow: 0 18px 40px rgba(217,106,57,0.28); }
+    .btn-login:active {
+      transform: translateY(1px) scale(.998);
+    }
+
+    .btn-login:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 40px rgba(217, 106, 57, 0.28);
+    }
 
     .meta {
-      margin-top:14px;
-      color:var(--muted);
-      font-size:14px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 14px;
     }
-    .meta a{ color:var(--orange-1); font-weight:600; text-decoration:none; margin-left:6px }
+
+    .meta a {
+      color: var(--orange-1);
+      font-weight: 600;
+      text-decoration: none;
+      margin-left: 6px
+    }
 
     /* SECCION DERECHA - WELCOME */
     .right {
-      flex:1;
+      flex: 1;
       background: linear-gradient(135deg, #7a3516 0%, #b95a2a 30%, #ff8f4d 100%);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:64px;
-      position:relative;
-      color:white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 64px;
+      position: relative;
+      color: white;
     }
 
     /* Diagonal cut to mimic image */
-    .right::before{
-      content:"";
-      position:absolute;
-      left:-10%;
-      top:0;
-      bottom:0;
-      width:60%;
-      background: linear-gradient(135deg, rgba(0,0,0,0.12), rgba(255,255,255,0.03));
+    .right::before {
+      content: "";
+      position: absolute;
+      left: -10%;
+      top: 0;
+      bottom: 0;
+      width: 60%;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.03));
       transform: skewX(-18deg);
-      opacity:0.2;
-      pointer-events:none;
+      opacity: 0.2;
+      pointer-events: none;
     }
 
-    .welcome-inner{
-      text-align:right;
-      max-width:360px;
-      margin-right:8%;
+    .welcome-inner {
+      text-align: right;
+      max-width: 360px;
+      margin-right: 8%;
     }
 
-    .welcome-inner h2{
+    .welcome-inner h2 {
       font-family: 'Montserrat', sans-serif;
-      font-size:48px;
-      margin-bottom:18px;
-      line-height:0.95;
-      letter-spacing:1px;
-      font-weight:800;
-      text-transform:uppercase;
+      font-size: 48px;
+      margin-bottom: 18px;
+      line-height: 0.95;
+      letter-spacing: 1px;
+      font-weight: 800;
+      text-transform: uppercase;
     }
 
-    .welcome-inner p{
-      color: rgba(255,255,255,0.93);
-      font-size:18px;
-      line-height:1.6;
-      text-align:right;
-      max-width:420px;
+    .welcome-inner p {
+      color: rgba(255, 255, 255, 0.93);
+      font-size: 18px;
+      line-height: 1.6;
+      text-align: right;
+      max-width: 420px;
     }
 
     /* small footer heart or dot (optional) */
-    .corner-dot{
-      position:absolute;
-      right:18px;
-      bottom:18px;
-      width:58px;height:58px;border-radius:50%;
-      background: linear-gradient(180deg, rgba(0,0,0,0.12), rgba(255,255,255,0.02));
-      display:flex;align-items:center;justify-content:center;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
-      opacity:0.9;
+    .corner-dot {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.02));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      opacity: 0.9;
     }
 
     /* RESPONSIVE: tablets and phones */
-    @media (max-width:1000px){
-      .card{ max-width:920px; height:calc(100vh - 64px); max-height:720px; }
-      .right{ padding:48px }
-      .left{ padding:40px }
-      .welcome-inner h2{ font-size:42px }
+    @media (max-width:1000px) {
+      .card {
+        max-width: 920px;
+        height: calc(100vh - 64px);
+        max-height: 720px;
+      }
+
+      .right {
+        padding: 48px
+      }
+
+      .left {
+        padding: 40px
+      }
+
+      .welcome-inner h2 {
+        font-size: 42px
+      }
     }
 
     /* Stack vertically on small screens like iPhone 12 Pro */
-    @media (max-width:420px){
-      .card{
-        flex-direction:column-reverse;
-        height:calc(100vh - 24px);
-        max-height:1000px;
-        border-radius:14px;
+    @media (max-width:420px) {
+      .card {
+        flex-direction: column-reverse;
+        height: calc(100vh - 24px);
+        max-height: 1000px;
+        border-radius: 14px;
       }
-      .left, .right { min-height:0; width:100%; }
-      .left{ padding:24px 20px; order:1; display:flex; justify-content:flex-start; align-items:flex-start; }
-      .right{ padding:22px 20px; order:0; border-bottom-left-radius:0; border-bottom-right-radius:0; }
-      h1.logo { font-size:34px; margin-bottom:18px }
-      form.login-form{ max-width:100% }
-      .welcome-inner { text-align:center; margin:0 auto; }
-      .welcome-inner h2{ font-size:32px }
-      .welcome-inner p{ font-size:15px; text-align:center; }
-      .btn-login{ height:54px }
-      .input-wrap label{ top:14px; }
-      .input-wrap .icon{ top:12px }
-      .card::after{ inset:4px }
+
+      .left,
+      .right {
+        min-height: 0;
+        width: 100%;
+      }
+
+      .left {
+        padding: 24px 20px;
+        order: 1;
+        display: flex;
+        justify-content: flex-start;
+        align-items: flex-start;
+      }
+
+      .right {
+        padding: 22px 20px;
+        order: 0;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+
+      h1.logo {
+        font-size: 34px;
+        margin-bottom: 18px
+      }
+
+      form.login-form {
+        max-width: 100%
+      }
+
+      .welcome-inner {
+        text-align: center;
+        margin: 0 auto;
+      }
+
+      .welcome-inner h2 {
+        font-size: 32px
+      }
+
+      .welcome-inner p {
+        font-size: 15px;
+        text-align: center;
+      }
+
+      .btn-login {
+        height: 54px
+      }
+
+      .input-wrap label {
+        top: 14px;
+      }
+
+      .input-wrap .icon {
+        top: 12px
+      }
+
+      .card::after {
+        inset: 4px
+      }
     }
 
     /* iPhone 12 Pro specific tweaks for safe-area */
     @supports(padding: env(safe-area-inset-bottom)) {
-      body { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
-      .card{ margin-bottom: env(safe-area-inset-bottom); }
+      body {
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+      }
+
+      .card {
+        margin-bottom: env(safe-area-inset-bottom);
+      }
     }
 
     /* Small animations */
-    .fade-up { transform: translateY(20px); opacity:0; animation: fadeUp .6s forwards; }
-    @keyframes fadeUp { to { transform:none; opacity:1 } }
+    .fade-up {
+      transform: translateY(20px);
+      opacity: 0;
+      animation: fadeUp .6s forwards;
+    }
+
+    @keyframes fadeUp {
+      to {
+        transform: none;
+        opacity: 1
+      }
+    }
   </style>
 </head>
+
 <body>
   <div class="card" role="main" aria-label="Login card">
     <!-- LEFT - LOGIN -->
@@ -316,19 +426,23 @@
           <div class="icon" aria-hidden="true">
             <!-- person svg -->
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM3 21a9 9 0 0 1 18 0" stroke="currentColor" stroke-opacity="0.9" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM3 21a9 9 0 0 1 18 0" stroke="currentColor"
+                stroke-opacity="0.9" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </div>
         </div>
 
         <div class="input-wrap password fade-up" style="animation-delay:.05s">
-          <input id="password" name="password" type="password" placeholder=" " required autocomplete="current-password" />
+          <input id="password" name="password" type="password" placeholder=" " required
+            autocomplete="current-password" />
           <label for="password">Contraseña</label>
           <div class="icon" aria-hidden="true">
             <!-- lock svg -->
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-opacity="0.9" stroke-width="1.4"></rect>
-              <path d="M7 11V8a5 5 0 0 1 10 0v3" stroke="currentColor" stroke-opacity="0.9" stroke-width="1.4" stroke-linecap="round"></path>
+              <rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-opacity="0.9"
+                stroke-width="1.4"></rect>
+              <path d="M7 11V8a5 5 0 0 1 10 0v3" stroke="currentColor" stroke-opacity="0.9" stroke-width="1.4"
+                stroke-linecap="round"></path>
             </svg>
           </div>
         </div>
@@ -343,7 +457,8 @@
     <aside class="right">
       <div class="welcome-inner fade-up" style="animation-delay:.12s">
         <h2>BIENVENIDO<br>A JC-C!</h2>
-        <p>Un programa donde vas a poder llevar tu inventario, registrar ventas, facturar electronicamente, y mucho más...</p>
+        <p>Un programa donde vas a poder llevar tu inventario, registrar ventas, facturar electronicamente, y mucho
+          más...</p>
       </div>
 
       <!-- decorative dot bottom-right (matching image) -->
@@ -351,8 +466,10 @@
     </aside>
   </div>
 
+  <script src="utils/notifications.js" type="module"></script>
   <script type="module" src="login.js">
 
   </script>
 </body>
+
 </html>

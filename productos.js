@@ -786,53 +786,35 @@ Producto: ${product.name}
 ${margin >= 30 ? '🟢 Margen excelente' : margin >= 20 ? '🟡 Margen aceptable' : '🔴 Margen bajo'}
     `;
 
-    alert(message);
+    // Usar la función global si está disponible, sino la local mejorada
+    if (typeof window.showNotification === 'function') {
+        window.showNotification(message, 'info', 'Análisis Financiero');
+    } else {
+        alert(message);
+    }
 };
 
-// Limpiar vista previa del margen
-function clearMarginPreview() {
-    const previewElement = document.getElementById('marginPreview');
-    if (previewElement) {
-        previewElement.remove();
-    }
-}
+// ... (resto del código)
 
-// Mostrar notificaciones
+// Ya no necesitamos la versión local si tenemos la global, 
+// pero la mantenemos como fallback o la actualizamos
 function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    const colors = {
-        success: 'var(--success)',
-        error: 'var(--danger)',
-        warning: 'var(--warning)',
-        info: 'var(--accent)'
-    };
-
-    const icons = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle',
-        info: 'fas fa-info-circle'
-    };
-
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${colors[type]};
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        box-shadow: var(--shadow-hover);
-        z-index: 10000;
-        font-weight: 600;
-        max-width: 300px;
-    `;
-    notification.innerHTML = `<i class="${icons[type]}"></i> ${message}`;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.remove();
-    }, 4000);
+    if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+    } else {
+        // Fallback premium local si la global falla
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
+            color: #333; padding: 15px 25px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-left: 5px solid var(--accent);
+            z-index: 10000; font-weight: 600;
+        `;
+        notification.innerHTML = message;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+    }
 }
 
 // Mostrar error

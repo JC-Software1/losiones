@@ -4,15 +4,15 @@ import "./keepAlive.js";
 import "./authCheck.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-const expenseCountInput = document.getElementById("expenseCount");
-const expenseItemsContainer = document.getElementById("expenseItemsContainer");
-const saveExpenseBtn = document.getElementById("saveExpense");
-const updateExpenseBtn = document.getElementById("updateExpense");  // ✅ AGREGAR AQUÍ
-const cancelExpenseBtn = document.getElementById("cancelExpense");
-const expenseDateInput = document.getElementById("expenseDate");
-const expensesList = document.getElementById("expensesList");
-const emptyState = document.getElementById("emptyState");
-const totalExpensesElement = document.getElementById("totalExpenses");
+    const expenseCountInput = document.getElementById("expenseCount");
+    const expenseItemsContainer = document.getElementById("expenseItemsContainer");
+    const saveExpenseBtn = document.getElementById("saveExpense");
+    const updateExpenseBtn = document.getElementById("updateExpense");  // ✅ AGREGAR AQUÍ
+    const cancelExpenseBtn = document.getElementById("cancelExpense");
+    const expenseDateInput = document.getElementById("expenseDate");
+    const expensesList = document.getElementById("expensesList");
+    const emptyState = document.getElementById("emptyState");
+    const totalExpensesElement = document.getElementById("totalExpenses");
 
     // Establecer fecha de hoy por defecto
     const today = new Date().toISOString().split('T')[0];
@@ -28,19 +28,19 @@ const totalExpensesElement = document.getElementById("totalExpenses");
         await loadExpenses();
 
         // Event listeners
-// Event listeners
-expenseCountInput.addEventListener("input", generateExpenseFields);
-saveExpenseBtn.addEventListener("click", saveExpense);
-updateExpenseBtn.addEventListener("click", updateExpense);  // ✅ AGREGAR AQUÍ
-cancelExpenseBtn.addEventListener("click", () => {
-    if (document.getElementById("expenseId").value) {
-        if (confirm("¿Seguro que deseas cancelar la edición?")) {
-            resetForm();
-        }
-    } else {
-        resetForm();
-    }
-});
+        // Event listeners
+        expenseCountInput.addEventListener("input", generateExpenseFields);
+        saveExpenseBtn.addEventListener("click", saveExpense);
+        updateExpenseBtn.addEventListener("click", updateExpense);  // ✅ AGREGAR AQUÍ
+        cancelExpenseBtn.addEventListener("click", async () => {
+            if (document.getElementById("expenseId").value) {
+                if (await showConfirm("¿Seguro que deseas cancelar la edición?")) {
+                    resetForm();
+                }
+            } else {
+                resetForm();
+            }
+        });
     } catch (error) {
         console.error("Error al inicializar:", error);
         showError("Error al cargar la página");
@@ -81,12 +81,12 @@ cancelExpenseBtn.addEventListener("click", () => {
         const amounts = document.querySelectorAll(".expense-amount");
 
         if (!date) {
-            alert("Por favor selecciona una fecha");
+            showNotification("Por favor selecciona una fecha", "warning");
             return;
         }
 
         if (descriptions.length === 0) {
-            alert("Por favor especifica cuántos gastos deseas registrar");
+            showNotification("Por favor especifica cuántos gastos deseas registrar", "warning");
             return;
         }
 
@@ -96,12 +96,12 @@ cancelExpenseBtn.addEventListener("click", () => {
             const amount = parseFloat(amounts[i].value);
 
             if (!description) {
-                alert(`Por favor completa la descripción del gasto ${i + 1}`);
+                showNotification(`Por favor completa la descripción del gasto ${i + 1}`, "warning");
                 return;
             }
 
             if (!amount || amount <= 0) {
-                alert(`Por favor ingresa un monto válido para el gasto ${i + 1}`);
+                showNotification(`Por favor ingresa un monto válido para el gasto ${i + 1}`, "warning");
                 return;
             }
 
@@ -111,131 +111,131 @@ cancelExpenseBtn.addEventListener("click", () => {
         try {
             const token = getToken();
             await apiFetch("/expenses", "POST", { date, items }, token);
-            
-            alert("¡Gastos registrados exitosamente!");
+
+            showNotification("¡Gastos registrados exitosamente!", "success");
             resetForm();
             await loadExpenses();
 
         } catch (error) {
             console.error("Error al guardar gastos:", error);
-            alert("Error al guardar gastos: " + error.message);
+            showNotification("Error al guardar gastos: " + error.message, "error");
         }
     }
 
     async function updateExpense() {
-    const id = document.getElementById("expenseId").value;
-    const date = expenseDateInput.value;
-    const descriptions = document.querySelectorAll(".expense-description");
-    const amounts = document.querySelectorAll(".expense-amount");
+        const id = document.getElementById("expenseId").value;
+        const date = expenseDateInput.value;
+        const descriptions = document.querySelectorAll(".expense-description");
+        const amounts = document.querySelectorAll(".expense-amount");
 
-    if (!id) {
-        alert("Error: No se encontró el ID del gasto");
-        return;
-    }
-
-    if (!date) {
-        alert("Por favor selecciona una fecha");
-        return;
-    }
-
-    if (descriptions.length === 0) {
-        alert("Por favor especifica cuántos gastos deseas registrar");
-        return;
-    }
-
-    const items = [];
-    for (let i = 0; i < descriptions.length; i++) {
-        const description = descriptions[i].value.trim();
-        const amount = parseFloat(amounts[i].value);
-
-        if (!description) {
-            alert(`Por favor completa la descripción del gasto ${i + 1}`);
+        if (!id) {
+            showNotification("Error: No se encontró el ID del gasto", "error");
             return;
         }
 
-        if (!amount || amount <= 0) {
-            alert(`Por favor ingresa un monto válido para el gasto ${i + 1}`);
+        if (!date) {
+            showNotification("Por favor selecciona una fecha", "warning");
             return;
         }
 
-        items.push({ description, amount });
-    }
-
-    try {
-        const token = getToken();
-        await apiFetch(`/expenses/${id}`, "PUT", { date, items }, token);
-        
-        alert("¡Gasto actualizado exitosamente!");
-        resetFormAfterEdit();
-        await loadExpenses();
-
-    } catch (error) {
-        console.error("Error al actualizar gasto:", error);
-        alert("Error al actualizar gasto: " + error.message);
-    }
-}
-
-function resetForm() {
-    document.getElementById("expenseId").value = "";
-    expenseCountInput.value = "";
-    expenseDateInput.value = today;
-    expenseItemsContainer.innerHTML = "";
-    expenseItemsContainer.classList.add("hidden");
-    
-    // Restaurar botones
-    saveExpenseBtn.classList.remove("hidden");
-    updateExpenseBtn.classList.add("hidden");
-}
-
-function resetFormAfterEdit() {
-    resetForm();
-}
-    window.editExpense = async function(id) {
-    try {
-        const token = getToken();
-        const expenses = await apiFetch("/expenses", "GET", null, token);
-        const expense = expenses.find(e => e._id === id);
-        
-        if (!expense) {
-            alert("Gasto no encontrado");
+        if (descriptions.length === 0) {
+            showNotification("Por favor especifica cuántos gastos deseas registrar", "warning");
             return;
         }
 
-        // Llenar el formulario con los datos existentes
-        document.getElementById("expenseId").value = expense._id;
-        
-        const expenseDate = new Date(expense.date);
-        const localDate = new Date(expenseDate.getTime() + expenseDate.getTimezoneOffset() * 60000);
-        expenseDateInput.value = localDate.toISOString().split('T')[0];
-        
-        expenseCountInput.value = expense.items.length;
-        
-        // Generar campos
-        generateExpenseFields();
-        
-        // Llenar los campos con los valores existentes
-        setTimeout(() => {
-            const descriptions = document.querySelectorAll(".expense-description");
-            const amounts = document.querySelectorAll(".expense-amount");
-            
-            expense.items.forEach((item, index) => {
-                if (descriptions[index]) descriptions[index].value = item.description;
-                if (amounts[index]) amounts[index].value = item.amount;
-            });
-        }, 100);
+        const items = [];
+        for (let i = 0; i < descriptions.length; i++) {
+            const description = descriptions[i].value.trim();
+            const amount = parseFloat(amounts[i].value);
 
-        // Cambiar botones
-        saveExpenseBtn.classList.add("hidden");
-        updateExpenseBtn.classList.remove("hidden");
-        
-        // Scroll al formulario
-        document.querySelector(".form-container").scrollIntoView({ behavior: 'smooth' });
+            if (!description) {
+                showNotification(`Por favor completa la descripción del gasto ${i + 1}`, "warning");
+                return;
+            }
 
-    } catch (error) {
-        console.error("Error al cargar gasto:", error);
-        alert("Error al cargar el gasto para editar");
+            if (!amount || amount <= 0) {
+                showNotification(`Por favor ingresa un monto válido para el gasto ${i + 1}`, "warning");
+                return;
+            }
+
+            items.push({ description, amount });
+        }
+
+        try {
+            const token = getToken();
+            await apiFetch(`/expenses/${id}`, "PUT", { date, items }, token);
+
+            showNotification("¡Gasto actualizado exitosamente!", "success");
+            resetFormAfterEdit();
+            await loadExpenses();
+
+        } catch (error) {
+            console.error("Error al actualizar gasto:", error);
+            showNotification("Error al actualizar gasto: " + error.message, "error");
+        }
     }
-};
+
+    function resetForm() {
+        document.getElementById("expenseId").value = "";
+        expenseCountInput.value = "";
+        expenseDateInput.value = today;
+        expenseItemsContainer.innerHTML = "";
+        expenseItemsContainer.classList.add("hidden");
+
+        // Restaurar botones
+        saveExpenseBtn.classList.remove("hidden");
+        updateExpenseBtn.classList.add("hidden");
+    }
+
+    function resetFormAfterEdit() {
+        resetForm();
+    }
+    window.editExpense = async function (id) {
+        try {
+            const token = getToken();
+            const expenses = await apiFetch("/expenses", "GET", null, token);
+            const expense = expenses.find(e => e._id === id);
+
+            if (!expense) {
+                showNotification("Gasto no encontrado", "error");
+                return;
+            }
+
+            // Llenar el formulario con los datos existentes
+            document.getElementById("expenseId").value = expense._id;
+
+            const expenseDate = new Date(expense.date);
+            const localDate = new Date(expenseDate.getTime() + expenseDate.getTimezoneOffset() * 60000);
+            expenseDateInput.value = localDate.toISOString().split('T')[0];
+
+            expenseCountInput.value = expense.items.length;
+
+            // Generar campos
+            generateExpenseFields();
+
+            // Llenar los campos con los valores existentes
+            setTimeout(() => {
+                const descriptions = document.querySelectorAll(".expense-description");
+                const amounts = document.querySelectorAll(".expense-amount");
+
+                expense.items.forEach((item, index) => {
+                    if (descriptions[index]) descriptions[index].value = item.description;
+                    if (amounts[index]) amounts[index].value = item.amount;
+                });
+            }, 100);
+
+            // Cambiar botones
+            saveExpenseBtn.classList.add("hidden");
+            updateExpenseBtn.classList.remove("hidden");
+
+            // Scroll al formulario
+            document.querySelector(".form-container").scrollIntoView({ behavior: 'smooth' });
+
+        } catch (error) {
+            console.error("Error al cargar gasto:", error);
+            showNotification("Error al cargar el gasto para editar", "error");
+        }
+    };
 
     async function loadExpenses() {
         try {
@@ -311,17 +311,17 @@ function resetFormAfterEdit() {
         totalExpensesElement.textContent = `$${total.toLocaleString('es-CO')}`;
     }
 
-    window.deleteExpense = async function(id) {
-        if (!confirm("¿Estás seguro de eliminar este gasto?")) return;
+    window.deleteExpense = async function (id) {
+        if (!await showConfirm("¿Estás seguro de eliminar este gasto?")) return;
 
         try {
             const token = getToken();
             await apiFetch(`/expenses/${id}`, "DELETE", null, token);
-            alert("Gasto eliminado correctamente");
+            showNotification("Gasto eliminado correctamente", "success");
             await loadExpenses();
         } catch (error) {
             console.error("Error al eliminar:", error);
-            alert("Error al eliminar el gasto: " + error.message);
+            showNotification("Error al eliminar el gasto: " + error.message, "error");
         }
     };
 

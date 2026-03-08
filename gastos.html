@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Gastos</title>
     <script src="adminMode.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/notifications.css">
     <style>
         :root {
             --primary: #2c3e50;
@@ -18,13 +20,17 @@
             --light-gray: #f8f9fa;
             --medium-gray: #6c757d;
             --border: #e9ecef;
-            --shadow: 0 2px 4px rgba(0,0,0,0.08);
-            --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
             --radius: 8px;
             --radius-lg: 12px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -109,7 +115,8 @@
             font-size: 14px;
         }
 
-        .form-group input, .form-group select {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 12px;
             border: 2px solid var(--border);
@@ -277,8 +284,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .empty-state {
@@ -308,6 +320,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -323,11 +336,11 @@
             <p>Total de gastos pendientes de liquidar</p>
         </div>
 
-<div class="form-container">
-    <h2 class="form-title">Registrar Nuevo Gasto</h2>
-    <input type="hidden" id="expenseId" value="">
-    
-    <div class="form-group">
+        <div class="form-container">
+            <h2 class="form-title">Registrar Nuevo Gasto</h2>
+            <input type="hidden" id="expenseId" value="">
+
+            <div class="form-group">
                 <label for="expenseDate">
                     <i class="fas fa-calendar"></i> Fecha del Gasto
                 </label>
@@ -343,17 +356,17 @@
 
             <div id="expenseItemsContainer" class="expense-items-container hidden"></div>
 
-<div class="button-group">
-    <button type="button" class="btn btn-success" id="saveExpense">
-        <i class="fas fa-save"></i> Guardar Gastos
-    </button>
-    <button type="button" class="btn btn-primary hidden" id="updateExpense">
-        <i class="fas fa-edit"></i> Actualizar Gastos
-    </button>
-    <button type="button" class="btn btn-secondary" id="cancelExpense">
-        <i class="fas fa-times"></i> Cancelar
-    </button>
-</div>
+            <div class="button-group">
+                <button type="button" class="btn btn-success" id="saveExpense">
+                    <i class="fas fa-save"></i> Guardar Gastos
+                </button>
+                <button type="button" class="btn btn-primary hidden" id="updateExpense">
+                    <i class="fas fa-edit"></i> Actualizar Gastos
+                </button>
+                <button type="button" class="btn btn-secondary" id="cancelExpense">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
         </div>
 
         <div class="expenses-grid" id="expensesList">
@@ -377,6 +390,8 @@
     </div>
 
     <script src="loader.js"></script>
+    <script src="utils/notifications.js" type="module"></script>
     <script type="module" src="gastos.js"></script>
 </body>
+
 </html>

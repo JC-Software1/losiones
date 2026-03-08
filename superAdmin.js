@@ -10,7 +10,7 @@ function enableStickyHeader() {
   const container = document.querySelector(".admin-container");
   if (!header || !container) return;
 
-  try { if ("scrollRestoration" in history) history.scrollRestoration = "manual"; } catch (e) {}
+  try { if ("scrollRestoration" in history) history.scrollRestoration = "manual"; } catch (e) { }
 
   function applyHeaderStyles() {
     header.style.transition = "none";
@@ -163,13 +163,13 @@ function createUserCard(user) {
     const fechaPago = new Date(user.fechaPago);
     const hoy = new Date();
     diasRestantes = Math.ceil((fechaPago - hoy) / (1000 * 60 * 60 * 24));
-    
-    fechaPagoDisplay = fechaPago.toLocaleDateString('es-ES', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+
+    fechaPagoDisplay = fechaPago.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
-    
+
     if (diasRestantes <= 0) {
       fechaPagoDisplay += ' <span style="color:#dc3545;font-weight:700">(VENCIDO)</span>';
     } else if (diasRestantes <= 5) {
@@ -284,16 +284,16 @@ function attachUsersGridHandlers() {
     if (action === "fecha-pago") {
       const fechaActual = user.fechaPago ? new Date(user.fechaPago).toISOString().split('T')[0] : '';
       const nuevaFecha = prompt(`Establecer fecha de pago para ${user.username}\n(Formato: YYYY-MM-DD)`, fechaActual);
-      
+
       if (!nuevaFecha) return;
-      
+
       try {
         await apiFetch(`/auth/users/${userId}/fecha-pago`, "PUT", { fechaPago: nuevaFecha });
-        alert("Fecha de pago actualizada exitosamente");
+        showNotification("Fecha de pago actualizada exitosamente", "success");
         await loadUsers();
       } catch (err) {
         console.error(err);
-        alert(`Error: ${err.message || err}`);
+        showNotification(`Error: ${err.message || err}`, "error");
       }
       return;
     }
@@ -306,51 +306,51 @@ function attachUsersGridHandlers() {
     if (action === "block" || action === "unblock") {
       const willBlock = action === "block";
       const confirmMsg = willBlock ? `¿Estás seguro de bloquear a ${user.username}?` : `¿Estás seguro de desbloquear a ${user.username}?`;
-      if (!confirm(confirmMsg)) return;
+      if (!await showConfirm(confirmMsg)) return;
       try {
         await apiFetch(`/auth/users/${userId}/${willBlock ? 'block' : 'unblock'}`, "PUT");
-        alert(`Usuario ${willBlock ? 'bloqueado' : 'desbloqueado'} exitosamente`);
+        showNotification(`Usuario ${willBlock ? 'bloqueado' : 'desbloqueado'} exitosamente`, "success");
         await loadUsers();
       } catch (err) {
         console.error(err);
-        alert(`Error: ${err.message || err}`);
+        showNotification(`Error: ${err.message || err}`, "error");
       }
       return;
     }
 
     if (action === "inspect") {
-      if (!confirm(`¿Quieres iniciar sesión como ${user.username}?`)) return;
+      if (!await showConfirm(`¿Quieres iniciar sesión como ${user.username}?`)) return;
       try {
         const { token } = await apiFetch(`/auth/login-as/${userId}`, "POST");
         setToken(token);
-        alert("Iniciando sesión como el usuario seleccionado...");
+        showNotification("Iniciando sesión como el usuario seleccionado...", "info");
         window.location.href = "categories.html";
       } catch (err) {
         console.error(err);
-        alert(`Error: ${err.message || err}`);
+        showNotification(`Error: ${err.message || err}`, "error");
       }
       return;
     }
 
     if (action === "delete") {
       if (user.tipo === 3) {
-        alert("No se puede eliminar a un super administrador.");
+        showNotification("No se puede eliminar a un super administrador.", "warning");
         return;
       }
-      const confirmDelete = confirm(`⚠️ ¿Deseas ELIMINAR permanentemente a ${user.username}? Esta acción NO se puede deshacer.`);
+      const confirmDelete = await showConfirm(`⚠️ ¿Deseas ELIMINAR permanentemente a ${user.username}? Esta acción NO se puede deshacer.`);
       if (!confirmDelete) return;
       const finalConfirm = prompt(`Para confirmar, escribe exactamente: ${user.username}`);
       if (finalConfirm !== user.username) {
-        alert("Eliminación cancelada. El nombre no coincide.");
+        showNotification("Eliminación cancelada. El nombre no coincide.", "warning");
         return;
       }
       try {
         await apiFetch(`/auth/users/${userId}`, "DELETE");
-        alert("Usuario eliminado exitosamente");
+        showNotification("Usuario eliminado exitosamente", "success");
         await loadUsers();
       } catch (err) {
         console.error(err);
-        alert(`Error: ${err.message || err}`);
+        showNotification(`Error: ${err.message || err}`, "error");
       }
       return;
     }
@@ -411,7 +411,7 @@ async function handleEditUser(event) {
   const tipo = parseInt(document.getElementById("editTipo").value, 10);
 
   if (!name || !username) {
-    alert("Por favor completa los campos obligatorios.");
+    showNotification("Por favor completa los campos obligatorios.", "warning");
     return;
   }
 
@@ -419,12 +419,12 @@ async function handleEditUser(event) {
     const body = { name, username, tipo };
     if (password) body.password = password;
     await apiFetch(`/auth/users/${userId}`, "PUT", body);
-    alert("Usuario actualizado exitosamente");
+    showNotification("Usuario actualizado exitosamente", "success");
     closeEditModal();
     await loadUsers();
   } catch (err) {
     console.error(err);
-    alert(`Error: ${err.message || err}`);
+    showNotification(`Error: ${err.message || err}`, "error");
   }
 }
 
@@ -436,22 +436,22 @@ async function handleAddUser(event) {
   const tipo = parseInt(document.getElementById("addTipo").value, 10);
 
   if (!name || !username || !password) {
-    alert("Por favor, completa todos los campos.");
+    showNotification("Por favor, completa todos los campos.", "warning");
     return;
   }
   if (password.length < 6) {
-    alert("La contraseña debe tener al menos 6 caracteres.");
+    showNotification("La contraseña debe tener al menos 6 caracteres.", "warning");
     return;
   }
 
   try {
     await apiFetch("/auth/register", "POST", { name, username, password, tipo });
-    alert("Usuario creado exitosamente");
+    showNotification("Usuario creado exitosamente", "success");
     closeAddModal();
     await loadUsers();
   } catch (err) {
     console.error(err);
-    alert(`Error: ${err.message || err}`);
+    showNotification(`Error: ${err.message || err}`, "error");
   }
 }
 
@@ -469,8 +469,8 @@ function setupEventListeners() {
   const logoutBtn = document.getElementById("logoutBtn");
   const addUserBtn = document.getElementById("addUserBtn");
 
-  logoutBtn.addEventListener("click", () => {
-    if (!confirm("¿Estás seguro de que quieres cerrar sesión?")) return;
+  logoutBtn.addEventListener("click", async () => {
+    if (!await showConfirm("¿Estás seguro de que quieres cerrar sesión?")) return;
     logout();
   });
 
@@ -516,14 +516,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   enableStickyHeader();
 
   if (!isAuthenticated()) {
-    alert("Sesión expirada. Redirigiendo al login...");
+    showNotification("Sesión expirada. Redirigiendo al login...", "warning");
     window.location.href = "index.html";
     return;
   }
 
   const userInfo = getUserInfo();
   if (!userInfo || userInfo.tipo !== 3) {
-    alert("Acceso denegado. Solo super administradores pueden acceder.");
+    showNotification("Acceso denegado. Solo super administradores pueden acceder.", "error");
     window.location.href = "index.html";
     return;
   }

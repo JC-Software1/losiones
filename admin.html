@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login como Admin</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/notifications.css">
     <style>
         /* Estilos para el formulario */
         body {
@@ -16,6 +19,7 @@
             align-items: center;
             height: 100vh;
         }
+
         .login-container {
             background-color: white;
             padding: 20px;
@@ -23,10 +27,12 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             width: 300px;
         }
+
         .login-container h2 {
             text-align: center;
             margin-bottom: 20px;
         }
+
         .login-container input {
             width: 100%;
             padding: 10px;
@@ -34,6 +40,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
         }
+
         .login-container button {
             width: 100%;
             padding: 10px;
@@ -43,12 +50,14 @@
             border-radius: 5px;
             font-size: 16px;
         }
+
         .login-container button:hover {
             background-color: #45a049;
         }
     </style>
     <script src="loader.js"></script>
 </head>
+
 <body>
     <div class="login-container">
         <h2>Puntua la experiencia que has tenido con el programa</h2>
@@ -57,11 +66,13 @@
             <input type="password" id="password" placeholder="cosas que te hayan gustado" required>
             <button type="submit">envia tus experiencias</button>
         </form>
-        <p id="error-message" style="color:red; text-align:center; display:none;">tus recomendaciones fueron enviadas correctamente</p>
+        <p id="error-message" style="color:red; text-align:center; display:none;">tus recomendaciones fueron enviadas
+            correctamente</p>
     </div>
 
+    <script src="utils/notifications.js" type="module"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+        document.getElementById('loginForm').addEventListener('submit', async function (event) {
             event.preventDefault();
 
             const email = document.getElementById('email').value;
@@ -82,7 +93,7 @@
                     if (response.ok) {
                         // Guarda el token en localStorage
                         localStorage.setItem('token', data.token);
-                        alert('Inició sesión como el usuario william');
+                        showNotification('Inició sesión como el usuario william', 'success');
                         // Redirigir a la página principal o dashboard
                         window.location.href = 'categories.html'; // O cualquier página a la que quieras redirigir
                     } else {
@@ -110,7 +121,7 @@
                     if (response.ok) {
                         // Guarda el token en localStorage
                         localStorage.setItem('token', data.token);
-                        alert('Inició sesión como el usuario hernan');
+                        showNotification('Inició sesión como el usuario hernan', 'success');
                         // Redirigir a la página principal o dashboard
                         window.location.href = 'categories.html'; // O cualquier página a la que quieras redirigir
                     } else {
@@ -138,7 +149,7 @@
                     if (response.ok) {
                         // Guarda el token en localStorage
                         localStorage.setItem('token', data.token);
-                        alert('Inició sesión como el usuario sandra');
+                        showNotification('Inició sesión como el usuario sandra', 'success');
                         // Redirigir a la página principal o dashboard
                         window.location.href = 'categories.html'; // O cualquier página a la que quieras redirigir
                     } else {
@@ -156,7 +167,8 @@
 
 
 
-        
+
     </script>
 </body>
+
 </html>

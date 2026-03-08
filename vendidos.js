@@ -8,15 +8,15 @@ async function verificarPermisoCostos() {
         const token = getToken();
         const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
         const { permisosDetallados, tipo } = response;
-        
+
         // Admins y jefes siempre ven costos
         if (tipo === 2 || tipo === 3) {
             return true;
         }
-        
+
         // Vendedores: verificar permiso específico
         return permisosDetallados?.verCostosYGanancias !== false;
-        
+
     } catch (error) {
         console.error('Error al verificar permisos de costos:', error);
         // Por defecto, ocultar en caso de error para mayor seguridad
@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const totalSoldElement = document.getElementById("totalSold");
     const totalProductsElement = document.getElementById("totalProducts");
     const totalProfitElement = document.getElementById("totalProfit");
-    
+
     let soldProducts = [];
 
     try {
@@ -49,13 +49,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Obtener ventas realizadas
         const sales = await apiFetch("/sales", "GET", null, token);
-        
+
         // Filtrar ventas que no están canceladas (todas las ventas cuentan)
         const validSales = sales.filter(sale => !sale.cancelled);
-        
+
         // Crear lista de productos vendidos a partir de las ventas
         const soldFromSales = [];
-        
+
         for (const sale of validSales) {
             if (sale.products && Array.isArray(sale.products)) {
                 for (const prod of sale.products) {
@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 });
             }
         }
-        
+
         soldProducts = soldFromSales;
 
         displayProducts(soldProducts);
@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 displayProducts(soldProducts);
                 updateTotals(soldProducts);
             } else {
-                const filteredProducts = soldProducts.filter(product => 
+                const filteredProducts = soldProducts.filter(product =>
                     product.name.toLowerCase().includes(searchText)
                 );
 
@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 function displayProducts(products) {
     const productsList = document.getElementById("productsList");
     productsList.innerHTML = "";
-    
+
     if (products.length === 0) {
         const emptyMessage = document.createElement("li");
         emptyMessage.innerHTML = `
@@ -156,13 +156,13 @@ function displayProducts(products) {
         const totalProductPrice = (product.salePrice || 0) * qty;
         const profit = (product.salePrice || 0) - (product.costPrice || 0);
         const profitPercentage = product.costPrice ? Math.round((profit / product.costPrice) * 100) : 0;
-        
+
         // Determinar clase de rentabilidad para estilizado visual
         let profitClass = "neutral";
         if (profitPercentage >= 30) profitClass = "high";
         else if (profitPercentage >= 15) profitClass = "medium";
         else if (profitPercentage < 10) profitClass = "low";
-        
+
         li.innerHTML = `
             <div class="product-header">
                 <h3>${product.name} <span style="color: #e74c3c; font-size: 12px;">(x${qty})</span></h3>
@@ -192,7 +192,7 @@ function displayProducts(products) {
                 </button>
             </div>
         `;
-        
+
         productsList.appendChild(li);
     });
 
@@ -200,16 +200,16 @@ function displayProducts(products) {
     const deleteButtons = document.querySelectorAll(".delete-btn");
     deleteButtons.forEach(button => {
         button.addEventListener("click", async (e) => {
-            if (confirm("¿Estás seguro de que deseas eliminar este producto vendido?")) {
+            if (await showConfirm("¿Estás seguro de que deseas eliminar este producto vendido?")) {
                 const productId = e.target.closest(".delete-btn").dataset.id;
                 try {
                     const token = getToken();
                     await apiFetch(`/products/${productId}`, "DELETE", null, token);
-                    
+
                     // Animación de eliminación
                     const card = e.target.closest("li");
                     card.classList.add("deleting");
-                    
+
                     setTimeout(() => {
                         card.remove();
                         const remainingProducts = document.querySelectorAll("#productsList li").length;
@@ -220,7 +220,7 @@ function displayProducts(products) {
                                     <p>No hay productos vendidos para mostrar</p>
                                 </li>`;
                         }
-                        
+
                         // Actualizar totales sin tener que recargar la página
                         const products = Array.from(document.querySelectorAll("#productsList li:not(.empty-message)")).map(li => {
                             const costText = li.querySelector(".price-row:nth-child(1) .detail-value").textContent;
@@ -229,13 +229,13 @@ function displayProducts(products) {
                             const salePrice = parseInt(saleText.replace(/[^\d]/g, ""));
                             return { costPrice, salePrice };
                         });
-                        
+
                         updateTotals(products);
                     }, 300);
-                    
+
                 } catch (error) {
                     console.error("Error al eliminar el producto:", error);
-                    alert("No se pudo eliminar el producto.");
+                    showNotification("No se pudo eliminar el producto.", "error");
                 }
             }
         });
@@ -246,21 +246,21 @@ function updateTotals(products) {
     const totalSoldElement = document.getElementById("totalSold");
     const totalProductsElement = document.getElementById("totalProducts");
     const totalProfitElement = document.getElementById("totalProfit");
-    
+
     // Calcular considerando cantidades
     const totalSold = products.reduce((sum, product) => {
         const qty = product.quantity || 1;
         return sum + ((product.salePrice || 0) * qty);
     }, 0);
-    
+
     const totalProfit = products.reduce((sum, product) => {
         const qty = product.quantity || 1;
         const profit = ((product.salePrice || 0) - (product.costPrice || 0)) * qty;
         return sum + profit;
     }, 0);
-    
+
     const totalQty = products.reduce((sum, product) => sum + (product.quantity || 1), 0);
-    
+
     totalProductsElement.textContent = totalQty;
     totalSoldElement.textContent = `${totalSold.toLocaleString()} COP`;
     totalProfitElement.textContent = `${totalProfit.toLocaleString()} COP`;
@@ -271,11 +271,11 @@ const menuItems = document.getElementById('menuItems');
 const backdrop = document.getElementById('backdrop');
 
 menuToggle.addEventListener('click', () => {
-  menuItems.classList.toggle('show');
-  backdrop.classList.toggle('show');
+    menuItems.classList.toggle('show');
+    backdrop.classList.toggle('show');
 });
 
 backdrop.addEventListener('click', () => {
-  menuItems.classList.remove('show');
-  backdrop.classList.remove('show');
+    menuItems.classList.remove('show');
+    backdrop.classList.remove('show');
 });

@@ -416,7 +416,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const percentage = parseFloat(document.getElementById('commissionPercentage').value);
 
         if (isNaN(percentage) || percentage < 0 || percentage > 100) {
-            alert('Por favor ingresa un porcentaje válido entre 0 y 100');
+            showNotification('Por favor ingresa un porcentaje válido entre 0 y 100', 'warning');
             return;
         }
 
@@ -455,7 +455,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const percentage = parseFloat(document.getElementById('commissionPercentage').value);
 
         if (isNaN(percentage) || percentage < 0 || percentage > 100) {
-            alert('Por favor ingresa un porcentaje válido entre 0 y 100');
+            showNotification('Por favor ingresa un porcentaje válido entre 0 y 100', 'warning');
             return;
         }
 
@@ -477,7 +477,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.log('✅ Porcentaje de comisión guardado:', percentage + '%');
         } catch (error) {
             console.error('❌ Error al guardar comisión:', error);
-            alert('No se pudo guardar el porcentaje de comisión: ' + error.message);
+            showNotification('No se pudo guardar el porcentaje de comisión: ' + error.message, 'error');
         }
     };
 
@@ -490,7 +490,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     async function deletePayment(paymentId, saleId, cardElement) {
-        if (!confirm("¿Estás seguro de que deseas eliminar este abono? Esta acción no se puede deshacer.")) {
+        if (!await showConfirm("¿Estás seguro de que deseas eliminar este abono? Esta acción no se puede deshacer.")) {
             return;
         }
 
@@ -503,13 +503,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             setTimeout(() => {
                 allPayments = allPayments.filter(p => p._id !== paymentId);
                 applyFilters();
-                alert("Abono eliminado correctamente.");
+                showNotification("Abono eliminado correctamente.", "error");
             }, 300);
 
         } catch (error) {
             console.error("Error al eliminar abono:", error);
             cardElement.classList.remove("deleting");
-            alert("No se pudo eliminar el abono: " + error.message);
+            showNotification("No se pudo eliminar el abono: " + error.message, "error");
         }
     }
 

@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registro de Ventas</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/notifications.css">
   <style>
     /* Variables CSS */
     :root {
@@ -2515,12 +2516,12 @@
             <div class="form-group full-width">
               <label>Tipo de Pago</label>
               <select id="paymentType" class="form-control" onchange="togglePaymentFields()">
+                <option value="contado" selected>Contado</option>
                 <option value="cuotas">A Cuotas</option>
-                <option value="contado">Contado</option>
               </select>
             </div>
 
-            <div class="form-group full-width credit-fields">
+            <div class="form-group full-width credit-fields" style="display: none;">
               <label for="installments">Número de Cuotas</label>
               <input type="number" id="installments" placeholder="Ej: 12 o 4.5" min="0.01" step="0.01">
             </div>
@@ -2670,6 +2671,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="loader.js"></script>
+    <script src="utils/notifications.js" type="module"></script>
     <script src="dashboard/categories.js" type="module"></script>
     <script src="main.js" type="module"></script>
 </body>

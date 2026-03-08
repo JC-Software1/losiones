@@ -4,9 +4,9 @@ import "./authCheck.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
     const liquidationId = sessionStorage.getItem('inspectLiquidationId');
-    
+
     if (!liquidationId) {
-        alert("No se especificó una liquidación para inspeccionar");
+        showNotification("No se especificó una liquidación para inspeccionar", "warning");
         window.location.href = "historial-liquidaciones.html";
         return;
     }
@@ -14,14 +14,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         const token = getToken();
         const liquidation = await apiFetch(`/liquidation/${liquidationId}`, "GET", null, token);
-        
+
         displayLiquidation(liquidation);
-        
+
         sessionStorage.removeItem('inspectLiquidationId');
-        
+
     } catch (error) {
         console.error("Error al cargar liquidación:", error);
-        alert("Error al cargar la liquidación: " + error.message);
+        showNotification("Error al cargar la liquidación: " + error.message, "error");
         window.location.href = "historial-liquidaciones.html";
     }
 });
@@ -41,12 +41,12 @@ function displayLiquidation(liq) {
     const paymentsCommission = liq.payments.commissionPercentage || 0;
     const paymentsCommAmount = Math.round(regularPayments * (paymentsCommission / 100));
     const paymentsAfterComm = Math.round(regularPayments - paymentsCommAmount);
-    
+
     // Comisión de ventas (informativa)
     const salesCommission = liq.sales.commissionPercentage || 0;
     const salesAfterComm = Math.round(liq.sales.total - (liq.sales.total * (salesCommission / 100)));
     const salesCommAmount = liq.sales.total - salesAfterComm;
-    
+
     // Total ingresos recalculado
     const realTotalIncome = Math.round(paymentsAfterComm + initialPayments);
 
@@ -64,10 +64,10 @@ function displayLiquidation(liq) {
 
     // ✅ Detalles de abonos CON BADGES DE SEÑAS
     const paymentsDetailsHTML = (liq.liquidatedPayments || []).map(p => {
-        const badge = p.isInitialPayment 
-            ? '<span style="background: #9b59b6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Seña</span>' 
+        const badge = p.isInitialPayment
+            ? '<span style="background: #9b59b6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Seña</span>'
             : '';
-        
+
         return `
             <div class="detail-item">
                 <span>${p.clientName}${badge}</span>
@@ -113,34 +113,34 @@ function displayLiquidation(liq) {
     `).join('');
     document.getElementById("inventoryDetails").innerHTML = inventoryDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay productos</p>';
 
-// ✅ CALCULAR EL TOTAL DESDE liquidatedExpenses
-let expensesTotal = 0;
-let expensesCount = 0;
+    // ✅ CALCULAR EL TOTAL DESDE liquidatedExpenses
+    let expensesTotal = 0;
+    let expensesCount = 0;
 
-if (liq.liquidatedExpenses && liq.liquidatedExpenses.length > 0) {
-    liq.liquidatedExpenses.forEach(expense => {
-        if (expense.items && expense.items.length > 0) {
-            expense.items.forEach(item => {
-                expensesTotal += item.amount;
-                expensesCount++;
-            });
-        }
-    });
-}
+    if (liq.liquidatedExpenses && liq.liquidatedExpenses.length > 0) {
+        liq.liquidatedExpenses.forEach(expense => {
+            if (expense.items && expense.items.length > 0) {
+                expense.items.forEach(item => {
+                    expensesTotal += item.amount;
+                    expensesCount++;
+                });
+            }
+        });
+    }
     document.getElementById("expensesCount").textContent = expensesCount;
     document.getElementById("expensesTotal").textContent = `$${expensesTotal.toLocaleString('es-CO')}`;
 
     // ✅ Detalles de gastos - ARREGLADO
     let expensesDetailsHTML = '';
-    
+
     if (liq.liquidatedExpenses && liq.liquidatedExpenses.length > 0) {
         expensesDetailsHTML = liq.liquidatedExpenses.map(expense => {
             if (!expense.items || expense.items.length === 0) return '';
-            
+
             const expenseDate = new Date(expense.date);
             const localDate = new Date(expenseDate.getTime() + expenseDate.getTimezoneOffset() * 60000);
             const formattedDate = localDate.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
-            
+
             return expense.items.map(item => `
                 <div class="detail-item">
                     <span>${item.description} <small style="color: var(--medium-gray);">(${formattedDate})</small></span>
@@ -149,13 +149,13 @@ if (liq.liquidatedExpenses && liq.liquidatedExpenses.length > 0) {
             `).join('');
         }).join('');
     }
-    
+
     document.getElementById("expensesDetails").innerHTML = expensesDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay gastos</p>';
 
     // ✅ Resumen final con valores recalculados
     const totalExpensesCalc = liq.inventory.totalCost + expensesTotal;
     const realFinalCash = Math.round(liq.initialCash + realTotalIncome - totalExpensesCalc);
-    
+
     document.getElementById("summaryInitial").textContent = `$${liq.initialCash.toLocaleString('es-CO')}`;
     document.getElementById("summaryIncome").textContent = `$${realTotalIncome.toLocaleString('es-CO')}`;
     document.getElementById("summaryExpenses").textContent = `$${totalExpensesCalc.toLocaleString('es-CO')}`;
@@ -170,12 +170,12 @@ if (liq.liquidatedExpenses && liq.liquidatedExpenses.length > 0) {
 }
 
 // Toggle detalles
-window.toggleDetails = function(id) {
+window.toggleDetails = function (id) {
     const element = document.getElementById(id);
     const icon = element.previousElementSibling.querySelector('i');
-    
+
     element.classList.toggle('open');
-    
+
     if (element.classList.contains('open')) {
         icon.style.transform = 'rotate(180deg)';
     } else {

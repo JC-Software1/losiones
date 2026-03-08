@@ -17,17 +17,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             window.location.href = "login.html";
             return;
         }
-        
+
         sales = await apiFetch("/sales/settled", "GET", null, token);
         filteredSales = [...sales];
-        
+
         displayLiquidatedSales(filteredSales);
         updateStatistics(filteredSales);
         setupMenuHandlers();
 
         // Filtrar las ventas mientras se escribe en el campo de búsqueda
         searchInput.addEventListener("input", applyFilters);
-        
+
         // Filtrar por fecha de liquidación
         dateFilter.addEventListener("change", applyFilters);
 
@@ -45,17 +45,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 function applyFilters() {
     const searchText = document.getElementById("searchInput").value.toLowerCase().trim();
     const selectedDate = document.getElementById("dateFilter").value;
-    
+
     filteredSales = sales.filter(sale => {
         const matchesSearch = searchText === "" || sale.clientName.toLowerCase().includes(searchText);
-        
+
         let matchesDate = true;
         if (selectedDate !== "") {
             // Convertir la fecha de liquidación a formato YYYY-MM-DD para comparación precisa
             const settledDateStr = new Date(sale.settledDate).toISOString().split('T')[0];
             matchesDate = settledDateStr === selectedDate;
         }
-        
+
         return matchesSearch && matchesDate;
     });
 
@@ -86,13 +86,13 @@ function displayLiquidatedSales(salesList) {
             month: '2-digit',
             year: 'numeric'
         });
-        
+
         const saleDate = new Date(sale.saleDate).toLocaleDateString('es-ES', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
         });
-        
+
         // Calcular días entre venta y liquidación
         const msPerDay = 24 * 60 * 60 * 1000;
         const daysBetween = Math.round(
@@ -161,10 +161,10 @@ function updateStatistics(salesList) {
     // Total liquidado
     const totalLiquidated = salesList.reduce((sum, sale) => sum + sale.price, 0);
     document.getElementById("totalLiquidated").textContent = `$${totalLiquidated.toLocaleString()}`;
-    
+
     // Total de ventas liquidadas
     document.getElementById("totalCount").textContent = salesList.length;
-    
+
     // Días promedio de liquidación
     if (salesList.length > 0) {
         const avgDays = Math.round(
@@ -178,43 +178,43 @@ function updateStatistics(salesList) {
     } else {
         document.getElementById("avgDays").textContent = "0";
     }
-    
+
     // Total liquidado este mes
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
-    
+
     const thisMonthSales = salesList.filter(sale => {
         const saleDate = new Date(sale.settledDate);
         return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
     });
-    
+
     const thisMonthTotal = thisMonthSales.reduce((sum, sale) => sum + sale.price, 0);
     document.getElementById("thisMonth").textContent = `$${thisMonthTotal.toLocaleString()}`;
 }
 
 // Función global para mostrar detalles de venta
-window.showSaleDetails = function(saleId) {
+window.showSaleDetails = function (saleId) {
     const sale = sales.find(s => s._id === saleId);
     if (!sale) return;
-    
+
     const saleDate = new Date(sale.saleDate).toLocaleDateString('es-ES', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric'
     });
-    
+
     const settledDate = new Date(sale.settledDate).toLocaleDateString('es-ES', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric'
     });
-    
+
     const msPerDay = 24 * 60 * 60 * 1000;
     const daysBetween = Math.round((new Date(sale.settledDate) - new Date(sale.saleDate)) / msPerDay);
-    
-    alert(`
+
+    showNotification(`
 DETALLES DE LA VENTA LIQUIDADA
 
 Cliente: ${sale.clientName}
@@ -226,23 +226,23 @@ Precio: $${sale.price.toLocaleString()} COP
 ⏱️ Tiempo de liquidación: ${daysBetween} días
 
 ${daysBetween <= 30 ? '⚡ Liquidación rápida' : '🕐 Liquidación extendida'}
-    `);
+    `, 'info', 'Detalles de Venta');
 };
 
 // Función global para eliminar venta
-window.deleteSale = async function(saleId) {
+window.deleteSale = async function (saleId) {
     if (!confirm("¿Estás seguro de que deseas eliminar este registro de liquidación?\n\nEsta acción no se puede deshacer.")) {
         return;
     }
-    
+
     try {
         const token = getToken();
         await apiFetch(`/sales/${saleId}`, "DELETE", null, token);
-        
+
         // Eliminar la venta del array y actualizar la vista
         sales = sales.filter(sale => sale._id !== saleId);
         applyFilters(); // Reaplicar filtros
-        
+
         // Mostrar mensaje de éxito
         const notification = document.createElement('div');
         notification.style.cssText = `
@@ -259,14 +259,14 @@ window.deleteSale = async function(saleId) {
         `;
         notification.innerHTML = '<i class="fas fa-check"></i> Venta eliminada correctamente';
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.remove();
         }, 3000);
-        
+
     } catch (error) {
         console.error("Error al eliminar la venta:", error);
-        alert("❌ No se pudo eliminar la venta. Intenta nuevamente.");
+        showNotification("❌ No se pudo eliminar la venta. Intenta nuevamente.", "error");
     }
 };
 
@@ -318,22 +318,22 @@ function setupMenuHandlers() {
 }
 
 // Función para exportar datos (funcionalidad adicional)
-window.exportLiquidatedData = function() {
+window.exportLiquidatedData = function () {
     if (filteredSales.length === 0) {
-        alert("No hay datos para exportar");
+        showNotification("No hay datos para exportar", "warning");
         return;
     }
-    
+
     const csvData = [
         ['Cliente', 'Producto', 'Precio', 'Fecha Venta', 'Fecha Liquidación', 'Días Liquidación']
     ];
-    
+
     filteredSales.forEach(sale => {
         const saleDate = new Date(sale.saleDate).toLocaleDateString('es-ES');
         const settledDate = new Date(sale.settledDate).toLocaleDateString('es-ES');
         const msPerDay = 24 * 60 * 60 * 1000;
         const daysBetween = Math.round((new Date(sale.settledDate) - new Date(sale.saleDate)) / msPerDay);
-        
+
         csvData.push([
             sale.clientName,
             sale.productName,
@@ -343,16 +343,16 @@ window.exportLiquidatedData = function() {
             daysBetween
         ]);
     });
-    
+
     const csvContent = csvData.map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', `liquidados_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -361,34 +361,34 @@ window.exportLiquidatedData = function() {
 // Función para obtener estadísticas avanzadas
 function getAdvancedStats() {
     if (sales.length === 0) return null;
-    
+
     const liquidationTimes = sales.map(sale => {
         const msPerDay = 24 * 60 * 60 * 1000;
         return Math.round((new Date(sale.settledDate) - new Date(sale.saleDate)) / msPerDay);
     });
-    
+
     const quickLiquidations = liquidationTimes.filter(days => days <= 30).length;
     const slowLiquidations = liquidationTimes.filter(days => days > 30).length;
-    
+
     // Clientes más frecuentes
     const clientFrequency = {};
     sales.forEach(sale => {
         clientFrequency[sale.clientName] = (clientFrequency[sale.clientName] || 0) + 1;
     });
-    
+
     const topClient = Object.entries(clientFrequency)
-        .sort(([,a], [,b]) => b - a)[0];
-    
+        .sort(([, a], [, b]) => b - a)[0];
+
     // Mes con más liquidaciones
     const monthlyStats = {};
     sales.forEach(sale => {
         const monthKey = new Date(sale.settledDate).toISOString().slice(0, 7);
         monthlyStats[monthKey] = (monthlyStats[monthKey] || 0) + sale.price;
     });
-    
+
     const bestMonth = Object.entries(monthlyStats)
-        .sort(([,a], [,b]) => b - a)[0];
-    
+        .sort(([, a], [, b]) => b - a)[0];
+
     return {
         quickLiquidations,
         slowLiquidations,
@@ -400,22 +400,22 @@ function getAdvancedStats() {
 }
 
 // Función para mostrar estadísticas avanzadas
-window.showAdvancedStats = function() {
+window.showAdvancedStats = function () {
     const stats = getAdvancedStats();
     if (!stats) {
-        alert("No hay datos suficientes para mostrar estadísticas");
+        showNotification("No hay datos suficientes para mostrar estadísticas", "warning");
         return;
     }
-    
+
     const monthNames = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
-    
-    const bestMonthFormatted = stats.bestMonth ? 
-        `${monthNames[parseInt(stats.bestMonth.month.split('-')[1]) - 1]} ${stats.bestMonth.month.split('-')[0]}` : 
+
+    const bestMonthFormatted = stats.bestMonth ?
+        `${monthNames[parseInt(stats.bestMonth.month.split('-')[1]) - 1]} ${stats.bestMonth.month.split('-')[0]}` :
         'N/A';
-    
+
     const message = `
 📊 ESTADÍSTICAS AVANZADAS DE LIQUIDACIONES
 
@@ -430,6 +430,6 @@ window.showAdvancedStats = function() {
 
 📈 Tasa de liquidación rápida: ${Math.round((stats.quickLiquidations / sales.length) * 100)}%
     `;
-    
-    alert(message);
+
+    showNotification(message, 'info', 'Estadísticas Avanzadas');
 };

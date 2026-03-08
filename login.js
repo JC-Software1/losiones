@@ -201,14 +201,14 @@ async function handleLogin(event) {
     const password = document.getElementById("password").value.trim();
 
     if (!username || !password) {
-        alert("Por favor, completa todos los campos.");
+        showNotification("Por favor, completa todos los campos.", "warning");
         return;
     }
 
     try {
         // PRIMERO: Verificar si el usuario o su jefe están bloqueados
         const verificacionBloqueo = await verificarBloqueosCompletos(username);
-        
+
         if (verificacionBloqueo.bloqueado) {
             mostrarModalBloqueo();
             return;
@@ -216,15 +216,15 @@ async function handleLogin(event) {
 
         // Si no está bloqueado, proceder con el login normal
         console.log("Iniciando sesión...");
-        
+
         const response = await apiFetch("/auth/login", "POST", { username, password });
-        
+
         // Guardar el token
         setToken(response.token);
 
         // Obtener información del usuario del token
         const userInfo = getUserInfo();
-        
+
         console.log("Usuario logueado:", userInfo);
 
         // Redirigir según el tipo de usuario
@@ -240,12 +240,12 @@ async function handleLogin(event) {
         }
     } catch (error) {
         console.error("Error en el login:", error);
-        
+
         // Si el error es de cuenta bloqueada
         if (error.message.includes('bloqueado') || error.message.includes('suspendida')) {
             mostrarModalBloqueo();
         } else {
-            alert(`Error al iniciar sesión: ${error.message}`);
+            showNotification(`Error al iniciar sesión: ${error.message}`, "error");
         }
     }
 }

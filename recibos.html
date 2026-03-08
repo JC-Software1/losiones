@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recibos - Sistema de Ventas</title>
-            <script src="adminMode.js"></script>
+    <script src="adminMode.js"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/notifications.css">
     <style>
-         :root {
+        :root {
             --primary: #2c3e50;
             --secondary: #34495e;
             --accent: #3498db;
@@ -23,8 +25,8 @@
             --light-gray: #f8f9fa;
             --medium-gray: #6c757d;
             --border: #e9ecef;
-            --shadow: 0 2px 4px rgba(0,0,0,0.08);
-            --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
             --radius: 8px;
             --radius-lg: 12px;
             --transition: all 0.3s ease;
@@ -112,14 +114,14 @@
             border: 1px solid var(--light);
             border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
             cursor: pointer;
         }
 
         .receipt-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
         }
 
         .receipt-header {
@@ -200,7 +202,7 @@
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         .empty-state {
@@ -227,7 +229,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -305,217 +307,368 @@
             .receipts-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .header h1 {
                 font-size: 2rem;
             }
-            
+
             .receipt-actions {
                 flex-direction: column;
             }
         }
 
-         /* ---------- Menú (mismo que historial) ---------- */
-        .menu-toggle{
-            position:fixed;
-            top:18px;
-            right:18px;
-            width:52px;
-            height:52px;
-            background:var(--white);
-            border:1px solid var(--border);
-            border-radius:50%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            cursor:pointer;
-            box-shadow:var(--shadow);
-            z-index:10010;
-            transition:transform .22s ease,background .22s ease,color .22s ease;
+        /* ---------- Menú (mismo que historial) ---------- */
+        .menu-toggle {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            width: 52px;
+            height: 52px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 10010;
+            transition: transform .22s ease, background .22s ease, color .22s ease;
         }
-        .menu-toggle:active{transform:scale(.98)}
-        .menu-toggle:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
-        .menu-toggle .menu-icon{font-size:18px;color:var(--primary)}
-        .menu-toggle.open{background:var(--primary);color:var(--white)}
-        .menu-toggle.open .menu-icon{color:var(--white)}
-        .backdrop{
-            position:fixed;
-            inset:0;
-            background:rgba(0,0,0,.45);
-            z-index:10005;
-            opacity:0;
-            visibility:hidden;
-            transition:opacity .28s ease,visibility .28s;
+
+        .menu-toggle:active {
+            transform: scale(.98)
         }
-        .backdrop.show{opacity:1;visibility:visible}
-        .menu-items{
-            position:fixed;
-            left:50%;
-            top:50%;
-            transform:translate(-50%,-50%) scale(.92);
-            min-width:260px;
-            max-width:92%;
-            background:linear-gradient(180deg,var(--white),#fbfbfb);
-            border-radius:14px;
-            padding:14px;
-            box-shadow:0 20px 50px rgba(0,0,0,.22);
-            z-index:10010;
-            opacity:0;
-            visibility:hidden;
-            transition:transform .32s cubic-bezier(.2,.9,.2,1),opacity .22s ease,visibility .22s;
-            border:1px solid rgba(0,0,0,.03);
-            overflow:hidden;
-            outline:0;
+
+        .menu-toggle:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover)
         }
-        .menu-items.show{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
-        .menu-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px}
-        .menu-head strong{color:var(--primary);font-size:14px}
-        .menu-close{background:transparent;border:none;font-size:16px;color:var(--medium-gray);cursor:pointer;padding:6px;border-radius:8px}
-        .menu-close:hover{color:var(--danger);transform:translateY(-2px)}
-        .menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;align-items:stretch}
-        .menu-link{display:flex;gap:10px;align-items:center;justify-content:center;text-decoration:none;background:linear-gradient(180deg,#fff,var(--light-gray));padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,.03);box-shadow:0 6px 18px rgba(0,0,0,.06);transition:transform .18s ease,box-shadow .18s ease,background .18s;color:var(--primary);font-weight:600;font-size:13px;text-align:center}
-        .menu-link i{font-size:16px;width:20px;text-align:center;color:var(--accent)}
-        .menu-link span{display:inline-block;line-height:1}
-        .menu-link:hover{transform:translateY(-6px);box-shadow:0 14px 36px rgba(0,0,0,.14);background:linear-gradient(180deg,var(--accent),#2a86c8);color:#fff}
-        .menu-link:hover i{color:#fff}
-        @media (max-width:420px){.menu-grid{grid-template-columns:repeat(3,1fr);gap:8px}.menu-link{padding:8px;font-size:12px;border-radius:8px}}
-        .menu-link{opacity:0;transform:translateY(6px) scale(.995);transition-property:transform,opacity,box-shadow,background;transition-duration:320ms}
-        .menu-items.show .menu-link{opacity:1;transform:translateY(0) scale(1)}
-        .menu-link:focus{outline:3px solid rgba(52,152,219,.18);transform:translateY(-3px)}
+
+        .menu-toggle .menu-icon {
+            font-size: 18px;
+            color: var(--primary)
+        }
+
+        .menu-toggle.open {
+            background: var(--primary);
+            color: var(--white)
+        }
+
+        .menu-toggle.open .menu-icon {
+            color: var(--white)
+        }
+
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .45);
+            z-index: 10005;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .28s ease, visibility .28s;
+        }
+
+        .backdrop.show {
+            opacity: 1;
+            visibility: visible
+        }
 
         .menu-items {
-  max-width: 92%;
-  width: auto;
-  max-height: calc(100vh - 120px); /* deja espacio arriba/abajo */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 18px; /* más aire alrededor */
-  gap: 12px;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.2);
-}
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(.92);
+            min-width: 260px;
+            max-width: 92%;
+            background: linear-gradient(180deg, var(--white), #fbfbfb);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .22);
+            z-index: 10010;
+            opacity: 0;
+            visibility: hidden;
+            transition: transform .32s cubic-bezier(.2, .9, .2, 1), opacity .22s ease, visibility .22s;
+            border: 1px solid rgba(0, 0, 0, .03);
+            overflow: hidden;
+            outline: 0;
+        }
 
-/* Cabecera del menú: más separación y tipografía clara */
-.menu-head {
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-.menu-head strong {
-  font-size:15px;
-  letter-spacing:0.2px;
-  color:var(--primary);
-}
+        .menu-items.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1)
+        }
 
-/* Ajuste del grid: columnas y gaps más generosos */
-.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0,1fr)); /* 2 columnas limpias por defecto */
-  gap: 12px;
-  align-items:stretch;
-}
+        .menu-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px
+        }
 
-/* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
-@media (max-width:420px) {
-  .menu-grid { grid-template-columns: 1fr; gap: 10px; }
-}
+        .menu-head strong {
+            color: var(--primary);
+            font-size: 14px
+        }
 
-/* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
-.menu-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: flex-start;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: linear-gradient(180deg,#fff,var(--light-gray));
-  border: 1px solid rgba(0,0,0,0.04);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
-  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-  min-height: 52px;           /* mayor área táctil */
-  align-items: center;
-  white-space: normal;
-}
+        .menu-close {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            color: var(--medium-gray);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px
+        }
 
-/* Icono: tamaño y contenedor */
-.menu-link i {
-  font-size: 18px;
-  width: 30px;
-  height: 30px;
-  line-height: 30px;
-  text-align: center;
-  color: var(--accent);
-  background: rgba(52,152,219,0.06);
-  border-radius: 8px;
-  flex: 0 0 30px;
-}
+        .menu-close:hover {
+            color: var(--danger);
+            transform: translateY(-2px)
+        }
 
-/* Texto: permitir varias líneas y buen espaciado */
-.menu-link span {
-  display: block;
-  text-align: left;
-  line-height: 1.1;
-  font-size: 14px;
-  color: var(--primary);
-  margin: 0;
-  word-break: break-word;
-}
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            align-items: stretch
+        }
 
-/* Estado hover / focus: contraste y sombra más suave */
-.menu-link:hover,
-.menu-link:focus {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 40px rgba(0,0,0,0.12);
-  background: linear-gradient(180deg,var(--accent),#2a86c8);
-  color: #fff;
-}
-.menu-link:hover i,
-.menu-link:focus i { color: #fff; background: transparent; }
+        .menu-link {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            background: linear-gradient(180deg, #fff, var(--light-gray));
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 0, 0, .03);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+            transition: transform .18s ease, box-shadow .18s ease, background .18s;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center
+        }
 
-/* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
-.menu-grid .btn-go-liquidation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  min-height: 52px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  text-decoration: none;
-}
+        .menu-link i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+            color: var(--accent)
+        }
 
-/* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
-.menu-items .menu-grid { margin-top: 6px; }
+        .menu-link span {
+            display: inline-block;
+            line-height: 1
+        }
 
-/* indicadores de focus accesible */
-.menu-link:focus { outline: 3px solid rgba(52,152,219,0.12); }
+        .menu-link:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, .14);
+            background: linear-gradient(180deg, var(--accent), #2a86c8);
+            color: #fff
+        }
 
-/* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
-.menu-link > *:first-child { margin-left: 2px; }
+        .menu-link:hover i {
+            color: #fff
+        }
 
-/* Si quieres dividir opciones por secciones (opcional) */
-.menu-section {
-  display:block;
-  margin-bottom: 8px;
-}
-.menu-section + .menu-section { border-top: 1px dashed rgba(0,0,0,0.04); padding-top: 8px; margin-top: 8px; }
+        @media (max-width:420px) {
+            .menu-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px
+            }
 
-/* Scrollbar más discreto (WebKit) */
-.menu-items::-webkit-scrollbar { width: 8px; }
-.menu-items::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 6px; }
+            .menu-link {
+                padding: 8px;
+                font-size: 12px;
+                border-radius: 8px
+            }
+        }
 
+        .menu-link {
+            opacity: 0;
+            transform: translateY(6px) scale(.995);
+            transition-property: transform, opacity, box-shadow, background;
+            transition-duration: 320ms
+        }
 
+        .menu-items.show .menu-link {
+            opacity: 1;
+            transform: translateY(0) scale(1)
+        }
+
+        .menu-link:focus {
+            outline: 3px solid rgba(52, 152, 219, .18);
+            transform: translateY(-3px)
+        }
+
+        .menu-items {
+            max-width: 92%;
+            width: auto;
+            max-height: calc(100vh - 120px);
+            /* deja espacio arriba/abajo */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 18px;
+            /* más aire alrededor */
+            gap: 12px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Cabecera del menú: más separación y tipografía clara */
+        .menu-head {
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .menu-head strong {
+            font-size: 15px;
+            letter-spacing: 0.2px;
+            color: var(--primary);
+        }
+
+        /* Ajuste del grid: columnas y gaps más generosos */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            /* 2 columnas limpias por defecto */
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        /* En pantallas muy pequeñas pasar a 1 columna para evitar apiñamiento */
+        @media (max-width:420px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+        }
+
+        /* Estilos de cada opción: más padding, icono separado y texto alineado a la izquierda */
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: flex-start;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #fff, var(--light-gray));
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+            min-height: 52px;
+            /* mayor área táctil */
+            align-items: center;
+            white-space: normal;
+        }
+
+        /* Icono: tamaño y contenedor */
+        .menu-link i {
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            color: var(--accent);
+            background: rgba(52, 152, 219, 0.06);
+            border-radius: 8px;
+            flex: 0 0 30px;
+        }
+
+        /* Texto: permitir varias líneas y buen espaciado */
+        .menu-link span {
+            display: block;
+            text-align: left;
+            line-height: 1.1;
+            font-size: 14px;
+            color: var(--primary);
+            margin: 0;
+            word-break: break-word;
+        }
+
+        /* Estado hover / focus: contraste y sombra más suave */
+        .menu-link:hover,
+        .menu-link:focus {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+            background: linear-gradient(180deg, var(--accent), #2a86c8);
+            color: #fff;
+        }
+
+        .menu-link:hover i,
+        .menu-link:focus i {
+            color: #fff;
+            background: transparent;
+        }
+
+        /* Botón especial 'Ir a Liquidación' dentro del grid: que respete la altura y estilo */
+        .menu-grid .btn-go-liquidation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            min-height: 52px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            text-decoration: none;
+        }
+
+        /* Si hay muchas opciones, evitar que la cabecera quede junto al primer item */
+        .menu-items .menu-grid {
+            margin-top: 6px;
+        }
+
+        /* indicadores de focus accesible */
+        .menu-link:focus {
+            outline: 3px solid rgba(52, 152, 219, 0.12);
+        }
+
+        /* Pequeños detalles: espaciado entre icono y texto cuando texto es largo */
+        .menu-link>*:first-child {
+            margin-left: 2px;
+        }
+
+        /* Si quieres dividir opciones por secciones (opcional) */
+        .menu-section {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .menu-section+.menu-section {
+            border-top: 1px dashed rgba(0, 0, 0, 0.04);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        /* Scrollbar más discreto (WebKit) */
+        .menu-items::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .menu-items::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.08);
+            border-radius: 6px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -523,7 +676,7 @@
             <p>Gestiona todos los recibos de tus ventas</p>
         </div>
 
-     
+
 
         <div class="content">
             <div class="search-bar">
@@ -531,25 +684,33 @@
                 <i class="fas fa-search"></i>
             </div>
 
-                 <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuItems" aria-label="Abrir menú">
-        <span class="menu-icon"><i class="fas fa-bars"></i></span>
-    </button>
-    <div class="backdrop" id="backdrop"></div>
-    <nav class="menu-items" id="menuItems" role="dialog" aria-modal="true" aria-hidden="true">
-        <div class="menu-head">
-            <strong>Acciones rápidas</strong>
-            <button class="menu-close" id="menuClose" aria-label="Cerrar menú"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="menu-grid">
-            <a href="categories.html" class="menu-link"><i class="fas fa-user-plus"></i><span>Agregar cliente</span></a>
-            <a href="abonos.html" class="menu-link"><i class="fas fa-receipt"></i><span>Historial de abonos</span></a>
-            <a href="historial.html" class="menu-link"><i class="fas fa-history"></i><span>Historial</span></a>
-            <a href="productos.html" class="menu-link"><i class="fas fa-box-open"></i><span>Agregar producto</span></a>
-            <a href="inventario.html" class="menu-link"><i class="fas fa-warehouse"></i><span>Inventario</span></a>
-            <a href="liquidados.html" class="menu-link"><i class="fas fa-check-circle"></i><span>Liquidados</span></a>
-            <center><a href="vendidos.html" class="menu-link"><i class="fas fa-file-alt"></i><span>Productos vendidos</span></a></center>
-        </div>
-    </nav>
+            <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuItems"
+                aria-label="Abrir menú">
+                <span class="menu-icon"><i class="fas fa-bars"></i></span>
+            </button>
+            <div class="backdrop" id="backdrop"></div>
+            <nav class="menu-items" id="menuItems" role="dialog" aria-modal="true" aria-hidden="true">
+                <div class="menu-head">
+                    <strong>Acciones rápidas</strong>
+                    <button class="menu-close" id="menuClose" aria-label="Cerrar menú"><i
+                            class="fas fa-times"></i></button>
+                </div>
+                <div class="menu-grid">
+                    <a href="categories.html" class="menu-link"><i class="fas fa-user-plus"></i><span>Agregar
+                            cliente</span></a>
+                    <a href="abonos.html" class="menu-link"><i class="fas fa-receipt"></i><span>Historial de
+                            abonos</span></a>
+                    <a href="historial.html" class="menu-link"><i class="fas fa-history"></i><span>Historial</span></a>
+                    <a href="productos.html" class="menu-link"><i class="fas fa-box-open"></i><span>Agregar
+                            producto</span></a>
+                    <a href="inventario.html" class="menu-link"><i
+                            class="fas fa-warehouse"></i><span>Inventario</span></a>
+                    <a href="liquidados.html" class="menu-link"><i
+                            class="fas fa-check-circle"></i><span>Liquidados</span></a>
+                    <center><a href="vendidos.html" class="menu-link"><i class="fas fa-file-alt"></i><span>Productos
+                                vendidos</span></a></center>
+                </div>
+            </nav>
 
             <div id="receiptsGrid" class="receipts-grid">
                 <!-- Los recibos se cargarán aquí -->
@@ -580,103 +741,104 @@
     </div>
 
 
-<script>
-    let currentReceipts = [];
-    let currentReceiptData = null;
+    <script src="utils/notifications.js" type="module"></script>
+    <script>
+        let currentReceipts = [];
+        let currentReceiptData = null;
 
-    function getToken() {
-        return localStorage.getItem('authToken'); // ✅ Usa 'authToken'
-    }
-
-    async function apiFetch(endpoint, method = 'GET', body = null, token = null) {
-        const url = `https://losiones-1.onrender.com/api${endpoint}`;
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        const options = { method, headers };
-        if (body) options.body = JSON.stringify(body);
-        const res = await fetch(url, options);
-        if (!res.ok) throw new Error(await res.text() || 'Error en la petición');
-        return res.json();
-    }
-
-    // Verificar autenticación
-    function checkAuth() {
-        const token = getToken();
-        const adminMode = sessionStorage.getItem('adminMode') === 'true';
-        const vendedorId = sessionStorage.getItem('vendedorId');
-        
-        // Modo admin: no requiere token propio
-        if (adminMode && vendedorId) {
-            return true;
+        function getToken() {
+            return localStorage.getItem('authToken'); // ✅ Usa 'authToken'
         }
-        
-        // Modo normal: requiere token
-        return !!token;
-    }
 
-    // Cargar recibos
-// Reemplaza la función loadReceipts() en recibos.html con esta versión:
+        async function apiFetch(endpoint, method = 'GET', body = null, token = null) {
+            const url = `https://losiones-1.onrender.com/api${endpoint}`;
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            const options = { method, headers };
+            if (body) options.body = JSON.stringify(body);
+            const res = await fetch(url, options);
+            if (!res.ok) throw new Error(await res.text() || 'Error en la petición');
+            return res.json();
+        }
 
-async function loadReceipts() {
-    try {
-        const adminMode = sessionStorage.getItem('adminMode') === 'true';
-        const vendedorId = sessionStorage.getItem('vendedorId');
-        const token = getToken();
-        
-        if (!token) {
-            console.warn('No hay token');
-            return;
+        // Verificar autenticación
+        function checkAuth() {
+            const token = getToken();
+            const adminMode = sessionStorage.getItem('adminMode') === 'true';
+            const vendedorId = sessionStorage.getItem('vendedorId');
+
+            // Modo admin: no requiere token propio
+            if (adminMode && vendedorId) {
+                return true;
+            }
+
+            // Modo normal: requiere token
+            return !!token;
         }
-        
-        let endpoint = "/receipts";
-        
-        // Modo admin: agregar query param con userId del vendedor
-        if (adminMode && vendedorId) {
-            console.log('Modo admin: viendo recibos del vendedor', vendedorId);
-            endpoint = `/receipts?userId=${vendedorId}`;
-        } else {
-            // Modo normal: el backend ya filtra por el userId del token
-            console.log('Modo normal: viendo mis propios recibos');
+
+        // Cargar recibos
+        // Reemplaza la función loadReceipts() en recibos.html con esta versión:
+
+        async function loadReceipts() {
+            try {
+                const adminMode = sessionStorage.getItem('adminMode') === 'true';
+                const vendedorId = sessionStorage.getItem('vendedorId');
+                const token = getToken();
+
+                if (!token) {
+                    console.warn('No hay token');
+                    return;
+                }
+
+                let endpoint = "/receipts";
+
+                // Modo admin: agregar query param con userId del vendedor
+                if (adminMode && vendedorId) {
+                    console.log('Modo admin: viendo recibos del vendedor', vendedorId);
+                    endpoint = `/receipts?userId=${vendedorId}`;
+                } else {
+                    // Modo normal: el backend ya filtra por el userId del token
+                    console.log('Modo normal: viendo mis propios recibos');
+                }
+
+                console.log('Endpoint:', endpoint);
+
+                const mongoReceipts = await apiFetch(endpoint, "GET", null, token);
+                console.log('Recibos recibidos:', mongoReceipts.length);
+
+                // Ya vienen filtrados del backend, solo ordenar
+                currentReceipts = mongoReceipts
+                    .map(mr => ({
+                        id: mr.localId || mr._id,
+                        receiptNumber: mr.receiptNumber,
+                        saleData: mr.saleData,
+                        createdAt: mr.createdAt,
+                        fromMongo: true,
+                        mongoId: mr._id,
+                        userId: mr.userId
+                    }))
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                console.log('Total recibos a mostrar:', currentReceipts.length);
+                renderReceipts(currentReceipts);
+
+            } catch (err) {
+                console.error("Error cargando recibos:", err);
+                renderReceipts([]);
+            }
         }
-        
-        console.log('Endpoint:', endpoint);
-        
-        const mongoReceipts = await apiFetch(endpoint, "GET", null, token);
-        console.log('Recibos recibidos:', mongoReceipts.length);
-        
-        // Ya vienen filtrados del backend, solo ordenar
-        currentReceipts = mongoReceipts
-            .map(mr => ({
-                id: mr.localId || mr._id,
-                receiptNumber: mr.receiptNumber,
-                saleData: mr.saleData,
-                createdAt: mr.createdAt,
-                fromMongo: true,
-                mongoId: mr._id,
-                userId: mr.userId
-            }))
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
-        console.log('Total recibos a mostrar:', currentReceipts.length);
-        renderReceipts(currentReceipts);
-        
-    } catch (err) {
-        console.error("Error cargando recibos:", err);
-        renderReceipts([]);
-    }
-}
-function renderReceipts(receipts) {
-        const grid = document.getElementById('receiptsGrid');
-        if (receipts.length === 0) {
-            grid.innerHTML = `
+        function renderReceipts(receipts) {
+            const grid = document.getElementById('receiptsGrid');
+            if (receipts.length === 0) {
+                grid.innerHTML = `
                 <div class="empty-state" style="grid-column: 1 / -1;">
                     <i class="fas fa-receipt"></i>
                     <h3>No hay recibos generados</h3>
                     <p>Los recibos aparecerán aquí cuando realices ventas</p>
                 </div>`;
-            return;
-        }
-        grid.innerHTML = receipts.map(receipt => `
+                return;
+            }
+            grid.innerHTML = receipts.map(receipt => `
             <div class="receipt-card" onclick="viewReceipt('${receipt.id}')">
                 <div class="receipt-header">
                     <div class="receipt-number">Recibo #${receipt.receiptNumber}</div>
@@ -694,174 +856,175 @@ function renderReceipts(receipts) {
                     <button class="btn btn-danger" onclick="deleteReceiptById('${receipt.id}')"><i class="fas fa-trash"></i> Eliminar</button>
                 </div>
             </div>`).join('');
-    }
-
-    function filterReceipts(query) {
-        if (!query.trim()) {
-            renderReceipts(currentReceipts);
-            return;
         }
-        const filtered = currentReceipts.filter(receipt =>
-            receipt.saleData.clientName.toLowerCase().includes(query.toLowerCase()) ||
-            receipt.receiptNumber.toString().includes(query) ||
-            receipt.saleData.productName.toLowerCase().includes(query.toLowerCase())
-        );
-        renderReceipts(filtered);
-    }
 
-    function viewReceipt(receiptId) {
-        const receipt = currentReceipts.find(r => r.id === receiptId);
-        if (!receipt) return;
-        currentReceiptData = receipt;
-        generateReceiptCanvas(receipt);
-        document.getElementById('receiptModal').classList.add('show');
-    }
-
-    function generateReceiptCanvas(receipt) {
-        const canvas = document.getElementById('receiptCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 600;
-        canvas.height = 800;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#2c3e50';
-        ctx.fillRect(0, 0, canvas.width, 120);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 32px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('RECIBO DE VENTA', canvas.width / 2, 50);
-        ctx.font = '18px Arial';
-        ctx.fillText(`Recibo #${receipt.receiptNumber}`, canvas.width / 2, 80);
-        ctx.fillText(`Fecha: ${new Date(receipt.createdAt).toLocaleDateString('es-CO')}`, canvas.width / 2, 105);
-        ctx.fillStyle = '#2c3e50';
-        ctx.font = 'bold 24px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText('INFORMACIÓN DEL CLIENTE', 40, 170);
-        ctx.font = '18px Arial';
-        ctx.fillText(`Cliente: ${receipt.saleData.clientName}`, 40, 200);
-        ctx.fillText(`Dirección: ${receipt.saleData.clientAddress || 'No especificada'}`, 40, 225);
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText('DETALLES DE LA VENTA', 40, 280);
-        ctx.font = '18px Arial';
-        ctx.fillText(`Producto: ${receipt.saleData.productName}`, 40, 310);
-        ctx.fillText(`Fecha de venta: ${new Date(receipt.saleData.saleDate).toLocaleDateString('es-CO')}`, 40, 335);
-        ctx.fillText(`Cuotas: ${receipt.saleData.installments}`, 40, 360);
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText('INFORMACIÓN DE PAGOS', 40, 420);
-        ctx.font = '18px Arial';
-        ctx.fillText(`Precio total: $${receipt.saleData.price.toLocaleString('es-CO')}`, 40, 450);
-        ctx.fillText(`Abono inicial: $${receipt.saleData.advancePayment.toLocaleString('es-CO')}`, 40, 475);
-        const remainingDebt = receipt.saleData.price - receipt.saleData.advancePayment;
-        ctx.fillText(`Saldo pendiente: $${remainingDebt.toLocaleString('es-CO')}`, 40, 500);
-        if (receipt.saleData.paymentDays) {
-            const days = receipt.saleData.paymentDays.split(',').map(d => d.trim()).join(', ');
-            ctx.fillText(`Días de pago: ${days}`, 40, 525);
+        function filterReceipts(query) {
+            if (!query.trim()) {
+                renderReceipts(currentReceipts);
+                return;
+            }
+            const filtered = currentReceipts.filter(receipt =>
+                receipt.saleData.clientName.toLowerCase().includes(query.toLowerCase()) ||
+                receipt.receiptNumber.toString().includes(query) ||
+                receipt.saleData.productName.toLowerCase().includes(query.toLowerCase())
+            );
+            renderReceipts(filtered);
         }
-        ctx.fillStyle = '#7f8c8d';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Este recibo fue generado automáticamente por el sistema', canvas.width / 2, 720);
-        ctx.fillText(`Generado el ${new Date().toLocaleString('es-CO')}`, canvas.width / 2, 740);
-        ctx.strokeStyle = '#3498db';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(40, 680);
-        ctx.lineTo(canvas.width - 40, 680);
-        ctx.stroke();
-    }
 
-    function closeReceiptModal() {
-        document.getElementById('receiptModal').classList.remove('show');
-        currentReceiptData = null;
-    }
+        function viewReceipt(receiptId) {
+            const receipt = currentReceipts.find(r => r.id === receiptId);
+            if (!receipt) return;
+            currentReceiptData = receipt;
+            generateReceiptCanvas(receipt);
+            document.getElementById('receiptModal').classList.add('show');
+        }
 
-    function shareReceipt() {
-        if (!currentReceiptData) return;
-        shareReceiptById(currentReceiptData.id);
-    }
+        function generateReceiptCanvas(receipt) {
+            const canvas = document.getElementById('receiptCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 600;
+            canvas.height = 800;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(0, 0, canvas.width, 120);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('RECIBO DE VENTA', canvas.width / 2, 50);
+            ctx.font = '18px Arial';
+            ctx.fillText(`Recibo #${receipt.receiptNumber}`, canvas.width / 2, 80);
+            ctx.fillText(`Fecha: ${new Date(receipt.createdAt).toLocaleDateString('es-CO')}`, canvas.width / 2, 105);
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('INFORMACIÓN DEL CLIENTE', 40, 170);
+            ctx.font = '18px Arial';
+            ctx.fillText(`Cliente: ${receipt.saleData.clientName}`, 40, 200);
+            ctx.fillText(`Dirección: ${receipt.saleData.clientAddress || 'No especificada'}`, 40, 225);
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText('DETALLES DE LA VENTA', 40, 280);
+            ctx.font = '18px Arial';
+            ctx.fillText(`Producto: ${receipt.saleData.productName}`, 40, 310);
+            ctx.fillText(`Fecha de venta: ${new Date(receipt.saleData.saleDate).toLocaleDateString('es-CO')}`, 40, 335);
+            ctx.fillText(`Cuotas: ${receipt.saleData.installments}`, 40, 360);
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText('INFORMACIÓN DE PAGOS', 40, 420);
+            ctx.font = '18px Arial';
+            ctx.fillText(`Precio total: $${receipt.saleData.price.toLocaleString('es-CO')}`, 40, 450);
+            ctx.fillText(`Abono inicial: $${receipt.saleData.advancePayment.toLocaleString('es-CO')}`, 40, 475);
+            const remainingDebt = receipt.saleData.price - receipt.saleData.advancePayment;
+            ctx.fillText(`Saldo pendiente: $${remainingDebt.toLocaleString('es-CO')}`, 40, 500);
+            if (receipt.saleData.paymentDays) {
+                const days = receipt.saleData.paymentDays.split(',').map(d => d.trim()).join(', ');
+                ctx.fillText(`Días de pago: ${days}`, 40, 525);
+            }
+            ctx.fillStyle = '#7f8c8d';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Este recibo fue generado automáticamente por el sistema', canvas.width / 2, 720);
+            ctx.fillText(`Generado el ${new Date().toLocaleString('es-CO')}`, canvas.width / 2, 740);
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(40, 680);
+            ctx.lineTo(canvas.width - 40, 680);
+            ctx.stroke();
+        }
 
-    function shareReceiptById(receiptId) {
-        const receipt = currentReceipts.find(r => r.id === receiptId);
-        if (!receipt) return;
-        const canvas = document.createElement('canvas');
-        canvas.width = 600;
-        canvas.height = 800;
-        const ctx = canvas.getContext('2d');
-        generateReceiptCanvas(receipt);
-        ctx.drawImage(document.getElementById('receiptCanvas'), 0, 0);
-        canvas.toBlob(blob => {
-            const file = new File([blob], `recibo-${receipt.receiptNumber}.png`, { type: 'image/png' });
-            if (navigator.share && navigator.canShare({ files: [file] })) {
-                navigator.share({ title: `Recibo #${receipt.receiptNumber}`, text: `Recibo de venta para ${receipt.saleData.clientName}`, files: [file] });
-            } else {
+        function closeReceiptModal() {
+            document.getElementById('receiptModal').classList.remove('show');
+            currentReceiptData = null;
+        }
+
+        function shareReceipt() {
+            if (!currentReceiptData) return;
+            shareReceiptById(currentReceiptData.id);
+        }
+
+        function shareReceiptById(receiptId) {
+            const receipt = currentReceipts.find(r => r.id === receiptId);
+            if (!receipt) return;
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 800;
+            const ctx = canvas.getContext('2d');
+            generateReceiptCanvas(receipt);
+            ctx.drawImage(document.getElementById('receiptCanvas'), 0, 0);
+            canvas.toBlob(blob => {
+                const file = new File([blob], `recibo-${receipt.receiptNumber}.png`, { type: 'image/png' });
+                if (navigator.share && navigator.canShare({ files: [file] })) {
+                    navigator.share({ title: `Recibo #${receipt.receiptNumber}`, text: `Recibo de venta para ${receipt.saleData.clientName}`, files: [file] });
+                } else {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `recibo-${receipt.receiptNumber}.png`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            }, 'image/png');
+        }
+
+        function downloadReceipt() {
+            if (!currentReceiptData) return;
+            const canvas = document.getElementById('receiptCanvas');
+            canvas.toBlob(blob => {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `recibo-${receipt.receiptNumber}.png`;
+                a.download = `recibo-${currentReceiptData.receiptNumber}.png`;
                 a.click();
                 URL.revokeObjectURL(url);
-            }
-        }, 'image/png');
-    }
-
-    function downloadReceipt() {
-        if (!currentReceiptData) return;
-        const canvas = document.getElementById('receiptCanvas');
-        canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `recibo-${currentReceiptData.receiptNumber}.png`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }, 'image/png');
-    }
-
-    async function deleteReceiptById(receiptId) {
-        if (!confirm('¿Estás seguro de que deseas eliminar este recibo?')) return;
-        const receipt = currentReceipts.find(r => r.id === receiptId);
-        if (!receipt) return;
-        let localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
-        localReceipts = localReceipts.filter(r => r.id !== receiptId);
-        localStorage.setItem('salesReceipts', JSON.stringify(localReceipts));
-        if (receipt.mongoId) {
-            try {
-                const token = getToken();
-                await apiFetch(`/receipts/${receipt.mongoId}`, "DELETE", null, token);
-            } catch (err) {
-                console.warn("Error eliminando recibo de MongoDB:", err);
-            }
+            }, 'image/png');
         }
-        alert('Recibo eliminado correctamente');
-        loadReceipts();
-        closeReceiptModal();
-    }
 
-    // Inicialización
-    document.addEventListener('DOMContentLoaded', () => {
-
-        loadReceipts();
-        document.getElementById('searchInput').addEventListener('input', (e) => filterReceipts(e.target.value));
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeReceiptModal(); });
-        document.getElementById('receiptModal').addEventListener('click', (e) => { if (e.target.id === 'receiptModal') closeReceiptModal(); });
-        
-        const menuToggle = document.getElementById("menuToggle");
-        const menuItems = document.getElementById("menuItems");
-        const backdrop = document.getElementById("backdrop");
-        if (menuToggle && menuItems && backdrop) {
-            menuToggle.addEventListener("click", () => {
-                menuItems.classList.toggle("show");
-                backdrop.classList.toggle("show");
-            });
-            backdrop.addEventListener("click", () => {
-                menuItems.classList.remove("show");
-                backdrop.classList.remove("show");
-            });
+        async function deleteReceiptById(receiptId) {
+            if (!await showConfirm('¿Estás seguro de que deseas eliminar este recibo?')) return;
+            const receipt = currentReceipts.find(r => r.id === receiptId);
+            if (!receipt) return;
+            let localReceipts = JSON.parse(localStorage.getItem('salesReceipts') || '[]');
+            localReceipts = localReceipts.filter(r => r.id !== receiptId);
+            localStorage.setItem('salesReceipts', JSON.stringify(localReceipts));
+            if (receipt.mongoId) {
+                try {
+                    const token = getToken();
+                    await apiFetch(`/receipts/${receipt.mongoId}`, "DELETE", null, token);
+                } catch (err) {
+                    console.warn("Error eliminando recibo de MongoDB:", err);
+                }
+            }
+            showNotification('Recibo eliminado correctamente', 'success');
+            loadReceipts();
+            closeReceiptModal();
         }
-    });
-</script>
-    
-</script>
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', () => {
+
+            loadReceipts();
+            document.getElementById('searchInput').addEventListener('input', (e) => filterReceipts(e.target.value));
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeReceiptModal(); });
+            document.getElementById('receiptModal').addEventListener('click', (e) => { if (e.target.id === 'receiptModal') closeReceiptModal(); });
+
+            const menuToggle = document.getElementById("menuToggle");
+            const menuItems = document.getElementById("menuItems");
+            const backdrop = document.getElementById("backdrop");
+            if (menuToggle && menuItems && backdrop) {
+                menuToggle.addEventListener("click", () => {
+                    menuItems.classList.toggle("show");
+                    backdrop.classList.toggle("show");
+                });
+                backdrop.addEventListener("click", () => {
+                    menuItems.classList.remove("show");
+                    backdrop.classList.remove("show");
+                });
+            }
+        });
+    </script>
+
+    </script>
 </body>
+
 </html>

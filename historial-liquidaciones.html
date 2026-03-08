@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historial de Liquidaciones</title>
     <script src="adminMode.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/notifications.css">
     <style>
         :root {
             --primary: #2c3e50;
@@ -17,11 +19,15 @@
             --light-gray: #f8f9fa;
             --medium-gray: #6c757d;
             --border: #e9ecef;
-            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             --radius-lg: 12px;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -186,7 +192,7 @@
 
         .liquidation-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         }
 
         .card-header {
@@ -226,9 +232,17 @@
             font-weight: 700;
         }
 
-        .stat-item-value.success { color: var(--success); }
-        .stat-item-value.danger { color: var(--danger); }
-        .stat-item-value.primary { color: var(--accent); }
+        .stat-item-value.success {
+            color: var(--success);
+        }
+
+        .stat-item-value.danger {
+            color: var(--danger);
+        }
+
+        .stat-item-value.primary {
+            color: var(--accent);
+        }
 
         .btn {
             padding: 12px 24px;
@@ -261,7 +275,7 @@
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         .action-buttons {
@@ -315,6 +329,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -325,7 +340,7 @@
             <p>Registro completo de todas las liquidaciones realizadas</p>
         </div>
 
-        
+
 
         <!-- Estadísticas Globales -->
         <div class="global-stats">
@@ -359,18 +374,18 @@
                 <div class="stat-label">Total Señas</div>
             </div>
 
-<!-- Después de la tarjeta "Total Señas" -->
-<div class="stat-card accent">
-    <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
-    <div class="stat-value" id="totalCashInHand">$0</div>
-    <div class="stat-label">Caja Efectivo Total</div>
-</div>
+            <!-- Después de la tarjeta "Total Señas" -->
+            <div class="stat-card accent">
+                <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="stat-value" id="totalCashInHand">$0</div>
+                <div class="stat-label">Caja Efectivo Total</div>
+            </div>
 
-<div class="stat-card accent">
-    <div class="stat-icon"><i class="fas fa-trophy"></i></div>
-    <div class="stat-value" id="bestDay">-</div>
-    <div class="stat-label">Mejor Día</div>
-</div>
+            <div class="stat-card accent">
+                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                <div class="stat-value" id="bestDay">-</div>
+                <div class="stat-label">Mejor Día</div>
+            </div>
         </div>
 
         <!-- Filtros -->
@@ -408,7 +423,9 @@
         </div>
 
         <div id="loadingContainer" class="loading">
-            <div style="width: 50px; height: 50px; border: 4px solid var(--border); border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+            <div
+                style="width: 50px; height: 50px; border: 4px solid var(--border); border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;">
+            </div>
             <p>Cargando historial...</p>
         </div>
 
@@ -423,139 +440,145 @@
 
     <style>
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 
-  <script type="module">
-    import { apiFetch } from "./utils/api.js";
-    import { getToken } from "./utils/auth.js";
-    import "./authCheck.js";
+    <script src="utils/notifications.js" type="module"></script>
+    <script type="module">
+        import { apiFetch } from "./utils/api.js";
+        import { getToken } from "./utils/auth.js";
+        import "./authCheck.js";
 
-    let allLiquidations = [];
-    let filteredLiquidations = [];
+        let allLiquidations = [];
+        let filteredLiquidations = [];
 
-    document.addEventListener("DOMContentLoaded", loadHistory);
+        document.addEventListener("DOMContentLoaded", loadHistory);
 
-    async function loadHistory() {
-        try {
-            const token = getToken();
-            
-            const vendedorId = window.adminModeUtils?.isActive()
-                             ? window.adminModeUtils.getVendedorId()
-                             : null;
+        async function loadHistory() {
+            try {
+                const token = getToken();
 
-            const endpoint = vendedorId
-                           ? `/liquidation/vendedor/${vendedorId}/history`
-                           : '/liquidation/history';
+                const vendedorId = window.adminModeUtils?.isActive()
+                    ? window.adminModeUtils.getVendedorId()
+                    : null;
 
-            allLiquidations = await apiFetch(endpoint, "GET", null, token);
+                const endpoint = vendedorId
+                    ? `/liquidation/vendedor/${vendedorId}/history`
+                    : '/liquidation/history';
 
-            document.getElementById("loadingContainer").style.display = "none";
+                allLiquidations = await apiFetch(endpoint, "GET", null, token);
 
-            if (allLiquidations.length === 0) {
-                document.getElementById("emptyState").style.display = "block";
-                return;
-            }
+                document.getElementById("loadingContainer").style.display = "none";
 
-            filteredLiquidations = [...allLiquidations];
-            updateGlobalStats(allLiquidations);
-            renderLiquidations(filteredLiquidations);
-            setupFilters();
+                if (allLiquidations.length === 0) {
+                    document.getElementById("emptyState").style.display = "block";
+                    return;
+                }
 
-            document.getElementById("liquidationsContainer").style.display = "grid";
+                filteredLiquidations = [...allLiquidations];
+                updateGlobalStats(allLiquidations);
+                renderLiquidations(filteredLiquidations);
+                setupFilters();
 
-        } catch (error) {
-            console.error("Error:", error);
-            document.getElementById("loadingContainer").innerHTML = `
+                document.getElementById("liquidationsContainer").style.display = "grid";
+
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById("loadingContainer").innerHTML = `
                 <div style="color: var(--danger);">
                     <i class="fas fa-exclamation-circle" style="font-size: 48px;"></i>
                     <p>Error al cargar el historial</p>
                 </div>
             `;
-        }
-    }
-    
-function updateGlobalStats(liquidations) {
-    if (liquidations.length === 0) return;
-
-    const currentCash = liquidations[0].finalCash;
-    document.getElementById("currentCash").textContent = `$${currentCash.toLocaleString('es-CO')}`;
-
-    const totalIncome = liquidations.reduce((sum, liq) => {
-        const initialPayments = liq.payments.totalInitialPayments || 0;
-        const regularPayments = liq.payments.total - initialPayments;
-        const commission = liq.payments.commissionPercentage || 0;
-        const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
-        const paymentsAfterComm = regularPayments - paymentsCommAmount;
-        const realIncome = Math.round(paymentsAfterComm + initialPayments);
-        return sum + realIncome;
-    }, 0);
-    document.getElementById("totalIncome").textContent = `$${totalIncome.toLocaleString('es-CO')}`;
-
-    const totalExpenses = liquidations.reduce((sum, l) => sum + l.totalExpenses, 0);
-    document.getElementById("totalExpenses").textContent = `$${totalExpenses.toLocaleString('es-CO')}`;
-
-    const totalPayments = liquidations.reduce((sum, l) => sum + l.payments.total, 0);
-    document.getElementById("totalPayments").textContent = `$${totalPayments.toLocaleString('es-CO')}`;
-
-    const totalInitialPayments = liquidations.reduce((sum, l) => sum + (l.payments.totalInitialPayments || 0), 0);
-    document.getElementById("totalInitialPayments").textContent = `$${totalInitialPayments.toLocaleString('es-CO')}`;
-
-    // 🔥 NUEVO: Calcular total de Caja Efectivo
-    const totalCashInHand = liquidations.reduce((sum, liq) => {
-        const expensesAmount = liq.expenses?.totalAmount || 0;
-        return sum + (liq.payments.total - expensesAmount);
-    }, 0);
-    document.getElementById("totalCashInHand").textContent = `$${totalCashInHand.toLocaleString('es-CO')}`;
-
-    const bestLiquidation = liquidations.reduce((max, l) => 
-        l.finalCash > max.finalCash ? l : max
-    , liquidations[0]);
-
-    const bestDayDate = new Date(bestLiquidation.liquidationDate).toLocaleDateString('es-CO', {
-        day: '2-digit',
-        month: '2-digit'
-    });
-    document.getElementById("bestDay").innerHTML = `${bestDayDate}<br><small style="font-size: 14px;">$${bestLiquidation.finalCash.toLocaleString('es-CO')}</small>`;
-}
-    function renderLiquidations(liquidations) {
-        const container = document.getElementById("liquidationsContainer");
-        const emptyState = document.getElementById("emptyState");
-
-        if (liquidations.length === 0) {
-            container.style.display = "none";
-            emptyState.style.display = "block";
-            return;
+            }
         }
 
-        container.style.display = "grid";
-        emptyState.style.display = "none";
-        
-// Dentro de la función renderLiquidations, reemplaza el contenido de la función map:
-container.innerHTML = liquidations.map(liq => {
-    const initialPayments = liq.payments.totalInitialPayments || 0;
-    const regularPayments = liq.payments.total - initialPayments;
-    const commission = liq.payments.commissionPercentage || 0;
-    const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
-    const paymentsAfterComm = regularPayments - paymentsCommAmount;
-    const realTotalIncome = Math.round(paymentsAfterComm + initialPayments);
-    
-    // 🔥 NUEVO: Calcular Caja Efectivo (Abonos - Gastos)
-    const expensesAmount = liq.expenses?.totalAmount || 0;
-    const cashInHand = Math.round(liq.payments.total - expensesAmount);
+        function updateGlobalStats(liquidations) {
+            if (liquidations.length === 0) return;
 
-    return `
+            const currentCash = liquidations[0].finalCash;
+            document.getElementById("currentCash").textContent = `$${currentCash.toLocaleString('es-CO')}`;
+
+            const totalIncome = liquidations.reduce((sum, liq) => {
+                const initialPayments = liq.payments.totalInitialPayments || 0;
+                const regularPayments = liq.payments.total - initialPayments;
+                const commission = liq.payments.commissionPercentage || 0;
+                const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
+                const paymentsAfterComm = regularPayments - paymentsCommAmount;
+                const realIncome = Math.round(paymentsAfterComm + initialPayments);
+                return sum + realIncome;
+            }, 0);
+            document.getElementById("totalIncome").textContent = `$${totalIncome.toLocaleString('es-CO')}`;
+
+            const totalExpenses = liquidations.reduce((sum, l) => sum + l.totalExpenses, 0);
+            document.getElementById("totalExpenses").textContent = `$${totalExpenses.toLocaleString('es-CO')}`;
+
+            const totalPayments = liquidations.reduce((sum, l) => sum + l.payments.total, 0);
+            document.getElementById("totalPayments").textContent = `$${totalPayments.toLocaleString('es-CO')}`;
+
+            const totalInitialPayments = liquidations.reduce((sum, l) => sum + (l.payments.totalInitialPayments || 0), 0);
+            document.getElementById("totalInitialPayments").textContent = `$${totalInitialPayments.toLocaleString('es-CO')}`;
+
+            // 🔥 NUEVO: Calcular total de Caja Efectivo
+            const totalCashInHand = liquidations.reduce((sum, liq) => {
+                const expensesAmount = liq.expenses?.totalAmount || 0;
+                return sum + (liq.payments.total - expensesAmount);
+            }, 0);
+            document.getElementById("totalCashInHand").textContent = `$${totalCashInHand.toLocaleString('es-CO')}`;
+
+            const bestLiquidation = liquidations.reduce((max, l) =>
+                l.finalCash > max.finalCash ? l : max
+                , liquidations[0]);
+
+            const bestDayDate = new Date(bestLiquidation.liquidationDate).toLocaleDateString('es-CO', {
+                day: '2-digit',
+                month: '2-digit'
+            });
+            document.getElementById("bestDay").innerHTML = `${bestDayDate}<br><small style="font-size: 14px;">$${bestLiquidation.finalCash.toLocaleString('es-CO')}</small>`;
+        }
+        function renderLiquidations(liquidations) {
+            const container = document.getElementById("liquidationsContainer");
+            const emptyState = document.getElementById("emptyState");
+
+            if (liquidations.length === 0) {
+                container.style.display = "none";
+                emptyState.style.display = "block";
+                return;
+            }
+
+            container.style.display = "grid";
+            emptyState.style.display = "none";
+
+            // Dentro de la función renderLiquidations, reemplaza el contenido de la función map:
+            container.innerHTML = liquidations.map(liq => {
+                const initialPayments = liq.payments.totalInitialPayments || 0;
+                const regularPayments = liq.payments.total - initialPayments;
+                const commission = liq.payments.commissionPercentage || 0;
+                const paymentsCommAmount = Math.round(regularPayments * (commission / 100));
+                const paymentsAfterComm = regularPayments - paymentsCommAmount;
+                const realTotalIncome = Math.round(paymentsAfterComm + initialPayments);
+
+                // 🔥 NUEVO: Calcular Caja Efectivo (Abonos - Gastos)
+                const expensesAmount = liq.expenses?.totalAmount || 0;
+                const cashInHand = Math.round(liq.payments.total - expensesAmount);
+
+                return `
         <div class="liquidation-card">
             <div class="card-header">
                 <div class="card-date">
                     <i class="fas fa-calendar"></i>
-                    ${new Date(liq.liquidationDate).toLocaleDateString('es-CO', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                    })}
+                    ${new Date(liq.liquidationDate).toLocaleDateString('es-CO', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                })}
                 </div>
             </div>
 
@@ -605,57 +628,58 @@ container.innerHTML = liquidations.map(liq => {
             </div>
         </div>
     `;
-}).join('');
-    }
-
-    function setupFilters() {
-        const filterDate = document.getElementById("filterDate");
-        const filterNotes = document.getElementById("filterNotes");
-        const clearFilters = document.getElementById("clearFilters");
-
-        filterDate.addEventListener("change", applyFilters);
-        filterNotes.addEventListener("input", applyFilters);
-        clearFilters.addEventListener("click", () => {
-            filterDate.value = "";
-            filterNotes.value = "";
-            applyFilters();
-        });
-    }
-
-    function applyFilters() {
-        const dateValue = document.getElementById("filterDate").value;
-        const notesValue = document.getElementById("filterNotes").value.toLowerCase().trim();
-
-        filteredLiquidations = allLiquidations.filter(liq => {
-            const matchesDate = !dateValue || 
-                new Date(liq.liquidationDate).toISOString().split('T')[0] === dateValue;
-
-            const matchesNotes = !notesValue || 
-                (liq.notes && liq.notes.toLowerCase().includes(notesValue));
-
-            return matchesDate && matchesNotes;
-        });
-
-        renderLiquidations(filteredLiquidations);
-    }
-
-    window.inspectLiquidation = function(id) {
-        sessionStorage.setItem('inspectLiquidationId', id);
-        window.location.href = 'inspeccion-liquidacion.html';
-    };
-
-    window.deleteLiquidation = async function(id) {
-        if (!confirm("¿Estás seguro de eliminar esta liquidación?")) return;
-
-        try {
-            const token = getToken();
-            await apiFetch(`/liquidation/${id}`, "DELETE", null, token);
-            alert("Liquidación eliminada");
-            loadHistory();
-        } catch (error) {
-            alert("Error al eliminar: " + error.message);
+            }).join('');
         }
-    };
-</script>
+
+        function setupFilters() {
+            const filterDate = document.getElementById("filterDate");
+            const filterNotes = document.getElementById("filterNotes");
+            const clearFilters = document.getElementById("clearFilters");
+
+            filterDate.addEventListener("change", applyFilters);
+            filterNotes.addEventListener("input", applyFilters);
+            clearFilters.addEventListener("click", () => {
+                filterDate.value = "";
+                filterNotes.value = "";
+                applyFilters();
+            });
+        }
+
+        function applyFilters() {
+            const dateValue = document.getElementById("filterDate").value;
+            const notesValue = document.getElementById("filterNotes").value.toLowerCase().trim();
+
+            filteredLiquidations = allLiquidations.filter(liq => {
+                const matchesDate = !dateValue ||
+                    new Date(liq.liquidationDate).toISOString().split('T')[0] === dateValue;
+
+                const matchesNotes = !notesValue ||
+                    (liq.notes && liq.notes.toLowerCase().includes(notesValue));
+
+                return matchesDate && matchesNotes;
+            });
+
+            renderLiquidations(filteredLiquidations);
+        }
+
+        window.inspectLiquidation = function (id) {
+            sessionStorage.setItem('inspectLiquidationId', id);
+            window.location.href = 'inspeccion-liquidacion.html';
+        };
+
+        window.deleteLiquidation = async function (id) {
+            if (!await showConfirm("¿Estás seguro de eliminar esta liquidación?")) return;
+
+            try {
+                const token = getToken();
+                await apiFetch(`/liquidation/${id}`, "DELETE", null, token);
+                showNotification("Liquidación eliminada", "success");
+                loadHistory();
+            } catch (error) {
+                showNotification("Error al eliminar: " + error.message, "error");
+            }
+        };
+    </script>
 </body>
+
 </html>
