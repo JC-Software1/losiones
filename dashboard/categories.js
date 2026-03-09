@@ -2719,9 +2719,7 @@ Volver pronto
     URL.revokeObjectURL(link.href);
 }
 
-function viewAllReceipts() {
-    window.location.href = 'recibos.html';
-}
+
 
 function fallbackShare(receipt) {
     const saleData = receipt.saleData;
@@ -2753,7 +2751,7 @@ Gracias por su compra!`;
 // --- hacer globales los botones del modal de recibo ---
 window.shareReceipt = shareReceipt;
 window.downloadReceipt = downloadReceipt;
-window.viewAllReceipts = viewAllReceipts;
+
 window.handleReceiptAction = handleReceiptAction;
 
 function closeReceiptModal() {
@@ -2800,9 +2798,7 @@ async function handleReceiptAction(action, receiptId) {
         case 'download':
             downloadReceipt(receiptId);
             break;
-        case 'view':
-            viewAllReceipts();
-            break;
+
         case 'close':
             break; // nada que hacer
     }
