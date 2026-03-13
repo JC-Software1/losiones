@@ -1383,20 +1383,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("paymentSection").style.display = "none";
     }
 
-    // Menú nuevo
-    const menuToggle = document.getElementById("menuToggle");
-    const menuItems = document.getElementById("menuItems");
-    const backdrop = document.getElementById("backdrop");
-    if (menuToggle && menuItems && backdrop) {
-        menuToggle.addEventListener("click", () => {
-            menuItems.classList.toggle("show");
-            backdrop.classList.toggle("show");
-        });
-        backdrop.addEventListener("click", () => {
-            menuItems.classList.remove("show");
-            backdrop.classList.remove("show");
-        });
-    }
 });
 
 /* ---------- conectar modal nuevo ---------- */

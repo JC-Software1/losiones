@@ -26,8 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let allPayments = [];
     let filteredPayments = [];
 
-    // Configuración del menú
-    setupMenu();
+    // Inicialización
 
     // Inicialización
     try {
@@ -603,29 +602,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         clearFiltersBtn.addEventListener("click", clearFilters);
     }
 
-    function setupMenu() {
-        const menuToggle = document.getElementById("menuToggle");
-        const menuItems = document.getElementById("menuItems");
-        const backdrop = document.getElementById("backdrop");
-        const menuClose = document.getElementById("menuClose");
-
-        if (menuToggle && menuItems && backdrop) {
-            menuToggle.addEventListener("click", () => {
-                menuItems.classList.toggle("show");
-                backdrop.classList.toggle("show");
-                menuToggle.classList.toggle("open");
-            });
-
-            backdrop.addEventListener("click", closeMenu);
-            menuClose.addEventListener("click", closeMenu);
-
-            function closeMenu() {
-                menuItems.classList.remove("show");
-                backdrop.classList.remove("show");
-                menuToggle.classList.remove("open");
-            }
-        }
-    }
 
     function showLoading() {
         paymentsList.innerHTML = `

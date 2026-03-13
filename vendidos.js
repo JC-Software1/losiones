@@ -266,16 +266,3 @@ function updateTotals(products) {
     totalProfitElement.textContent = `${totalProfit.toLocaleString()} COP`;
 }
 
-const menuToggle = document.getElementById('menuToggle');
-const menuItems = document.getElementById('menuItems');
-const backdrop = document.getElementById('backdrop');
-
-menuToggle.addEventListener('click', () => {
-    menuItems.classList.toggle('show');
-    backdrop.classList.toggle('show');
-});
-
-backdrop.addEventListener('click', () => {
-    menuItems.classList.remove('show');
-    backdrop.classList.remove('show');
-});

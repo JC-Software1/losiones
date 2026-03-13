@@ -43,32 +43,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         salesHistory.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar ventas</h3></div>`;
     }
 
-    // Menú
-    const menuToggle = document.getElementById("menuToggle");
-    const menuItems = document.getElementById("menuItems");
-    const backdrop = document.getElementById("backdrop");
-    const menuClose = document.getElementById("menuClose"); // ✅ AGREGAR
-
-    if (menuToggle && menuItems && backdrop) {
-        menuToggle.addEventListener("click", () => {
-            menuItems.classList.toggle("show");
-            backdrop.classList.toggle("show");
-            menuToggle.classList.toggle("open"); // ✅ AGREGAR para animación
-        });
-        backdrop.addEventListener("click", () => {
-            menuItems.classList.remove("show");
-            backdrop.classList.remove("show");
-            menuToggle.classList.remove("open"); // ✅ AGREGAR
-        });
-        // ✅ AGREGAR: Cerrar con botón X
-        if (menuClose) {
-            menuClose.addEventListener("click", () => {
-                menuItems.classList.remove("show");
-                backdrop.classList.remove("show");
-                menuToggle.classList.remove("open");
-            });
-        }
-    }
 });
 
 /* ---------- filtros mejorados ---------- */

@@ -673,7 +673,7 @@
         <!-- ---------- RESUMEN TOTAL ---------- -->
         <!-- Reemplaza el bloque .total-summary completo por: -->
         <div class="total-summary" id="salesSummaryCard" style="cursor:pointer;transition:transform .2s">
-            <h2 id="totalRevenue">$0</h2>
+            <h2 id="totalSold">$0</h2>
             <p>Ingresos totales por ventas</p>
         </div>
         <!-- ---------- ESTADÍSTICAS ---------- -->
@@ -851,7 +851,7 @@
 
         // Abrir modal y cargar % guardado
         salesSummaryCard.addEventListener('click', () => {
-            const total = parseInt(document.getElementById('totalRevenue').textContent.replace(/[^\d]/g, '')) || 0;
+            const total = parseInt(document.getElementById('totalSold').textContent.replace(/[^\d]/g, '')) || 0;
             salesTotalDisplay.textContent = '$' + total.toLocaleString('es-CO');
             document.getElementById('salesCommissionModal').classList.add('show');
             loadSavedSalesCommission();
@@ -934,7 +934,6 @@
 
                 displayProducts(filteredProducts);
                 updateStatistics(filteredProducts);
-                setupMenuHandlers();
 
                 // Filtros
                 searchInput.addEventListener("input", applyFilters);
@@ -1087,7 +1086,7 @@
 
 
         function updateStatistics(products) {
-            const totalRevenue = products.reduce((sum, product) => sum + product.salePrice, 0);
+            const totalSold = products.reduce((sum, product) => sum + product.salePrice, 0);
             const totalProfit = products.reduce((sum, product) => sum + (product.salePrice - product.costPrice), 0);
             const avgMargin = products.length > 0 ?
                 Math.round(products.reduce((sum, product) => sum + ((product.salePrice - product.costPrice) / product.costPrice * 100), 0) / products.length) : 0;
@@ -1095,7 +1094,7 @@
             const bestProduct = products.length > 0 ?
                 products.reduce((best, product) => (product.salePrice - product.costPrice) > (best.salePrice - best.costPrice) ? product : best).name : 'N/A';
 
-            document.getElementById("totalRevenue").textContent = `$${totalRevenue.toLocaleString()}`;
+            document.getElementById("totalSold").textContent = `$${totalSold.toLocaleString()}`;
             document.getElementById("totalProducts").textContent = products.length;
 
             // ✅ Ocultar ganancia total y margen si no tiene permiso
@@ -1201,50 +1200,6 @@ ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
             }
         };
 
-        function setupMenuHandlers() {
-            const menuToggle = document.getElementById('menuToggle');
-            const menuClose = document.getElementById('menuClose');
-            const menuItems = document.getElementById('menuItems');
-            const backdrop = document.getElementById('backdrop');
-
-            function openMenu() {
-                menuItems.classList.add('show');
-                backdrop.classList.add('show');
-                menuToggle.classList.add('open');
-                menuToggle.setAttribute('aria-expanded', 'true');
-                menuItems.setAttribute('aria-hidden', 'false');
-            }
-
-            function closeMenu() {
-                menuItems.classList.remove('show');
-                backdrop.classList.remove('show');
-                menuToggle.classList.remove('open');
-                menuToggle.setAttribute('aria-expanded', 'false');
-                menuItems.setAttribute('aria-hidden', 'true');
-            }
-
-            menuToggle.addEventListener('click', () => {
-                if (menuItems.classList.contains('show')) {
-                    closeMenu();
-                } else {
-                    openMenu();
-                }
-            });
-
-            menuClose.addEventListener('click', closeMenu);
-            backdrop.addEventListener('click', closeMenu);
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && menuItems.classList.contains('show')) {
-                    closeMenu();
-                }
-            });
-
-            const menuLinks = document.querySelectorAll('.menu-link');
-            menuLinks.forEach((link, index) => {
-                link.style.transitionDelay = `${index * 50}ms`;
-            });
-        }
 
         // Función para exportar datos
         window.exportSoldProducts = function () {
@@ -1326,7 +1281,7 @@ ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
                 topCategory: topCategory ? { name: topCategory[0], count: topCategory[1] } : null,
                 mostProfitable,
                 avgTicket,
-                totalRevenue: soldProducts.reduce((sum, product) => sum + product.salePrice, 0),
+                totalSold: soldProducts.reduce((sum, product) => sum + product.salePrice, 0),
                 totalProfit: soldProducts.reduce((sum, product) => sum + (product.salePrice - product.costPrice), 0)
             };
         }
@@ -1352,7 +1307,7 @@ ${profitPercentage >= 30 ? '⚡ Excelente rentabilidad' :
             const message = `
 📊 ANÁLISIS AVANZADO DE VENTAS
 
-💰 Ingresos totales: ${analysis.totalRevenue.toLocaleString()} COP
+💰 Ingresos totales: ${analysis.totalSold.toLocaleString()} COP
 📈 Ganancia total: ${analysis.totalProfit.toLocaleString()} COP
 🎯 Ticket promedio: ${analysis.avgTicket.toLocaleString()} COP
 

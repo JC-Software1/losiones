@@ -65,7 +65,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         showLowStockAlert(); // Alerta real de stock
         showLowMarginAlert(); // Alerta de márgenes
         setupEventListeners();
-        setupMenuHandlers();
 
     } catch (error) {
         console.error("Error al inicializar:", error);
@@ -624,60 +623,6 @@ function showError(message) {
 }
 
 // Configurar manejadores del menú
-function setupMenuHandlers() {
-    const menuToggle = document.getElementById('menuToggle');
-    const menuClose = document.getElementById('menuClose');
-    const menuItems = document.getElementById('menuItems');
-    const backdrop = document.getElementById('backdrop');
-
-    if (!menuToggle || !menuItems || !backdrop) {
-        console.warn("Elementos del menú no encontrados");
-        return;
-    }
-
-    function openMenu() {
-        menuItems.classList.add('show');
-        backdrop.classList.add('show');
-        menuToggle.classList.add('open');
-        menuToggle.setAttribute('aria-expanded', 'true');
-        menuItems.setAttribute('aria-hidden', 'false');
-    }
-
-    function closeMenu() {
-        menuItems.classList.remove('show');
-        backdrop.classList.remove('show');
-        menuToggle.classList.remove('open');
-        menuToggle.setAttribute('aria-expanded', 'false');
-        menuItems.setAttribute('aria-hidden', 'true');
-    }
-
-    menuToggle.addEventListener('click', () => {
-        if (menuItems.classList.contains('show')) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
-    });
-
-    if (menuClose) {
-        menuClose.addEventListener('click', closeMenu);
-    }
-
-    backdrop.addEventListener('click', closeMenu);
-
-    // Cerrar menú con tecla Escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && menuItems.classList.contains('show')) {
-            closeMenu();
-        }
-    });
-
-    // Animación escalonada de los enlaces del menú
-    const menuLinks = document.querySelectorAll('.menu-link');
-    menuLinks.forEach((link, index) => {
-        link.style.transitionDelay = `${index * 50}ms`;
-    });
-}
 
 // Llenar filtros con valores únicos
 function populateFilters(products) {

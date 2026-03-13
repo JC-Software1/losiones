@@ -23,7 +23,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         displayLiquidatedSales(filteredSales);
         updateStatistics(filteredSales);
-        setupMenuHandlers();
 
         // Filtrar las ventas mientras se escribe en el campo de búsqueda
         searchInput.addEventListener("input", applyFilters);
@@ -270,52 +269,6 @@ window.deleteSale = async function (saleId) {
     }
 };
 
-function setupMenuHandlers() {
-    const menuToggle = document.getElementById('menuToggle');
-    const menuClose = document.getElementById('menuClose');
-    const menuItems = document.getElementById('menuItems');
-    const backdrop = document.getElementById('backdrop');
-
-    function openMenu() {
-        menuItems.classList.add('show');
-        backdrop.classList.add('show');
-        menuToggle.classList.add('open');
-        menuToggle.setAttribute('aria-expanded', 'true');
-        menuItems.setAttribute('aria-hidden', 'false');
-    }
-
-    function closeMenu() {
-        menuItems.classList.remove('show');
-        backdrop.classList.remove('show');
-        menuToggle.classList.remove('open');
-        menuToggle.setAttribute('aria-expanded', 'false');
-        menuItems.setAttribute('aria-hidden', 'true');
-    }
-
-    menuToggle.addEventListener('click', () => {
-        if (menuItems.classList.contains('show')) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
-    });
-
-    menuClose.addEventListener('click', closeMenu);
-    backdrop.addEventListener('click', closeMenu);
-
-    // Cerrar menú con tecla Escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && menuItems.classList.contains('show')) {
-            closeMenu();
-        }
-    });
-
-    // Animación escalonada de los enlaces del menú
-    const menuLinks = document.querySelectorAll('.menu-link');
-    menuLinks.forEach((link, index) => {
-        link.style.transitionDelay = `${index * 50}ms`;
-    });
-}
 
 // Función para exportar datos (funcionalidad adicional)
 window.exportLiquidatedData = function () {
