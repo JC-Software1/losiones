@@ -78,10 +78,9 @@ async function loadProducts() {
         const token = getToken();
         const products = await apiFetch("/products", "GET", null, token);
 
-        // Ya no filtramos por "sold" para que los productos agotados 
-        // permanezcan visibles y puedan ser reinventados.
-        allProducts = products;
-        filteredProducts = products;
+        // ✅ El usuario pide que si un producto no tiene stock, no aparezca en inventario
+        allProducts = products.filter(p => (p.stock || 0) > 0);
+        filteredProducts = allProducts;
         displayProducts(allProducts);
         updateStatistics(allProducts);
         populateFilters(allProducts);

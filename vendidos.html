@@ -327,8 +327,48 @@
             border-color: rgba(231, 76, 60, 0.2)
         }
 
-        .profit-low .profit-text {
-            color: var(--danger)
+        .quantity-badge {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-left: 4px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .total-label {
+            font-size: 14px;
+            color: var(--medium-gray);
+            font-weight: 500;
+        }
+
+        .total-value {
+            font-size: 18px;
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, #8e44ad, #9b59b6);
+            color: var(--white);
+        }
+
+        .btn-accent:hover {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 13px;
         }
 
         .product-actions {

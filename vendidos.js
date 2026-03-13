@@ -152,48 +152,67 @@ function displayProducts(products) {
 
     products.forEach(product => {
         const li = document.createElement("li");
+        li.classList.add("product-card", "sold");
+        
         const qty = product.quantity || 1;
         const totalProductPrice = (product.salePrice || 0) * qty;
-        const profit = (product.salePrice || 0) - (product.costPrice || 0);
-        const profitPercentage = product.costPrice ? Math.round((profit / product.costPrice) * 100) : 0;
-
-        // Determinar clase de rentabilidad para estilizado visual
-        let profitClass = "neutral";
-        if (profitPercentage >= 30) profitClass = "high";
-        else if (profitPercentage >= 15) profitClass = "medium";
-        else if (profitPercentage < 10) profitClass = "low";
+        
+        // Determinar icono según tipo de pago
+        const paymentIcon = product.paymentType === 'contado' ? 'fa-check-circle' : 'fa-calendar-alt';
+        const paymentClass = product.paymentType === 'contado' ? 'success' : 'warning';
 
         li.innerHTML = `
             <div class="product-header">
-                <h3>${product.name} <span style="color: #e74c3c; font-size: 12px;">(x${qty})</span></h3>
-                <span class="product-badge">${product.paymentType === 'contado' ? '✅ Contado' : '📅 Cuotas'}</span>
-            </div>
-            
-            <div class="product-details">
-                <div class="price-row">
-                    <span class="detail-label">Cantidad:</span>
-                    <span class="detail-value">${qty} unidades</span>
+                <div class="product-info">
+                    <h3>${product.name} <span class="quantity-badge">x${qty}</span></h3>
+                    <p><i class="fas fa-user-tag"></i> Vendido a: <strong>${product.soldTo || 'Cliente'}</strong></p>
                 </div>
-                
-                <div class="price-row">
-                    <span class="detail-label">Precio unitario:</span>
-                    <span class="detail-value">${(product.salePrice || 0).toLocaleString()} COP</span>
-                </div>
-                
-                <div class="price-row">
-                    <span class="detail-label">Total venta:</span>
-                    <span class="detail-value sale">${totalProductPrice.toLocaleString()} COP</span>
+                <div class="sold-badge">
+                    <i class="fas ${paymentIcon}"></i> ${product.paymentType === 'contado' ? 'Contado' : 'Cuotas'}
                 </div>
             </div>
             
-            <div class="card-actions">
-                <button class="view-sale-btn" data-sale-id="${product.saleId}">
-                    <span class="btn-icon">👁️</span> Ver venta
+            <div class="product-meta">
+                <div class="meta-item">
+                    <i class="fas fa-boxes"></i>
+                    <span>Cantidad: <span class="meta-value">${qty} unidades</span></span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-tag"></i>
+                    <span>Precio unitario: <span class="meta-value">$${(product.salePrice || 0).toLocaleString()}</span></span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>Fecha: <span class="meta-value">${new Date(product.soldDate).toLocaleDateString()}</span></span>
+                </div>
+            </div>
+
+            <div class="profit-section">
+                <div class="total-row">
+                    <span class="total-label">Total Venta</span>
+                    <span class="total-value">$${totalProductPrice.toLocaleString()} COP</span>
+                </div>
+            </div>
+            
+            <div class="product-actions" style="margin-top: 15px; display: flex; gap: 10px;">
+                <button class="view-sale-btn btn btn-accent btn-sm" data-sale-id="${product.saleId}" style="flex: 1; justify-content: center;">
+                    <i class="fas fa-eye"></i> Ver venta
                 </button>
             </div>
         `;
 
         productsList.appendChild(li);
+    });
+
+    // Agregar event listeners para los botones de ver venta
+    const viewButtons = document.querySelectorAll(".view-sale-btn");
+    viewButtons.forEach(button => {
+        button.addEventListener("click", (e) => {
+            const saleId = e.currentTarget.dataset.saleId;
+            if (saleId) {
+                window.location.href = `saleDetails.html?id=${saleId}`;
+            }
+        });
     });
 
     // Agregar event listeners para los botones de eliminar
