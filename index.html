@@ -229,6 +229,25 @@
       margin-left: 6px
     }
 
+    .register-link {
+      text-align: center;
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .register-link a {
+      color: var(--orange-2);
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+
+    .register-link a:hover {
+      color: var(--orange-1);
+      text-decoration: underline;
+    }
+
     /* SECCION DERECHA - WELCOME */
     .right {
       flex: 1;
@@ -449,6 +468,7 @@
 
         <button class="btn-login fade-up" type="submit" style="animation-delay:.1s">Iniciar Sesión</button>
 
+        <p class="register-link">¿No tienes cuenta? <a href="register.html">Regístrate aquí</a></p>
 
       </form>
     </section>

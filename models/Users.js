@@ -47,7 +47,10 @@ const UserSchema = new mongoose.Schema({
     // NUEVOS CAMPOS
     fechaPago: { type: Date, default: null },
     fechaVencimiento: { type: Date, default: null },
-    diasAvisoVencimiento: { type: Number, default: 5 }
+    diasAvisoVencimiento: { type: Number, default: 5 },
+    motivoBloqueo: { type: String, default: '' },
+    fechaBloqueo: { type: Date, default: null },
+    pagado: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);
