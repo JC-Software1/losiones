@@ -519,6 +519,14 @@ function showMarginPreview(margin, profit) {
         Margen: ${margin}% • Ganancia: ${profit.toLocaleString()}
     `;
 }
+
+// Función para limpiar la vista previa del margen
+function clearMarginPreview() {
+    const previewElement = document.getElementById('marginPreview');
+    if (previewElement) {
+        previewElement.remove();
+    }
+}
 // Guardar producto
 // Guardar producto
 async function saveProduct() {
