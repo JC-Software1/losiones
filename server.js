@@ -23,7 +23,7 @@ app.use(express.json());
 
 // 🟢 Habilitar CORS para permitir peticiones desde el frontend
 app.use(cors({
-    origin: ["https://jc-c.netlify.app", "http://127.0.0.1:5502", "http://127.0.0.1:5503"], // Ajusta según la URL de tu frontend
+    origin: ["https://jc-c.netlify.app", "https://jc-c.onrender.com", "https://losiones-1.onrender.com", "http://127.0.0.1:5502", "http://127.0.0.1:5503"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
