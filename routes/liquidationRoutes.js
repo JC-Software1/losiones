@@ -7,23 +7,15 @@ const Expense = require("../models/Expense");
 const router = express.Router();
 
 async function getSalesForLiquidation(userId) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
-
     return await Sale.find({
         user: userId,
         $or: [
             // Ventas activas (no liquidadas)
             { settled: false },
-            // Ventas liquidadas HOY (para incluir el último pago)
-            {
-                settled: true,
-                settledDate: {
-                    $gte: today,
-                    $lte: endOfDay
-                }
+            // Ventas ya liquidadas pero que tienen abonos pendientes de liquidar por día
+            { 
+                settled: true, 
+                "payments.liquidatedDay": false 
             }
         ]
     }).lean().select('_id clientName payments advancePayment settled settledDate');
