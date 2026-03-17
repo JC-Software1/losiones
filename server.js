@@ -40,6 +40,14 @@ app.use("/api/expenses", expenseRoutes);
 
 
 const PORT = process.env.PORT || 5000;
+
+// Ruta manual para probar bloqueo de suscripciones (eliminar en producción)
+app.get("/api/test-bloqueo", async (req, res) => {
+    const dias = parseInt(req.query.dias) || 30;
+    await checkExpiredSubscriptions(dias);
+    res.json({ message: "Verificación de suscripciones ejecutada" });
+});
+
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
 
 // ============================================
@@ -57,7 +65,7 @@ function startCronJobs() {
     checkExpiredSubscriptions();
 }
 
-async function checkExpiredSubscriptions() {
+async function checkExpiredSubscriptions(diasPrueba = null) {
     try {
         console.log('🔍 Verificando suscripciones vencidas...');
         const now = new Date();
@@ -72,7 +80,12 @@ async function checkExpiredSubscriptions() {
         for (const user of usersToCheck) {
             const fechaCreacion = new Date(user.createdAt);
             const fechaComparar = new Date(fechaCreacion);
-            fechaComparar.setMonth(fechaComparar.getMonth() + 1);
+            
+            if (diasPrueba) {
+                fechaComparar.setDate(fechaComparar.getDate() - diasPrueba);
+            } else {
+                fechaComparar.setMonth(fechaComparar.getMonth() + 1);
+            }
             
             if (now >= fechaComparar) {
                 user.bloqueado = true;

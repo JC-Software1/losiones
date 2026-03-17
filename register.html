@@ -266,7 +266,7 @@
   </div>
 
   <script>
-    const API_URL = 'https://jc-c.onrender.com/api/auth';
+    const API_URL = 'https://losiones-1.onrender.com/api/auth';
 
     function showAlert(message, type) {
       const alert = document.createElement('div');
@@ -337,18 +337,11 @@
 
         const data = await response.json();
 
-        if (data.token || data._id) {
-          showAlert('¡Cuenta creada exitosamente! Redirigiendo...', 'success');
+        if (response.ok) {
+          showAlert(data.message || '¡Cuenta creada exitosamente! Redirigiendo...', 'success');
           
-          if (data.token) {
-            localStorage.setItem('token', data.token);
-          }
-          if (data.user) {
-            localStorage.setItem('user', JSON.stringify(data.user));
-          }
-
           setTimeout(() => {
-            window.location.href = 'admin.html';
+            window.location.href = 'login.html';
           }, 1500);
         } else {
           showAlert(data.error || 'Error al crear la cuenta', 'error');
