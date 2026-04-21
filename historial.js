@@ -1,6 +1,7 @@
 /* ---------- módulos ---------- */
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import { generatePOS } from "./utils/invoiceGenerator.js";
 import "./authCheck.js";
 
 /* ---------- referencias DOM ---------- */
@@ -132,11 +133,13 @@ function renderSales(list) {
 
             <div class="sale-actions">
                 <button class="btn btn-info btn-sm"><i class="fas fa-eye"></i> Info</button>
+                <button class="btn btn-success btn-sm btn-print"><i class="fas fa-print"></i> Factura POS</button>
                 <button class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Eliminar</button>
             </div>
         `;
 
         card.querySelector(".btn-info").onclick = () => viewSaleDetails(sale);
+        card.querySelector(".btn-print").onclick = () => window.generateInvoice(sale._id);
         card.querySelector(".btn-danger").onclick = () => deleteSale(sale._id, card);
 
         salesHistory.appendChild(card);
@@ -182,4 +185,25 @@ window.clearAllFilters = function () {
     dateInput.value = "";
     dayFilter.value = "";
     applyFilters();
+};
+/**
+ * Genera la factura POS para una venta pendiente/historial
+ */
+window.generateInvoice = function (saleId) {
+    const sale = sales.find(s => s._id === saleId);
+    if (!sale) {
+        showNotification("No se encontró la información de la venta.", "error");
+        return;
+    }
+
+    const totalPaid = sale.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+    
+    // Preparar datos para generatePOS
+    const saleDataForInvoice = {
+        ...sale,
+        remainingBalance: sale.price - totalPaid,
+        advancePayment: sale.advancePayment || 0
+    };
+
+    generatePOS(saleDataForInvoice);
 };

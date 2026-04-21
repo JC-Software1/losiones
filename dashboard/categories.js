@@ -1,6 +1,7 @@
 /* ---------- módulos (sin cambios) ---------- */
 import { apiFetch } from "../utils/api.js";
 import { getToken } from "../utils/auth.js";
+import { generatePOS } from "../utils/invoiceGenerator.js";
 import "../keepAlive.js";
 
 /* ---------- referencias DOM (sin cambios) ---------- */
@@ -2443,150 +2444,8 @@ window.closeReceiptModal = function () {
     }
 };
 
-// ✅ Función para generar ticket POS
-window.generatePOS = function (receiptData) {
-    const saleData = receiptData.saleData;
-    const isContado = saleData.paymentType === 'contado';
-
-    // Generar contenido del ticket en texto plano
-    const ticketText = `
-================================
-      ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
-================================
-Fecha: ${new Date().toLocaleDateString('es-CO')}
-Hora: ${new Date().toLocaleTimeString('es-CO')}
-
---------------------------------
-CLIENTE
---------------------------------
-${saleData.clientName}
-${saleData.clientAddress || 'Sin dirección'}
-
---------------------------------
-PRODUCTOS
---------------------------------
-${saleData.products ? saleData.products.map((p, i) => {
-        const qty = p.quantity || 1;
-        const subtotal = (p.salePrice || 0) * qty;
-        return `${i + 1}. ${p.name} (x${qty})
-   $${p.salePrice.toLocaleString('es-CO')} c/u = $${subtotal.toLocaleString('es-CO')}`;
-    }).join('\n') : saleData.productName}
-
---------------------------------
-DETALLE DE PAGO
---------------------------------
-Total: $${saleData.price.toLocaleString('es-CO')}
-Tipo: ${isContado ? 'CONTADO' : 'A CUOTAS'}
-
-${!isContado ? `Cuotas: ${saleData.numberOfInstallments}
-Valor cuota: $${(saleData.paymentPerInstallment || 0).toLocaleString('es-CO')}
-Pago inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}` : `Pago realizado: $${saleData.price.toLocaleString('es-CO')}
-SALDO: $0`}
-
---------------------------------
-${isContado ? '✓ PAGO COMPLETO' : `Saldo pendiente: $${(saleData.remainingBalance || 0).toLocaleString('es-CO')}`}
-================================
-
-Gracias por su compra!
-Volver pronto
-
-================================
-`;
-
-    // Abrir ventana de impresión
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-
-    if (!printWindow) {
-        alert("⚠️ El navegador bloquinó la ventana de impresión. Por favor permite las ventanas emergentes e intenta de nuevo.");
-        return;
-    }
-
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Ticket POS - ${saleData.clientName}</title>
-            <style>
-                @media print {
-                    body { 
-                        margin: 0; 
-                        padding: 10px;
-                        font-family: 'Courier New', monospace;
-                        font-size: 12px;
-                    }
-                    @page {
-                        size: 58mm auto;
-                        margin: 0;
-                    }
-                }
-                body {
-                    font-family: 'Courier New', monospace;
-                    font-size: 12px;
-                    white-space: pre-wrap;
-                    width: 58mm;
-                    margin: 0 auto;
-                }
-                .header { text-align: center; font-weight: bold; }
-                .divider { border-bottom: 1px dashed #000; margin: 5px 0; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-================================
-      ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
-================================
-Fecha: ${new Date().toLocaleDateString('es-CO')}
-Hora: ${new Date().toLocaleTimeString('es-CO')}
-
---------------------------------
-CLIENTE
---------------------------------
-${saleData.clientName}
-${saleData.clientAddress || 'Sin dirección'}
-
---------------------------------
-PRODUCTOS
---------------------------------
-${saleData.products ? saleData.products.map((p, i) => {
-        const qty = p.quantity || 1;
-        const subtotal = (p.salePrice || 0) * qty;
-        return `${i + 1}. ${p.name} (x${qty})
-   $${p.salePrice.toLocaleString('es-CO')} c/u = $${subtotal.toLocaleString('es-CO')}`;
-    }).join('\n') : saleData.productName}
-
---------------------------------
-DETALLE DE PAGO
---------------------------------
-Total: $${saleData.price.toLocaleString('es-CO')}
-Tipo: ${isContado ? 'CONTADO' : 'A CUOTAS'}
-
-${!isContado ? `Cuotas: ${saleData.numberOfInstallments}
-Valor cuota: $${(saleData.paymentPerInstallment || 0).toLocaleString('es-CO')}
-Pago inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}` : `Pago realizado: $${saleData.price.toLocaleString('es-CO')}
-SALDO: $0`}
-
---------------------------------
-${isContado ? '✓ PAGO COMPLETO' : `Saldo pendiente: $${(saleData.remainingBalance || 0).toLocaleString('es-CO')}`}
-================================
-
-Gracias por su compra!
-Volver pronto
-
-================================
-            </div>
-            <script>
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                        window.close();
-                    }, 500);
-                };
-            </script>
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-}
+// ✅ Función para generar ticket POS (Reutilizada de la utilidad central)
+window.generatePOS = generatePOS;
 
 // Funciones para compartir y descargar
 async function shareReceipt(receiptId) {

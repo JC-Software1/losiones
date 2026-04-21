@@ -27,6 +27,15 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
+// Ruta manual para probar bloqueo de suscripciones (eliminar en producción)
+const User = require('./models/Users');
+app.get("/api/test-bloqueo", async (req, res) => {
+    const dias = parseInt(req.query.dias) || 30;
+    await checkExpiredSubscriptions(dias);
+    res.json({ message: "Verificación de suscripciones ejecutada" });
+});
+
 // Rutas
 app.use("/api/auth", authRoutes);
 app.use("/api/sales", salesRoutes);
@@ -41,20 +50,11 @@ app.use("/api/expenses", expenseRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-// Ruta manual para probar bloqueo de suscripciones (eliminar en producción)
-app.get("/api/test-bloqueo", async (req, res) => {
-    const dias = parseInt(req.query.dias) || 30;
-    await checkExpiredSubscriptions(dias);
-    res.json({ message: "Verificación de suscripciones ejecutada" });
-});
-
 app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
 
 // ============================================
 // 🔥 CRON JOBS - Verificación de suscripciones
 // ============================================
-const User = require('./models/Users');
-
 function startCronJobs() {
     console.log('⏰ Servicio de Cron Jobs iniciado.');
     

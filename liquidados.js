@@ -1,5 +1,6 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import { generatePOS } from "./utils/invoiceGenerator.js";
 import "./authCheck.js";
 
 let sales = [];
@@ -145,6 +146,9 @@ function displayLiquidatedSales(salesList) {
             <div class="sale-actions">
                 <button class="btn btn-info" onclick="showSaleDetails('${sale._id}')">
                     <i class="fas fa-info-circle"></i> Ver detalles
+                </button>
+                <button class="btn btn-success" onclick="generateInvoice('${sale._id}')">
+                    <i class="fas fa-print"></i> Factura POS
                 </button>
                 <button class="btn btn-danger" onclick="deleteSale('${sale._id}')">
                     <i class="fas fa-trash-alt"></i> Eliminar
@@ -385,4 +389,23 @@ window.showAdvancedStats = function () {
     `;
 
     showNotification(message, 'info', 'Estadísticas Avanzadas');
+};
+/**
+ * Genera la factura POS para una venta liquidada
+ */
+window.generateInvoice = function (saleId) {
+    const sale = filteredSales.find(s => s._id === saleId);
+    if (!sale) {
+        showNotification("No se encontró la información de la venta.", "error");
+        return;
+    }
+
+    // Preparar el objeto saleData esperado por generatePOS
+    const saleDataForInvoice = {
+        ...sale,
+        paymentType: 'contado', 
+        remainingBalance: 0
+    };
+
+    generatePOS(saleDataForInvoice);
 };
