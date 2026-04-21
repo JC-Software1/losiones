@@ -2,16 +2,47 @@
  * Utility to generate and print POS invoices for thermal printers (58mm).
  * Reuses the logic established in the sales system.
  */
+import { apiFetch } from "./api.js";
+import { getToken } from "./auth.js";
 
-export function generatePOS(data) {
+export async function generatePOS(data) {
+    // Abrir ventana de impresión INMEDIATAMENTE para evitar bloqueo del navegador
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+
+    if (!printWindow) {
+        alert("⚠️ El navegador bloqueó la ventana de impresión. Por favor permite las ventanas emergentes e intenta de nuevo.");
+        return;
+    }
+
+    // Escribir un estado de carga inicial
+    printWindow.document.write('<html><body><div style="text-align:center;padding:20px;font-family:monospace;">Generando ticket...</div></body></html>');
+
+    // Intentar obtener info del negocio
+    let bizInfo = { businessName: "", businessNit: "" };
+    try {
+        const token = getToken();
+        if (token) {
+            bizInfo = await apiFetch("/auth/business-info", "GET", null, token);
+        }
+    } catch (e) {
+        console.error("Error al obtener info de negocio para ticket:", e);
+    }
+
     // Si recibimos receiptData (formato de categories.js), extraemos saleData
     // Si no, asumimos que 'data' ya es el saleData
     const saleData = data.saleData || data;
     const isContado = saleData.paymentType === 'contado';
 
+    // Construir el encabezado del negocio si existe
+    const bizHeader = bizInfo.businessName 
+        ? `${bizInfo.businessName.toUpperCase()}
+${bizInfo.businessNit ? `NIT: ${bizInfo.businessNit}` : ''}
+================================`
+        : '';
+
     // Generar contenido del ticket en texto plano
     const ticketText = `
-================================
+${bizHeader}
       ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
 ================================
 Fecha: ${new Date().toLocaleDateString('es-CO')}
@@ -54,14 +85,8 @@ Volver pronto
 ================================
 `;
 
-    // Abrir ventana de impresión
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-
-    if (!printWindow) {
-        alert("⚠️ El navegador bloqueó la ventana de impresión. Por favor permite las ventanas emergentes e intenta de nuevo.");
-        return;
-    }
-
+    // Limpiar el contenido de "Generando ticket..." y escribir la factura real
+    printWindow.document.open();
     printWindow.document.write(`
         <!DOCTYPE html>
         <html>

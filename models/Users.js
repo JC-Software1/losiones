@@ -50,7 +50,10 @@ const UserSchema = new mongoose.Schema({
     diasAvisoVencimiento: { type: Number, default: 5 },
     motivoBloqueo: { type: String, default: '' },
     fechaBloqueo: { type: Date, default: null },
-    pagado: { type: Boolean, default: false }
+    pagado: { type: Boolean, default: false },
+    // CONFIGURACIÓN DE NEGOCIO PARA FACTURAS
+    businessName: { type: String, default: "" },
+    businessNit: { type: String, default: "" }
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);

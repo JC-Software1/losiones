@@ -878,4 +878,50 @@ router.post("/desbloquear", auth, async (req, res) => {
   }
 });
 
+/* ----------  INFO DE NEGOCIO PARA FACTURAS ---------- */
+router.get("/business-info", auth, async (req, res) => {
+  try {
+    let user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+    // Si es vendedor (tipo 1), buscar la info de su jefe
+    if (user.tipo === 1 && user.jefe) {
+      const jefe = await User.findById(user.jefe);
+      if (jefe) {
+        return res.json({
+          businessName: jefe.businessName || "",
+          businessNit: jefe.businessNit || ""
+        });
+      }
+    }
+
+    // De lo contrario devolver su propia info
+    res.json({
+      businessName: user.businessName || "",
+      businessNit: user.businessNit || ""
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Error al obtener info de negocio" });
+  }
+});
+
+router.put("/business-info", auth, async (req, res) => {
+  try {
+    const { businessName, businessNit } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { businessName, businessNit },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+    res.json({
+      message: "Información de negocio actualizada",
+      businessName: user.businessName,
+      businessNit: user.businessNit
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Error al actualizar info de negocio" });
+  }
+});
+
 module.exports = router;
