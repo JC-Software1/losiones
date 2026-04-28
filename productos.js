@@ -19,6 +19,7 @@ const inputCategory = document.getElementById("productCategory");
 const inputBrand = document.getElementById("productBrand");
 const inputSize = document.getElementById("productSize");
 const inputQuantity = document.getElementById("productQuantity");
+const inputBarcode = document.getElementById("productBarcode");
 
 // Variables globales
 let products = [];
@@ -134,6 +135,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadProducts();
         showLowStockAlert(); // ✅ Mostrar alerta de stock bajo
         setupEventListeners();
+
+        // ✅ Escuchar escaneo global
+        window.addEventListener('barcodeScanned', (e) => {
+            const code = e.detail.code;
+            console.log("📥 Código recibido en Productos:", code);
+            
+            // Si el formulario está visible (rellenarlo)
+            if (inputBarcode) {
+                inputBarcode.value = code;
+                inputBarcode.classList.add('highlight-glow'); // Efecto visual opcional
+                setTimeout(() => inputBarcode.classList.remove('highlight-glow'), 1000);
+            }
+        });
 
         // ✅ Verificar si venimos de "Inventario" para reinventar
         const reinventData = localStorage.getItem('reinventarProduct');
@@ -539,6 +553,7 @@ async function saveProduct() {
         category: inputCategory.value.trim(),
         brand: inputBrand.value.trim(),
         size: inputSize.value.trim() || null,
+        barcode: inputBarcode.value.trim() || null,
         stock: stock
     };
 
@@ -634,6 +649,7 @@ window.restockProduct = function (productId) {
     inputCategory.value = product.category;
     inputBrand.value = product.brand;
     inputSize.value = product.size || "";
+    inputBarcode.value = product.barcode || "";
     inputQuantity.value = 1; // Default 1 para reinventar
 
     // Cambiar visualmente el formulario
@@ -664,6 +680,7 @@ window.editProduct = function (productId) {
     inputCategory.value = product.category;
     inputBrand.value = product.brand;
     inputSize.value = product.size || "";
+    inputBarcode.value = product.barcode || "";
     inputQuantity.value = product.stock || 1;
 
     formTitle.innerHTML = '<i class="fas fa-edit"></i> Editar Producto';
@@ -693,6 +710,7 @@ async function updateProduct() {
         category: inputCategory.value.trim(),
         brand: inputBrand.value.trim(),
         size: inputSize.value.trim() || null,
+        barcode: inputBarcode.value.trim() || null,
         stock: stock,
         // Al actualizar/reinventar, si hay stock el producto ya no está "vendido"
         sold: stock <= 0,

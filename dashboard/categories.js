@@ -948,6 +948,41 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.togglePaymentFields();
     }
 
+    // ✅ Escuchar escaneo global de códigos de barras
+    window.addEventListener('barcodeScanned', async (e) => {
+        const code = e.detail.code;
+        console.log("📥 Código recibido en Ventas:", code);
+        
+        try {
+            const token = getToken();
+            const products = await apiFetch("/products", "GET", null, token);
+            
+            // Buscar producto por código de fábrica
+            const found = products.find(p => p.barcode === code);
+            
+            if (found) {
+                if ((found.stock || 0) <= 0) {
+                    showNotification(`❌ El producto "${found.name}" no tiene stock disponible`, 'error');
+                    return;
+                }
+                
+                // Si ya existe la función selectProduct, usarla
+                if (typeof selectProduct === 'function') {
+                    selectProduct(found, 1);
+                    showNotification(`✅ Producto añadido: ${found.name}`, 'success');
+                } else {
+                    // Fallback si selectProduct no es global 
+                    // (aunque debería serlo en scope de módulo si se importa correctamente)
+                    console.warn("selectProduct no está definida, intentando buscar en el DOM");
+                }
+            } else {
+                showNotification(`⚠️ Producto no encontrado (Código: ${code})`, 'warning');
+            }
+        } catch (error) {
+            console.error("Error al procesar código de barras:", error);
+        }
+    });
+
     document.addEventListener("click", (e) => {
         const dropdown = document.getElementById("productDropdown");
         const panel = document.getElementById("productDropdownPanel");
