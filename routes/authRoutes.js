@@ -644,7 +644,7 @@ router.put('/vendedor/:id/permisos-detallados', auth, async (req, res) => {
 // Ruta para obtener los permisos del usuario actual (para el frontend)
 router.get('/mis-permisos', auth, async (req, res) => {
     try {
-        const usuario = await User.findById(req.user.id);
+        const usuario = await User.findById(req.user.id).populate('linkedVendedor', 'name _id');
         
         if (!usuario) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -653,7 +653,8 @@ router.get('/mis-permisos', auth, async (req, res) => {
         res.json({
             permisosDetallados: usuario.permisosDetallados || {},
             permisos: usuario.permisos,
-            tipo: usuario.tipo
+            tipo: usuario.tipo,
+            linkedVendedor: usuario.linkedVendedor // Incluir datos del vendedor enlazado
         });
     } catch (error) {
         console.error('Error al obtener mis permisos:', error);
@@ -921,6 +922,44 @@ router.put("/business-info", auth, async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ error: "Error al actualizar info de negocio" });
+  }
+});
+
+/* ----------  ENLACE DE ADMINISTRADOR (PERSISTENCIA) ---------- */
+router.post("/link-vendedor/:vendedorId", auth, async (req, res) => {
+  try {
+    if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const { vendedorId } = req.params;
+    const vendedor = await User.findById(vendedorId);
+
+    if (!vendedor || vendedor.tipo !== 1) {
+      return res.status(404).json({ error: "Vendedor no encontrado o inválido" });
+    }
+
+    await User.findByIdAndUpdate(req.user.id, { linkedVendedor: vendedorId });
+    
+    res.json({ 
+      message: "Vendedor enlazado correctamente",
+      vendedor: { id: vendedor._id, name: vendedor.name }
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Error al enlazar vendedor" });
+  }
+});
+
+router.delete("/link-vendedor", auth, async (req, res) => {
+  try {
+    if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    await User.findByIdAndUpdate(req.user.id, { linkedVendedor: null });
+    res.json({ message: "Vendedor desenlazado correctamente" });
+  } catch (error) {
+    res.status(500).json({ error: "Error al desenlazar vendedor" });
   }
 });
 

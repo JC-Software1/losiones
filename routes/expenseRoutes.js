@@ -77,10 +77,9 @@ router.get("/vendedor/:vendedorId", auth, async (req, res) => {
 router.get("/", auth, checkPermission('verGastos'), async (req, res) => {
     try {
         // SIN filtro de liquidatedDay - mostrar TODOS los gastos
-        const query = {};
-        if (req.user.tipo === 1) {
-            query.user = req.user.id;
-        }
+        const query = (req.user.tipo === 1 || req.user.linkedVendedor) 
+            ? { user: req.user.linkedVendedor || req.user.id } 
+            : {};
         
         const expenses = await Expense.find(query).sort({ date: -1 });
         res.json(expenses);
@@ -103,8 +102,8 @@ router.get("/by-date/:date", auth, checkPermission('verGastos'), async (req, res
             }
         };
         
-        if (req.user.tipo === 1) {
-            query.user = req.user.id;
+        if (req.user.tipo === 1 || req.user.linkedVendedor) {
+            query.user = req.user.linkedVendedor || req.user.id;
         }
 
         const expenses = await Expense.find(query);
@@ -134,7 +133,7 @@ router.post("/", auth, checkPermission('crearGastos'), async (req, res) => {
         }
 
         const expense = new Expense({
-            user: req.user.id,
+            user: req.user.linkedVendedor || req.user.id,
             date: date || new Date(),
             items
         });
@@ -196,8 +195,8 @@ router.delete("/:id", auth, checkPermission('eliminarGastos'), async (req, res) 
 router.get("/total", auth, checkPermission('verGastos'), async (req, res) => {
     try {
         const query = { liquidatedDay: false };
-        if (req.user.tipo === 1) {
-            query.user = req.user.id;
+        if (req.user.tipo === 1 || req.user.linkedVendedor) {
+            query.user = req.user.linkedVendedor || req.user.id;
         }
         
         const expenses = await Expense.find(query);

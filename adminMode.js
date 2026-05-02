@@ -1,22 +1,26 @@
 /* ============================================================
-   SISTEMA DE MODO ADMINISTRADOR GLOBAL
-   - Detecta automáticamente si estás en modo admin
-   - Redirige peticiones al vendedor seleccionado
+   SISTEMA DE MODO ADMINISTRADOR GLOBAL v2.0 (Persistente)
+   - Detecta enlace de administrador desde el servidor
+   - Sincroniza estado con la base de datos
    - Muestra banner informativo en todas las páginas
-   - Compatible con tipo 2 (admin) y tipo 3 (superadmin)
+   - Compatible con todas las rutas del backend de forma automática
    ============================================================ */
 
 (function() {
     'use strict';
 
+    const API_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+        ? 'http://localhost:5000/api/auth'
+        : `${window.location.origin}/api/auth`;
+
+    function getToken() {
+        return localStorage.getItem('token');
+    }
+
     function isAdminMode() {
         const adminMode = sessionStorage.getItem('adminMode');
         const vendedorId = sessionStorage.getItem('vendedorId');
         return adminMode === 'true' && vendedorId;
-    }
-
-    function getVendedorId() {
-        return sessionStorage.getItem('vendedorId');
     }
 
     function getVendedorName() {
@@ -78,150 +82,79 @@
         }
     }
 
-    window.exitAdminMode = function() {
+    window.exitAdminMode = async function() {
+        try {
+            const token = getToken();
+            if (token) {
+                await fetch(`${API_URL}/link-vendedor`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            }
+        } catch (error) {
+            console.error("Error al desenlazar en servidor:", error);
+        }
+
         sessionStorage.removeItem('adminMode');
         sessionStorage.removeItem('vendedorId');
         sessionStorage.removeItem('vendedorName');
         window.location.href = 'GestorVendedores.html';
     };
 
-    // INTERCEPTOR DE FETCH
-    const originalFetch = window.fetch;
-    window.fetch = function(...args) {
-        let [url, options] = args;
+    // SINCRONIZACIÓN CON EL SERVIDOR
+    async function syncWithServer() {
+        const token = getToken();
+        if (!token) return;
 
-        if (isAdminMode() && typeof url === 'string') {
-            const vendedorId = getVendedorId();
+        try {
+            const response = await fetch(`${API_URL}/mis-permisos`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
 
-            // GASTOS
-// GASTOS
-if (url.includes('/api/expenses') && !url.includes('/vendedor/')) {
-    const baseUrl = url.split('/api/expenses')[0];
-    const pathAfter = url.split('/api/expenses')[1] || '';
-    const method = options?.method || 'GET';
-    
-    // GET: Redirigir a /vendedor/:id
-    if (method === 'GET' && (!pathAfter || pathAfter === '' || pathAfter === '/')) {
-        url = `${baseUrl}/api/expenses/vendedor/${vendedorId}`;
-        console.log('📊 Redirigiendo gastos del vendedor (GET):', url);
-    }
-    // POST: Redirigir a /vendedor/:id/new
-    else if (method === 'POST' && (!pathAfter || pathAfter === '' || pathAfter === '/')) {
-        url = `${baseUrl}/api/expenses/vendedor/${vendedorId}/new`;
-        console.log('📊 Redirigiendo creación de gasto (POST):', url);
-    }
-}
+            if (!response.ok) return;
 
-            // PRODUCTOS
-            if (url.includes('/api/products') && !url.includes('/vendedor/')) {
-                const baseUrl = url.split('/api/products')[0];
-                const pathAfter = url.split('/api/products')[1] || '';
-                
-                if (!pathAfter || pathAfter === '' || pathAfter === '/' || pathAfter === '/last') {
-                    url = `${baseUrl}/api/products/vendedor/${vendedorId}`;
-                    console.log('📦 Redirigiendo productos del vendedor:', url);
-                }
-            }
-
-            // LIQUIDACIONES
-            if (url.includes('/api/liquidations') && !url.includes('/vendedor/')) {
-                const baseUrl = url.split('/api/liquidations')[0];
-                const pathAfter = url.split('/api/liquidations')[1] || '';
-                
-                if (pathAfter === '/pending' || pathAfter === '/history' || !pathAfter || pathAfter === '/') {
-                    // Construir nueva URL con parámetro
-                    if (pathAfter === '/pending') {
-                        url = `${baseUrl}/api/liquidations/vendedor/${vendedorId}/pending`;
-                    } else if (pathAfter === '/history') {
-                        url = `${baseUrl}/api/liquidations/vendedor/${vendedorId}/history`;
-                    } else {
-                        url = `${baseUrl}/api/liquidations/vendedor/${vendedorId}`;
+            const data = await response.json();
+            
+            // Si el servidor dice que estamos enlazados
+            if (data.linkedVendedor) {
+                sessionStorage.setItem('adminMode', 'true');
+                sessionStorage.setItem('vendedorId', data.linkedVendedor._id);
+                sessionStorage.setItem('vendedorName', data.linkedVendedor.name);
+                showAdminBanner();
+            } else {
+                // Si no hay enlace en servidor pero sí en sesión, limpiar sesión (salvo que acabemos de iniciarla)
+                if (isAdminMode()) {
+                    // Solo limpiar si no estamos en GestorVendedores (donde se inicia el proceso)
+                    if (!window.location.href.includes('GestorVendedores.html')) {
+                        console.log("Sincronización: Limpiando modo admin (no enlazado en servidor)");
+                        sessionStorage.removeItem('adminMode');
+                        sessionStorage.removeItem('vendedorId');
+                        sessionStorage.removeItem('vendedorName');
+                        window.location.reload();
                     }
-                    console.log('💰 Redirigiendo liquidaciones del vendedor:', url);
                 }
             }
-
-            // VENTAS
-// VENTAS
-if (url.includes('/api/sales') && !url.includes('/vendedor/')) {
-    const baseUrl = url.split('/api/sales')[0];
-    const pathAfter = url.split('/api/sales')[1] || '';
-    
-    // Manejar específicamente el endpoint de ventas liquidadas
-    if (pathAfter === '/settled' || pathAfter.startsWith('/settled')) {
-        url = `${baseUrl}/api/sales/vendedor/${vendedorId}/settled`;
-        console.log('✅ Redirigiendo ventas liquidadas del vendedor:', url);
-    }
-    // Otras rutas de ventas (excepto /new y /payment)
-    else if (!url.includes('/new') && !url.includes('/payment')) {
-        if (!pathAfter || pathAfter === '' || pathAfter === '/') {
-            url = `${baseUrl}/api/sales/vendedor/${vendedorId}`;
-            console.log('📄 Redirigiendo ventas del vendedor:', url);
+        } catch (error) {
+            console.error("Error sync adminMode:", error);
         }
     }
-}
-
-            // LIQUIDACIONES
-if (url.includes('/api/liquidation') && !url.includes('/vendedor/')) {
-    const baseUrl = url.split('/api/liquidation')[0];
-    const pathAfter = url.split('/api/liquidation')[1] || '';
-    
-    // GET: Redirigir rutas de consulta
-    if (!pathAfter || pathAfter === '' || pathAfter === '/' || 
-        pathAfter === '/history' || pathAfter === '/pending') {
-        
-        if (pathAfter === '/history') {
-            url = `${baseUrl}/api/liquidation/vendedor/${vendedorId}/history`;
-            console.log('📊 Redirigiendo historial de liquidaciones:', url);
-        } else if (pathAfter === '/pending') {
-            url = `${baseUrl}/api/liquidation/vendedor/${vendedorId}/pending`;
-            console.log('📊 Redirigiendo liquidaciones pendientes:', url);
-        }
-    }
-    // POST: Redirigir creación (ya lo tienes en liquidacion.js pero por si acaso)
-    else if (pathAfter === '/new' || pathAfter === '/create') {
-        url = `${baseUrl}/api/liquidation/vendedor/${vendedorId}/new`;
-        console.log('📊 Redirigiendo creación de liquidación:', url);
-    }
-}
-
-if (url.includes('/api/receipts') && !url.includes('userId=')) {
-    const baseUrl = url.split('/api/receipts')[0];
-    const pathAfter = url.split('/api/receipts')[1] || '';
-    
-    // Solo interceptar GET (lectura de recibos)
-    const method = options?.method || 'GET';
-    if (method === 'GET' && (!pathAfter || pathAfter === '' || pathAfter === '/')) {
-        // Agregar userId como query parameter
-        url = `${baseUrl}/api/receipts?userId=${vendedorId}`;
-        console.log('🧾 Redirigiendo recibos del vendedor:', url);
-    }
-}
-
-        }
-
-        return originalFetch(url, options);
-    };
 
     // Inicializar
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            if (isAdminMode()) {
-                showAdminBanner();
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            syncWithServer();
         });
     } else {
-        if (isAdminMode()) {
-            showAdminBanner();
-        }
+        syncWithServer();
     }
 
     window.adminModeUtils = {
         isActive: isAdminMode,
-        getVendedorId: getVendedorId,
+        getVendedorId: () => sessionStorage.getItem('vendedorId'),
         getVendedorName: getVendedorName,
-        exit: window.exitAdminMode
+        exit: window.exitAdminMode,
+        refresh: syncWithServer
     };
 
-    console.log('✅ Sistema de modo administrador inicializado');
+    console.log('✅ Sistema de modo administrador v2.0 inicializado');
 })();

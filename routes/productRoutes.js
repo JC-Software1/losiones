@@ -53,7 +53,9 @@ router.get("/vendedor/:vendedorId/last", auth, async (req, res) => {
 // Get all products
 router.get("/", auth, checkPermission('verProductos'), async (req, res) => {
     try {
-        const query = req.user.tipo === 1 ? { user: req.user.id } : {};
+        const query = (req.user.tipo === 1 || req.user.linkedVendedor) 
+            ? { user: req.user.linkedVendedor || req.user.id } 
+            : {};
         const products = await Product.find(query);
         res.json(products);
     } catch (error) {
@@ -64,7 +66,9 @@ router.get("/", auth, checkPermission('verProductos'), async (req, res) => {
 // Último producto creado
 router.get("/last", auth, checkPermission('verProductos'), async (req, res) => {
     try {
-        const query = req.user.tipo === 1 ? { user: req.user.id } : {};
+        const query = (req.user.tipo === 1 || req.user.linkedVendedor) 
+            ? { user: req.user.linkedVendedor || req.user.id } 
+            : {};
         const last = await Product.findOne(query)
                               .sort({ createdAt: -1 })
                               .select("_id name costPrice salePrice");
@@ -94,7 +98,7 @@ if (!name || costPrice === undefined || costPrice === null || salePrice === unde
             size,
             barcode: barcode || null,
             stock: stock || 1,
-            user: req.user.id
+            user: req.user.linkedVendedor || req.user.id
         });
 
         await product.save();

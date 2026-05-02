@@ -79,7 +79,10 @@ async function loadProducts() {
         const products = await apiFetch("/products", "GET", null, token);
 
         // ✅ El usuario pide que si un producto no tiene stock, no aparezca en inventario
-        allProducts = products.filter(p => (p.stock || 0) > 0);
+        // ✅ Ordenar alfabéticamente por nombre
+        allProducts = products
+            .filter(p => (p.stock || 0) > 0)
+            .sort((a, b) => a.name.localeCompare(b.name));
         filteredProducts = allProducts;
         displayProducts(allProducts);
         updateStatistics(allProducts);

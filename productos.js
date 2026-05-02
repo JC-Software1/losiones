@@ -182,7 +182,8 @@ async function loadProducts() {
 
         // Guardar todos los productos.
         // El usuario pide que NO desaparezcan cuando se agotan.
-        products = data;
+        // ✅ Ordenar alfabéticamente por nombre
+        products = data.sort((a, b) => a.name.localeCompare(b.name));
         filteredProducts = [...products];
 
         displayProducts(filteredProducts);
@@ -237,6 +238,7 @@ function setupEventListeners() {
 }
 
 // Modificar displayProducts para ocultar costos si no tiene permiso
+// Modificar displayProducts para que sea idéntico al de inventario
 function displayProducts(productsList) {
     const productsContainer = document.getElementById("productsList");
     productsContainer.innerHTML = "";
@@ -251,7 +253,7 @@ function displayProducts(productsList) {
         return;
     }
 
-    productsList.forEach((product) => {
+    productsList.forEach((product, index) => {
         const productCard = document.createElement("div");
         productCard.classList.add("product-card");
 
@@ -265,110 +267,84 @@ function displayProducts(productsList) {
         let profit = 0;
 
         if (puedeVerCostos) {
-            margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
             profit = product.salePrice - product.costPrice;
+            margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
         }
 
-        const marginClass = margin >= 30 ? 'success' : margin >= 20 ? 'warning' : 'danger';
-        const marginIcon = margin >= 30 ? 'fas fa-trending-up' : margin >= 20 ? 'fas fa-minus' : 'fas fa-trending-down';
+        const marginClass = margin >= 30 ? 'margin-high' : margin >= 20 ? 'margin-medium' : 'margin-low';
 
         // Mostrar u ocultar según permiso
         const costoPriceHTML = puedeVerCostos
-            ? `Costo: $${product.costPrice.toLocaleString()}`
-            : `Costo: <span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>`;
+            ? `<div class="price-value">$${product.costPrice.toLocaleString()}</div>`
+            : `<div class="price-value" style="color: var(--medium-gray); font-style: italic;">●●●●●</div>`;
 
-        const gananciasHTML = puedeVerCostos
-            ? `<div class="profit-margin">
-                <div class="margin-text">
-                    <i class="${marginIcon}"></i> 
-                    Margen: ${margin}% • Ganancia: $${profit.toLocaleString()}
+        const profitHighlightHTML = puedeVerCostos
+            ? `<div class="profit-highlight">
+                <div class="profit-text">
+                    <i class="fas fa-chart-line"></i> 
+                    Ganancia: $${profit.toLocaleString()} • Margen: ${margin}% 
+                    <span class="margin-indicator ${marginClass}"></span>
                 </div>
             </div>`
-            : `<div class="profit-margin">
-                <div class="margin-text" style="color: var(--medium-gray);">
+            : `<div class="profit-highlight">
+                <div class="profit-text" style="color: var(--medium-gray);">
                     <i class="fas fa-lock"></i> 
-                    Margen: <span style="font-style: italic;">●●●●●</span> • Ganancia: <span style="font-style: italic;">●●●●●</span>
+                    Ganancia: <span style="font-style: italic;">●●●●●</span> • Margen: <span style="font-style: italic;">●●●●●</span>
                 </div>
             </div>`;
-
-        const metaItemsHTML = puedeVerCostos
-            ? `
-            <div class="meta-item">
-                <i class="fas fa-coins"></i>
-                <span>Costo: <span class="meta-value">$${product.costPrice.toLocaleString()}</span></span>
-            </div>
-            <div class="meta-item">
-                <i class="fas fa-chart-line"></i>
-                <span>Margen: <span class="meta-value">${margin}%</span></span>
-            </div>
-            <div class="meta-item">
-                <i class="fas fa-hand-holding-usd"></i>
-                <span>Ganancia: <span class="meta-value">$${profit.toLocaleString()}</span></span>
-            </div>
-            `
-            : `
-            <div class="meta-item">
-                <i class="fas fa-coins"></i>
-                <span>Costo: <span class="meta-value" style="color: var(--medium-gray); font-style: italic;">●●●●●</span></span>
-            </div>
-            <div class="meta-item">
-                <i class="fas fa-chart-line"></i>
-                <span>Margen: <span class="meta-value" style="color: var(--medium-gray); font-style: italic;">●●●●●</span></span>
-            </div>
-            <div class="meta-item">
-                <i class="fas fa-hand-holding-usd"></i>
-                <span>Ganancia: <span class="meta-value" style="color: var(--medium-gray); font-style: italic;">●●●●●</span></span>
-            </div>
-            `;
 
         productCard.innerHTML = `
             <div class="product-header">
                 <div class="product-info">
                     <h3>${product.name}</h3>
-                    <p>${isOutOfStock ? '<span style="color: #e74c3c; font-weight: bold;">❌ No hay stock disponible</span>' : 'Producto disponible en inventario'}</p>
+                    <p>${isOutOfStock ? '<span style="color: #e74c3c; font-weight: bold;">❌ No hay stock</span>' : 'Disponible en catálogo'}</p>
+                </div>
+                <div class="product-status ${isOutOfStock ? 'status-out' : 'status-available'}">
+                    <i class="fas ${isOutOfStock ? 'fa-times-circle' : 'fa-check-circle'}"></i> ${isOutOfStock ? 'Agotado' : 'Disponible'}
                 </div>
             </div>
             
             <div class="product-meta">
-                <div class="meta-item">
-                    <i class="fas fa-folder"></i>
-                    <span>Categoría: <span class="meta-value">${product.category}</span></span>
-                </div>
-                <div class="meta-item">
-                    <i class="fas fa-tag"></i>
-                    <span>Marca: <span class="meta-value">${product.brand}</span></span>
-                </div>
-                ${product.size ? `
-                <div class="meta-item">
-                    <i class="fas fa-ruler"></i>
-                    <span>Talla: <span class="meta-value">${product.size}</span></span>
-                </div>` : ''}
-                <div class="meta-item" style="${isLowStock ? 'color: #e67e22; font-weight: bold;' : ''}">
-                    <i class="fas fa-boxes"></i>
-                    <span>Stock: <span class="meta-value">${stock}</span>${isLowStock ? ' ⚠️' : ''}</span>
-                </div>
+                <i class="fas fa-folder"></i> ${product.category} • 
+                <i class="fas fa-tag"></i> ${product.brand} • 
+                ${product.size ? `<i class="fas fa-ruler"></i> Talla: ${product.size} • ` : ''}
+                <span class="${isLowStock ? 'low-stock-warning' : ''}">
+                    <i class="fas fa-boxes"></i> Stock: ${stock} ${isLowStock ? '⚠️' : ''}
+                </span>
             </div>
+
             <div class="product-prices">
-                <div class="cost-price">${costoPriceHTML}</div>
-                <div class="sale-price">$${product.salePrice.toLocaleString()} COP</div>
+                <div class="price-item">
+                    <div class="price-label">Precio de Costo</div>
+                    ${costoPriceHTML}
+                </div>
+                <div class="price-item">
+                    <div class="price-label">Precio de Venta</div>
+                    <div class="price-value">$${product.salePrice.toLocaleString()}</div>
+                </div>
             </div>
+
+            ${profitHighlightHTML}
 
             <div class="product-actions" style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
                 ${isOutOfStock ? `
-                <button class="btn btn-info btn-sm" onclick="showProductDetails('${product._id}')" title="Info" style="flex: 1;">
+                <button class="btn btn-info btn-sm" onclick="showProductDetails('${product._id}')" title="Detalles" style="flex: 1;">
                     <i class="fas fa-info-circle"></i> Info
                 </button>
                 <button class="btn btn-warning" onclick="restockProduct('${product._id}')" style="flex: 2;">
                     <i class="fas fa-magic"></i> Reinventar
                 </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${product._id}')" title="Eliminar">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
                 ` : `
                 <button class="btn btn-primary btn-sm" onclick="editProduct('${product._id}')" title="Editar">
-                    <i class="fas fa-edit"></i>
+                    <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn btn-accent btn-sm" onclick="showBarcode('${product._id}')" title="Ver QR">
-                    <i class="fas fa-qrcode"></i>
+                <button class="btn btn-accent btn-sm" onclick="showBarcode('${product._id}', '${product.name.replace(/'/g, "\\'")}', '${product.salePrice}')" title="Ver QR">
+                    <i class="fas fa-qrcode"></i> QR
                 </button>
-                <button class="btn btn-info btn-sm" onclick="showProductDetails('${product._id}')" title="Info">
+                <button class="btn btn-info btn-sm" onclick="showProductDetails('${product._id}')" title="Detalles">
                     <i class="fas fa-info-circle"></i>
                 </button>
                 <button class="btn btn-danger btn-sm" onclick="deleteProduct('${product._id}')" title="Eliminar">
@@ -385,6 +361,7 @@ function displayProducts(productsList) {
             productCard.classList.add('low-stock');
         }
 
+        productCard.style.animationDelay = `${index * 0.1}s`;
         productsContainer.appendChild(productCard);
     })
 }

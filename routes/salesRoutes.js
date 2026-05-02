@@ -35,11 +35,12 @@ router.get("/by-date/:date", auth, checkPermission('verVentas'), async (req, res
             }
         };
 
-        if (req.user.tipo === 1) {
-            query.user = userId;
+        // Filtrar por usuario si es vendedor O si tiene un vendedor enlazado
+        if (req.user.tipo === 1 || req.user.linkedVendedor) {
+            query.user = req.user.linkedVendedor || req.user.id;
         }
 
-        const sales = await Sale.find(query);
+        const sales = await Sale.find(query).sort({ saleDate: -1 });
         res.json(sales);
     } catch (error) {
         console.error("Error al filtrar por fecha:", error);
@@ -50,8 +51,10 @@ router.get("/by-date/:date", auth, checkPermission('verVentas'), async (req, res
 // Obtener todas las ventas
 router.get("/all", auth, checkPermission('verVentas'), async (req, res) => {
     try {
-        const query = req.user.tipo === 1 ? { user: req.user.id } : {};
-        const sales = await Sale.find(query);
+        const query = (req.user.tipo === 1 || req.user.linkedVendedor) 
+            ? { user: req.user.linkedVendedor || req.user.id } 
+            : {};
+        const sales = await Sale.find(query).sort({ saleDate: -1 });
         res.json(sales);
     } catch (error) {
         res.status(500).json({ error: "Error al obtener todas las ventas" });
@@ -61,8 +64,8 @@ router.get("/all", auth, checkPermission('verVentas'), async (req, res) => {
 // Obtener ventas liquidadas
 router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
     try {
-        const query = req.user.tipo === 1
-            ? { user: req.user.id, settled: true }
+        const query = (req.user.tipo === 1 || req.user.linkedVendedor) 
+            ? { user: req.user.linkedVendedor || req.user.id, settled: true }
             : { settled: true };
 
         const sales = await Sale.find(query).sort({ settledDate: -1 });
@@ -367,10 +370,10 @@ router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
 
 router.get("/", auth, checkPermission('verVentas'), async (req, res) => {
     try {
-        // Filtrar por usuario si es vendedor, todo si es admin
-        const query = req.user.tipo === 1
-            ? { user: req.user.id }  // Vendedor: todas SUS ventas
-            : {};                     // Admin: TODAS las ventas
+        // Filtrar por usuario si es vendedor, todo si es admin (a menos que esté inspeccionando uno)
+        const query = (req.user.tipo === 1 || req.user.linkedVendedor)
+            ? { user: req.user.linkedVendedor || req.user.id }  
+            : {};                     
 
         const sales = await Sale.find(query).sort({ saleDate: -1 });
         res.json(sales);

@@ -1499,11 +1499,37 @@
             );
 
             if (confirmacion) {
-                sessionStorage.setItem('adminMode', 'true');
-                sessionStorage.setItem('vendedorId', vendedorActual._id);
-                sessionStorage.setItem('vendedorName', vendedorActual.name);
+                try {
+                    const token = getToken();
+                    const response = await fetch(`${API_URL}/link-vendedor/${vendedorActual._id}`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
 
-                window.location.href = 'categories.html';
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.error || 'Error al vincular el vendedor en el servidor');
+                    }
+
+                    // Guardar en sesión como respaldo y para acceso rápido
+                    sessionStorage.setItem('adminMode', 'true');
+                    sessionStorage.setItem('vendedorId', vendedorActual._id);
+                    sessionStorage.setItem('vendedorName', vendedorActual.name);
+
+                    window.location.href = 'categories.html';
+                } catch (error) {
+                    console.error('Error al iniciar modo inspección:', error);
+                    mostrarError('No se pudo establecer el enlace permanente, pero intentaremos continuar: ' + error.message);
+                    
+                    // Fallback a sesión si falla el servidor
+                    sessionStorage.setItem('adminMode', 'true');
+                    sessionStorage.setItem('vendedorId', vendedorActual._id);
+                    sessionStorage.setItem('vendedorName', vendedorActual.name);
+                    setTimeout(() => { window.location.href = 'categories.html'; }, 1500);
+                }
             }
         }
 

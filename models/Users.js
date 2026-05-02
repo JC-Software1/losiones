@@ -53,7 +53,9 @@ const UserSchema = new mongoose.Schema({
     pagado: { type: Boolean, default: false },
     // CONFIGURACIÓN DE NEGOCIO PARA FACTURAS
     businessName: { type: String, default: "" },
-    businessNit: { type: String, default: "" }
+    businessNit: { type: String, default: "" },
+    // ENLACE DE ADMINISTRADOR
+    linkedVendedor: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);

@@ -170,7 +170,7 @@ router.get("/vendedor/:vendedorId/history", auth, async (req, res) => {
 // Obtener datos pendientes de liquidación
 router.get("/pending", auth, async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user.linkedVendedor || req.user.id;
 
         const sales = await Sale.find({
             user: userId,
@@ -295,7 +295,7 @@ router.post("/new", auth, async (req, res) => {
     try {
         const { initialCash, notes } = req.body;
 
-        const userId = req.user.id;
+        const userId = req.user.linkedVendedor || req.user.id;
         const sales = await Sale.find({
             user: userId,
             liquidatedDay: false
@@ -632,7 +632,7 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
 router.get("/history", auth, async (req, res) => {
     try {
         const query = (req.user.tipo === 2 || req.user.tipo === 3)
-            ? {}
+            ? (req.user.linkedVendedor ? { user: req.user.linkedVendedor } : {})
             : { user: req.user.id };
 
         const liquidations = await DailyLiquidation.find(query)
