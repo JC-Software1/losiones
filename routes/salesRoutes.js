@@ -95,7 +95,14 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             products  // ✅ NUEVO: array de productos con cantidades
         } = req.body;
 
-        if (!clientName || !productName || !price || !saleDate) {
+        // ✅ REGLA: Nombre obligatorio solo para cuotas
+        if (paymentType === 'cuotas' && !clientName) {
+            return res.status(400).json({ error: "El nombre del cliente es obligatorio para ventas a cuotas" });
+        }
+
+        const finalClientName = clientName || `venta de ${productName}`;
+
+        if (!productName || !price || !saleDate) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
 
@@ -150,7 +157,7 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
         }
 
         const sale = new Sale({
-            clientName,
+            clientName: finalClientName,
             productName,
             saleDate: new Date(saleDate),
             price,
@@ -231,7 +238,14 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             products  // ✅ NUEVO: array de productos con cantidades
         } = req.body;
 
-        if (!clientName || !productName || !price || !saleDate) {
+        // ✅ REGLA: Nombre obligatorio solo para cuotas
+        if (paymentType === 'cuotas' && !clientName) {
+            return res.status(400).json({ error: "El nombre del cliente es obligatorio para ventas a cuotas" });
+        }
+
+        const finalClientName = clientName || `venta de ${productName}`;
+
+        if (!productName || !price || !saleDate) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
         }
 
@@ -277,7 +291,7 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
         }
 
         const sale = new Sale({
-            clientName,
+            clientName: finalClientName,
             productName,
             saleDate: new Date(saleDate),
             price,

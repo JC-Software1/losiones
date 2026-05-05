@@ -535,8 +535,18 @@ async function saveSale() {
     const address = String(document.getElementById("clientAddress").value.trim() || "Sin dirección");
 
     // ---------- Validación FINAL ----------
-    if (!clientName || !productName || !saleDate || !price) {
-        showNotification("⚠ Faltan datos obligatorios:\nCliente, Producto, Fecha o Precio.", "warning");
+    // ✅ REGLA: Si es a cuotas, el nombre es obligatorio
+    if (paymentType === 'cuotas' && !clientName) {
+        showNotification("⚠ El nombre del cliente es obligatorio para ventas a cuotas.", "warning");
+        inputClient.focus();
+        return;
+    }
+
+    // ✅ REGLA: Si no hay nombre, poner el nombre por defecto
+    const finalClientName = clientName || `venta de ${productName}`;
+
+    if (!productName || !saleDate || !price) {
+        showNotification("⚠ Faltan datos obligatorios:\nProducto, Fecha o Precio.", "warning");
         return;
     }
 
@@ -575,7 +585,7 @@ async function saveSale() {
     }));
 
     const saleData = {
-        clientName,
+        clientName: finalClientName,
         productName,
         saleDate,
         price,
@@ -603,7 +613,7 @@ async function saveSale() {
     console.log("📤 JSON final enviado:", JSON.stringify(saleData, null, 2));
 
     // ---------- Copia para el recibo ----------
-    const receiptData = { ...saleData, products: [...selectedProducts] };
+    const receiptData = { ...saleData, clientName: finalClientName, products: [...selectedProducts] };
 
     try {
         const token = getToken();
@@ -677,8 +687,20 @@ async function updateSale() {
         paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
     }
 
+    const clientNameRaw = inputClient.value.trim();
+    const productNameRaw = inputProduct.value.trim();
+
+    // ✅ REGLA: Si es a cuotas, el nombre es obligatorio
+    if (paymentType === 'cuotas' && !clientNameRaw) {
+        showNotification("⚠ El nombre del cliente es obligatorio para ventas a cuotas.", "warning");
+        inputClient.focus();
+        return;
+    }
+
+    const finalClientNameUpdate = clientNameRaw || `venta de ${productNameRaw}`;
+
     const saleData = {
-        clientName: inputClient.value.trim(),
+        clientName: finalClientNameUpdate,
         clientAddress: document.getElementById("clientAddress").value.trim(),
         productName: inputProduct.value.trim(),
         saleDate: inputDate.value,
