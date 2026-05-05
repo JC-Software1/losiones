@@ -302,6 +302,7 @@
 
     .sales-grid {
       display: grid;
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
       margin-bottom: 24px
     }
@@ -1480,6 +1481,10 @@
         gap: 10px;
       }
 
+      .sales-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
       .button-group .btn {
         min-height: 44px;
         font-size: 15px;
@@ -1688,7 +1693,7 @@
       .sales-grid {
         grid-column: 1 / -1;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        grid-template-columns: repeat(4, 1fr);
         gap: 18px;
         align-items: start;
       }
@@ -1820,7 +1825,7 @@
       /* Si hay una sección de resultados o cards, ajustamos su posición */
       .sales-grid {
         grid-column: 1 / -1;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(4, 1fr);
       }
     }
 

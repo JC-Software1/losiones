@@ -207,6 +207,7 @@
         /* ---------- Productos vendidos (mismo estilo que liquidados) ---------- */
         .products-grid {
             display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
             margin-bottom: 24px
         }
@@ -484,6 +485,10 @@
         @media (max-width:768px) {
             .container {
                 padding: 12px
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
 
             .product-actions {

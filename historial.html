@@ -199,6 +199,7 @@
 
         .sales-grid {
             display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
             margin-bottom: 24px
         }
@@ -322,6 +323,10 @@
         @media (max-width:768px) {
             .container {
                 padding: 12px
+            }
+
+            .sales-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
 
             .sale-actions {
