@@ -250,12 +250,7 @@ async function loadUsers() {
     if (allUsers.length === 0) {
       renderEmpty();
     } else {
-      grid.innerHTML = "";
-      allUsers.sort((a, b) => (b.tipo - a.tipo));
-      allUsers.forEach(u => {
-        const card = createUserCard(u);
-        grid.appendChild(card);
-      });
+      renderFilteredUsers();
     }
     updateStats();
   } catch (err) {
@@ -479,6 +474,37 @@ function setupScrollToTop() {
   btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 }
 
+/* ------------------- Search Users ------------------- */
+function renderFilteredUsers() {
+  const term = (document.getElementById("userSearchInput")?.value || "").toLowerCase();
+  const filtered = allUsers.filter(u => {
+    const name = (u.name || "").toLowerCase();
+    const username = (u.username || "").toLowerCase();
+    return name.includes(term) || username.includes(term);
+  });
+  
+  const grid = document.getElementById("usersGrid");
+  if (!grid) return;
+  
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.85);grid-column: 1 / -1;">No hay usuarios que coincidan</div>`;
+  } else {
+    grid.innerHTML = "";
+    filtered.sort((a, b) => (b.tipo - a.tipo));
+    filtered.forEach(u => {
+      const card = createUserCard(u);
+      grid.appendChild(card);
+    });
+  }
+}
+
+function setupSearch() {
+  const searchInput = document.getElementById("userSearchInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", renderFilteredUsers);
+  }
+}
+
 /* ------------------- Setup event listeners ------------------- */
 function setupEventListeners() {
   const logoutBtn = document.getElementById("logoutBtn");
@@ -516,6 +542,7 @@ function setupEventListeners() {
   injectCardLayoutStyles();
   addLayoutControls();
   setupScrollToTop();
+  setupSearch();
 
   const grid = document.getElementById("usersGrid");
   const container = document.querySelector(".admin-container");
