@@ -210,6 +210,7 @@ function createUserCard(user) {
     <div class="user-actions">
       <button class="btn-sm btn-edit" data-action="edit" data-id="${user._id}">✏️ Editar</button>
       <button class="btn-sm btn-inspect" data-action="fecha-pago" data-id="${user._id}">📅 Fecha Pago</button>
+      <button class="btn-sm btn-unblock" data-action="pagado" data-id="${user._id}">💰 Pagado</button>
       <button class="btn-sm ${user.bloqueado ? 'btn-unblock' : 'btn-block'}" data-action="${user.bloqueado ? 'unblock' : 'block'}" data-id="${user._id}" ${user.tipo === 3 ? 'disabled title="No se puede bloquear a un super admin"' : ''}>
         ${user.bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear'}
       </button>
@@ -291,6 +292,19 @@ function attachUsersGridHandlers() {
       try {
         await apiFetch(`/auth/users/${userId}/fecha-pago`, "PUT", { fechaPago: nuevaFecha });
         showNotification("Fecha de pago actualizada exitosamente", "success");
+        await loadUsers();
+      } catch (err) {
+        console.error(err);
+        showNotification(`Error: ${err.message || err}`, "error");
+      }
+      return;
+    }
+
+    if (action === "pagado") {
+      if (!await showConfirm(`¿Estás seguro de marcar a ${user.username} como pagado? Esto actualizará su fecha de pago 1 mes y lo desbloqueará si estaba bloqueado.`)) return;
+      try {
+        await apiFetch(`/auth/marcar-pagado`, "POST", { usuarioId: userId, pagado: true });
+        showNotification("Usuario marcado como pagado exitosamente", "success");
         await loadUsers();
       } catch (err) {
         console.error(err);

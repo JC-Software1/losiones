@@ -796,6 +796,18 @@ router.post("/marcar-pagado", auth, async (req, res) => {
       usuario.fechaBloqueo = null;
     }
 
+    if (pagado) {
+      if (usuario.fechaPago) {
+        const fecha = new Date(usuario.fechaPago);
+        fecha.setMonth(fecha.getMonth() + 1);
+        usuario.fechaPago = fecha;
+      } else {
+        const fecha = new Date();
+        fecha.setMonth(fecha.getMonth() + 1);
+        usuario.fechaPago = fecha;
+      }
+    }
+
     await usuario.save();
 
     res.json({
