@@ -83,14 +83,14 @@ router.post("/login", async (req, res) => {
     // Verificar si el usuario está bloqueado
     if (user.bloqueado) {
       return res.status(403).json({ 
-        error: "Su cuenta ha sido suspendida. Comuníquese con soporte al 3128540908"
+        error: "Su cuenta ha sido suspendida. Comuníquese con soporte al 3016726199"
       });
     }
 
     // Verificar si el jefe del usuario está bloqueado
     if (user.jefe && user.jefe.bloqueado) {
       return res.status(403).json({ 
-        error: "La cuenta del administrador está suspendida. Comuníquese con soporte al 3128540908"
+        error: "La cuenta del administrador está suspendida. Comuníquese con soporte al 3016726199"
       });
     }
 

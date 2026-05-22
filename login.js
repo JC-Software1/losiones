@@ -101,7 +101,7 @@ function mostrarModalBloqueo() {
                 font-size: 16px;
                 font-weight: 600;
             ">
-                📞 3128540908
+                📞 3016726199
             </p>
         </div>
     `;
@@ -142,7 +142,7 @@ function mostrarModalBloqueo() {
 
     // Evento para el botón de WhatsApp
     document.getElementById('contactarSoporteBtn').addEventListener('click', () => {
-        const telefono = '3128540908';
+        const telefono = '573016726199';
         const mensaje = encodeURIComponent('Hola, mi cuenta ha sido suspendida y necesito información sobre cómo reactivarla.');
         const urlWhatsApp = `https://wa.me/${telefono}?text=${mensaje}`;
         window.open(urlWhatsApp, '_blank');
