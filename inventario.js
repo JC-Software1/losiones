@@ -220,25 +220,27 @@ function updateStatistics(products) {
     // Filtrar solo productos con stock para las estadísticas
     const availableProducts = products.filter(p => (p.stock || 0) > 0);
 
-    totalProductsSpan.textContent = availableProducts.length;
+    // Sumar el stock total en lugar de contar productos
+    const totalStock = availableProducts.reduce((sum, product) => sum + (product.stock || 0), 0);
+    totalProductsSpan.textContent = totalStock;
 
     if (availableProducts.length > 0) {
         if (puedeVerCostos) {
-            // Calcular margen promedio
-            const avgMargin = (availableProducts.reduce((sum, product) => {
-                const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
-                return sum + margin;
-            }, 0) / availableProducts.length).toFixed(1);
+            // Calcular valor total ponderado por stock
+            const totalSaleValue = availableProducts.reduce((sum, product) =>
+                sum + (product.salePrice * (product.stock || 1)), 0);
+            const totalCostValue = availableProducts.reduce((sum, product) =>
+                sum + (product.costPrice * (product.stock || 1)), 0);
+
+            // Margen promedio ponderado por stock
+            const avgMargin = totalSaleValue > 0
+                ? ((totalSaleValue - totalCostValue) / totalSaleValue * 100).toFixed(1)
+                : "0.0";
             avgMarginSpan.textContent = `${avgMargin}%`;
 
-            // Calcular valor total del inventario (precio de costo)
-            const totalInventoryValue = availableProducts.reduce((sum, product) => sum + product.costPrice, 0);
-            totalInventoryValueSpan.textContent = `$${totalInventoryValue.toLocaleString()}`;
+            totalInventoryValueSpan.textContent = `$${totalCostValue.toLocaleString()}`;
 
-            // Calcular ganancia potencial total
-            const totalPotentialProfit = availableProducts.reduce((sum, product) => {
-                return sum + (product.salePrice - product.costPrice);
-            }, 0);
+            const totalPotentialProfit = totalSaleValue - totalCostValue;
             totalPotentialProfitSpan.textContent = `$${totalPotentialProfit.toLocaleString()}`;
         } else {
             // Ocultar estadísticas de costos y ganancias
@@ -517,46 +519,48 @@ window.generateInventoryReport = function () {
         return;
     }
 
-    // Calcular estadísticas avanzadas
-    const totalProducts = allProducts.length;
-    const totalCostValue = allProducts.reduce((sum, p) => sum + p.costPrice, 0);
-    const totalSaleValue = allProducts.reduce((sum, p) => sum + p.salePrice, 0);
+    // Calcular estadísticas avanzadas ponderadas por stock
+    const totalProducts = allProducts.reduce((sum, p) => sum + (p.stock || 1), 0);
+    const totalCostValue = allProducts.reduce((sum, p) => sum + (p.costPrice * (p.stock || 1)), 0);
+    const totalSaleValue = allProducts.reduce((sum, p) => sum + (p.salePrice * (p.stock || 1)), 0);
     const totalPotentialProfit = totalSaleValue - totalCostValue;
 
-    const avgCost = totalCostValue / totalProducts;
-    const avgSale = totalSaleValue / totalProducts;
-    const avgMargin = ((totalSaleValue - totalCostValue) / totalSaleValue * 100).toFixed(1);
+    const avgCost = totalProducts > 0 ? totalCostValue / totalProducts : 0;
+    const avgSale = totalProducts > 0 ? totalSaleValue / totalProducts : 0;
+    const avgMargin = totalSaleValue > 0 ? ((totalSaleValue - totalCostValue) / totalSaleValue * 100).toFixed(1) : "0.0";
 
-    // Productos por categoría de margen
-    const highMargin = allProducts.filter(p => ((p.salePrice - p.costPrice) / p.salePrice * 100) >= 30).length;
-    const mediumMargin = allProducts.filter(p => {
-        const margin = (p.salePrice - p.costPrice) / p.salePrice * 100;
-        return margin >= 20 && margin < 30;
-    }).length;
-    const lowMargin = allProducts.filter(p => ((p.salePrice - p.costPrice) / p.salePrice * 100) < 20).length;
+    // Productos por categoría de margen (ponderado por stock)
+    let highMarginStock = 0, mediumMarginStock = 0, lowMarginStock = 0;
+    allProducts.forEach(p => {
+        const margin = ((p.salePrice - p.costPrice) / p.salePrice) * 100;
+        const stock = p.stock || 1;
+        if (margin >= 30) highMarginStock += stock;
+        else if (margin >= 20) mediumMarginStock += stock;
+        else lowMarginStock += stock;
+    });
 
     const reportMessage = `
 REPORTE COMPLETO DEL INVENTARIO
 Generado el: ${new Date().toLocaleDateString()}
 
 RESUMEN EJECUTIVO:
-• Total de productos: ${totalProducts}
+• Total de unidades en inventario: ${totalProducts}
 • Valor total invertido: $${totalCostValue.toLocaleString()}
 • Valor potencial de venta: $${totalSaleValue.toLocaleString()}
 • Ganancia potencial total: $${totalPotentialProfit.toLocaleString()}
-• Margen promedio: ${avgMargin}%
+• Margen promedio ponderado: ${avgMargin}%
 
 PROMEDIOS:
-• Precio de costo promedio: $${avgCost.toLocaleString()}
-• Precio de venta promedio: $${avgSale.toLocaleString()}
+• Precio de costo promedio por unidad: $${avgCost.toLocaleString()}
+• Precio de venta promedio por unidad: $${avgSale.toLocaleString()}
 
 DISTRIBUCIÓN POR MÁRGENES:
-• Margen alto (≥30%): ${highMargin} productos (${(highMargin / totalProducts * 100).toFixed(1)}%)
-• Margen medio (20-29%): ${mediumMargin} productos (${(mediumMargin / totalProducts * 100).toFixed(1)}%)
-• Margen bajo (<20%): ${lowMargin} productos (${(lowMargin / totalProducts * 100).toFixed(1)}%)
+• Margen alto (≥30%): ${highMarginStock} unidades (${(highMarginStock / totalProducts * 100).toFixed(1)}%)
+• Margen medio (20-29%): ${mediumMarginStock} unidades (${(mediumMarginStock / totalProducts * 100).toFixed(1)}%)
+• Margen bajo (<20%): ${lowMarginStock} unidades (${(lowMarginStock / totalProducts * 100).toFixed(1)}%)
 
 RECOMENDACIONES:
-${highMargin >= totalProducts * 0.6 ? 'Excelente distribución de márgenes' : 'Considera optimizar productos con márgenes bajos'}
+${highMarginStock >= totalProducts * 0.6 ? 'Excelente distribución de márgenes' : 'Considera optimizar productos con márgenes bajos'}
 ${avgMargin >= 25 ? 'Margen promedio saludable' : 'Margen promedio por debajo del objetivo (25%)'}
     `;
 

@@ -39,7 +39,7 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
             user: vendedorId,
             liquidatedDay: false,
             sold: false
-        }).lean().select('_id name brand costPrice');
+        }).lean().select('_id name brand costPrice stock');
 
         const expenses = await Expense.find({
             user: vendedorId,
@@ -81,7 +81,8 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
         });
 
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
-        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
+        const totalStock = products.reduce((sum, p) => sum + (p.stock || 1), 0);
+        const totalInventoryCost = products.reduce((sum, p) => sum + (p.costPrice * (p.stock || 1)), 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
 
         const totalActiveClients = allActiveSales.length;
@@ -102,7 +103,8 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
             _id: p._id,
             name: p.name,
             brand: p.brand,
-            costPrice: p.costPrice
+            costPrice: p.costPrice,
+            stock: p.stock || 1
         }));
 
         const expensesData = expenses.map(e => ({
@@ -125,7 +127,7 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
                 data: paymentsData
             },
             inventory: {
-                count: products.length,
+                count: totalStock,
                 totalCost: totalInventoryCost,
                 data: productsData
             },
@@ -181,7 +183,7 @@ router.get("/pending", auth, async (req, res) => {
             user: userId,
             liquidatedDay: false,
             sold: false
-        }).lean().select('_id name brand costPrice');
+        }).lean().select('_id name brand costPrice stock');
 
         const expenses = await Expense.find({
             user: userId,
@@ -223,7 +225,8 @@ router.get("/pending", auth, async (req, res) => {
         });
 
         const totalSales = sales.reduce((sum, s) => sum + s.price, 0);
-        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
+        const totalStock = products.reduce((sum, p) => sum + (p.stock || 1), 0);
+        const totalInventoryCost = products.reduce((sum, p) => sum + (p.costPrice * (p.stock || 1)), 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
 
         const totalActiveClients = allActiveSales.length;
@@ -244,7 +247,8 @@ router.get("/pending", auth, async (req, res) => {
             _id: p._id,
             name: p.name,
             brand: p.brand,
-            costPrice: p.costPrice
+            costPrice: p.costPrice,
+            stock: p.stock || 1
         }));
 
         const expensesData = expenses.map(e => ({
@@ -267,7 +271,7 @@ router.get("/pending", auth, async (req, res) => {
                 data: paymentsData
             },
             inventory: {
-                count: products.length,
+                count: totalStock,
                 totalCost: totalInventoryCost,
                 data: productsData
             },
@@ -305,7 +309,7 @@ router.post("/new", auth, async (req, res) => {
             user: userId,
             liquidatedDay: false,
             sold: false
-        }).lean().select('_id name brand costPrice');
+        }).lean().select('_id name brand costPrice stock');
 
         const expenses = await Expense.find({
             user: userId,
@@ -357,7 +361,8 @@ router.post("/new", auth, async (req, res) => {
         const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
         const totalIncome = paymentsAfterCommission + totalInitialPayments;
 
-        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
+        const totalStock = products.reduce((sum, p) => sum + (p.stock || 1), 0);
+        const totalInventoryCost = products.reduce((sum, p) => sum + (p.costPrice * (p.stock || 1)), 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         const totalExpenses = totalInventoryCost + totalExpensesAmount;
         const finalCash = initialCash + totalIncome - totalExpenses;
@@ -382,7 +387,7 @@ router.post("/new", auth, async (req, res) => {
             totalIncome,
             inventory: {
                 totalCost: totalInventoryCost,
-                productCount: products.length
+                productCount: totalStock
             },
             expenses: {
                 totalAmount: totalExpensesAmount,
@@ -398,7 +403,8 @@ router.post("/new", auth, async (req, res) => {
             liquidatedProducts: products.map(p => ({
                 productId: p._id,
                 name: p.name,
-                costPrice: p.costPrice
+                costPrice: p.costPrice,
+                stock: p.stock
             })),
             liquidatedExpenses: expenses.map(e => ({
                 expenseId: e._id,
@@ -476,7 +482,7 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
             user: vendedorId,
             liquidatedDay: false,
             sold: false
-        }).lean().select('_id name brand costPrice');
+        }).lean().select('_id name brand costPrice stock');
 
         const expenses = await Expense.find({
             user: vendedorId,
@@ -528,7 +534,8 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
         const salesAfterCommission = Math.round(totalSales - (totalSales * (salesCommission / 100)));
         const totalIncome = paymentsAfterCommission + totalInitialPayments;
 
-        const totalInventoryCost = products.reduce((sum, p) => sum + p.costPrice, 0);
+        const totalStock = products.reduce((sum, p) => sum + (p.stock || 1), 0);
+        const totalInventoryCost = products.reduce((sum, p) => sum + (p.costPrice * (p.stock || 1)), 0);
         const totalExpensesAmount = expenses.reduce((sum, exp) => sum + exp.totalAmount, 0);
         const totalExpenses = totalInventoryCost + totalExpensesAmount;
         const finalCash = initialCash + totalIncome - totalExpenses;
@@ -553,7 +560,7 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
             totalIncome,
             inventory: {
                 totalCost: totalInventoryCost,
-                productCount: products.length
+                productCount: totalStock
             },
             expenses: {
                 totalAmount: totalExpensesAmount,
@@ -569,7 +576,8 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
             liquidatedProducts: products.map(p => ({
                 productId: p._id,
                 name: p.name,
-                costPrice: p.costPrice
+                costPrice: p.costPrice,
+                stock: p.stock
             })),
             liquidatedExpenses: expenses.map(e => ({
                 expenseId: e._id,
