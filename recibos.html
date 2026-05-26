@@ -428,7 +428,7 @@
         }
 
         async function apiFetch(endpoint, method = 'GET', body = null, token = null) {
-            const url = `https://losiones-1.onrender.com/api${endpoint}`;
+            const url = `https://losiones-fjt0.onrender.com/api${endpoint}`;
             const headers = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
             const options = { method, headers };

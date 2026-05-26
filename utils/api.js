@@ -1,6 +1,6 @@
 import { getToken } from "./auth.js";
 
-const API_URL = "https://losiones-1.onrender.com/api";
+const API_URL = "https://losiones-fjt0.onrender.com/api";
 
 export async function apiFetch(endpoint, method = "GET", body = null, token = null) {
     const headers = { "Content-Type": "application/json" };

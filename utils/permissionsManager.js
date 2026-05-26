@@ -1,6 +1,6 @@
 import { getToken } from './auth.js';
 
-const API_URL = 'https://losiones-1.onrender.com/api/auth';
+const API_URL = 'https://losiones-fjt0.onrender.com/api/auth';
 
 // Cache de permisos del usuario
 let permisosUsuario = null;
