@@ -7,7 +7,7 @@ export async function apiFetch(endpoint, method = "GET", body = null, token = nu
 
     // Si no se proporciona token, intentar obtenerlo del localStorage
     const authToken = token || getToken();
-    
+
     if (authToken) {
         headers["Authorization"] = `Bearer ${authToken}`;
     }
@@ -18,6 +18,7 @@ export async function apiFetch(endpoint, method = "GET", body = null, token = nu
             headers,
             body: body ? JSON.stringify(body) : null,
         });
+
 
         // Si la respuesta no es JSON válido, manejarlo antes de intentar parsearlo
         const contentType = response.headers.get("content-type");
