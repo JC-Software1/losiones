@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Acueducto</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2035;
+            --bg-card-hover: #1e2642;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.3);
+            --accent-soft: rgba(59, 130, 246, 0.1);
+            --green: #10b981;
+            --green-glow: rgba(16, 185, 129, 0.3);
+            --orange: #f59e0b;
+            --orange-glow: rgba(245, 158, 11, 0.3);
+            --red: #ef4444;
+            --red-glow: rgba(239, 68, 68, 0.3);
+            --purple: #8b5cf6;
+            --purple-glow: rgba(139, 92, 246, 0.3);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-light: rgba(255, 255, 255, 0.1);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.4);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.active { opacity: 1; pointer-events: all; }
+
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 300px;
+            height: 100%;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            z-index: 1000;
+            transform: translateX(-100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar.open { transform: translateX(0); }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sidebar-header h2 {
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .sidebar-header p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 12px;
+            overflow-y: auto;
+        }
+        .sidebar-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        .sidebar-nav-item:hover {
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+        .sidebar-nav-item.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .sidebar-nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+        }
+        .sidebar-footer button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .sidebar-footer button:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* ===== TOP BAR ===== */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            background: rgba(10, 14, 26, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .hamburger {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        .hamburger:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+        .topbar-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .topbar-time {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ===== CONTENT ===== */
+        .content {
+            flex: 1;
+            padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* ===== GREETING ===== */
+        .greeting {
+            margin-bottom: 32px;
+            animation: fadeInUp 0.6s ease;
+        }
+        .greeting h1 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .greeting h1 span {
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .greeting p {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* ===== STATS ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+            animation: fadeInUp 0.6s ease 0.1s both;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 3px;
+            border-radius: 3px 3px 0 0;
+        }
+        .stat-card:nth-child(1)::before { background: linear-gradient(90deg, var(--accent), var(--purple)); }
+        .stat-card:nth-child(2)::before { background: linear-gradient(90deg, var(--green), #06b6d4); }
+        .stat-card:nth-child(3)::before { background: linear-gradient(90deg, var(--orange), var(--red)); }
+        .stat-card:hover { transform: translateY(-2px); border-color: var(--border-light); }
+        .stat-card .stat-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            margin-bottom: 14px;
+        }
+        .stat-card:nth-child(1) .stat-icon { background: var(--accent-soft); color: var(--accent); }
+        .stat-card:nth-child(2) .stat-icon { background: rgba(16, 185, 129, 0.1); color: var(--green); }
+        .stat-card:nth-child(3) .stat-icon { background: rgba(245, 158, 11, 0.1); color: var(--orange); }
+        .stat-card .stat-value {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .stat-card .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ===== FORM CARD ===== */
+        .form-section {
+            animation: fadeInUp 0.6s ease 0.2s both;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-title i {
+            color: var(--accent);
+        }
+
+        .form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 32px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .form-group label .required {
+            color: var(--red);
+            margin-left: 2px;
+        }
+        .form-group label .optional {
+            color: var(--text-muted);
+            font-weight: 400;
+            font-size: 11px;
+        }
+        .form-group input,
+        .form-group select {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-light);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: var(--transition);
+            outline: none;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+        .form-group select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .form-actions {
+            margin-top: 24px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            color: white;
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px var(--accent-glow);
+        }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+        }
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, var(--green), #06b6d4);
+            color: white;
+            box-shadow: 0 4px 16px var(--green-glow);
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px var(--green-glow);
+        }
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+        }
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        .btn-sm {
+            padding: 8px 14px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+
+        /* ===== CLIENTS GRID ===== */
+        .clients-section {
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+        .clients-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 16px;
+        }
+
+        .client-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        .client-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            background: linear-gradient(180deg, var(--accent), var(--purple));
+            border-radius: 4px 0 0 4px;
+        }
+        .client-card:hover {
+            border-color: var(--border-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        .client-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        .client-name {
+            font-size: 17px;
+            font-weight: 700;
+        }
+        .client-mode {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        .client-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+        .client-info-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .client-info-row i {
+            width: 16px;
+            color: var(--text-muted);
+        }
+        .client-info-row strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .client-debt {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            margin-bottom: 16px;
+        }
+        .client-debt-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .client-debt-value {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--orange);
+        }
+        .client-debt-value.paid {
+            color: var(--green);
+        }
+        .client-next-payment {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        .client-next-payment strong {
+            color: var(--text-secondary);
+        }
+
+        .client-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .client-actions .btn {
+            flex: 1;
+            min-width: 0;
+            justify-content: center;
+            padding: 10px 8px;
+            font-size: 12px;
+        }
+
+        /* ===== SIDEBAR SECTIONS ===== */
+        .section-page {
+            display: none;
+        }
+        .section-page.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* ===== ABONOS SECTION ===== */
+        .filters-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filters-bar input,
+        .filters-bar select {
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-light);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            transition: var(--transition);
+        }
+        .filters-bar input:focus,
+        .filters-bar select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .abonos-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .abono-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+        }
+        .abono-item:hover {
+            border-color: var(--border-light);
+            transform: translateX(4px);
+        }
+        .abono-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .abono-client {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .abono-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .abono-amount {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--green);
+        }
+
+        /* ===== MODALS ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .modal-overlay.active .modal {
+            transform: scale(1) translateY(0);
+        }
+        .modal h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        .modal-close:hover {
+            background: var(--red);
+            color: white;
+        }
+
+        /* ===== TOAST NOTIFICATIONS ===== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            padding: 14px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            color: white;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideInRight 0.4s ease, fadeOut 0.3s ease 2.7s forwards;
+            max-width: 360px;
+        }
+        .toast.success { background: linear-gradient(135deg, var(--green), #06b6d4); }
+        .toast.error { background: linear-gradient(135deg, var(--red), #dc2626); }
+        .toast.info { background: linear-gradient(135deg, var(--accent), var(--purple)); }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        .empty-state p {
+            font-size: 15px;
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(60px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .card-enter {
+            animation: fadeInUp 0.4s ease;
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 640px) {
+            .content { padding: 16px; }
+            .greeting h1 { font-size: 22px; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .clients-grid { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns: 1fr; }
+            .client-actions { flex-direction: column; }
+            .client-actions .btn { width: 100%; }
+            .topbar-title { font-size: 15px; }
+            .sidebar { width: 280px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- SIDEBAR OVERLAY -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Acueducto</h2>
+            <p>Sistema de gestion</p>
+        </div>
+        <div class="sidebar-nav">
+            <div class="sidebar-nav-item active" data-section="dashboard">
+                <i class="fas fa-th-large"></i>
+                <span>Dashboard</span>
+            </div>
+            <div class="sidebar-nav-item" data-section="abonos">
+                <i class="fas fa-coins"></i>
+                <span>Todos los Abonos</span>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <button id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar Sesion
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-wrapper">
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="hamburger" id="hamburgerBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <div class="topbar-title">Acueducto</div>
+                    <div class="topbar-time" id="currentTime"></div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--purple)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;" id="userAvatar"></div>
+            </div>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content">
+            <!-- DASHBOARD SECTION -->
+            <div class="section-page active" id="section-dashboard">
+                <!-- GREETING -->
+                <div class="greeting">
+                    <h1>Hola, <span id="userName"></span></h1>
+                    <p id="greetingText"></p>
+                </div>
+
+                <!-- STATS -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-value" id="statClientes">0</div>
+                        <div class="stat-label">Clientes Activos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="stat-value" id="statDeuda">$0</div>
+                        <div class="stat-label">Deuda Total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-value" id="statProximos">0</div>
+                        <div class="stat-label">Proximos a Vencer</div>
+                    </div>
+                </div>
+
+                <!-- FORM -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <i class="fas fa-user-plus"></i>
+                        Agregar Persona
+                    </div>
+                    <div class="form-card">
+                        <form id="clientForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Nombre <span class="required">*</span></label>
+                                    <input type="text" id="fNombre" placeholder="Nombre completo" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Telefono <span class="optional">(opcional)</span></label>
+                                    <input type="tel" id="fTelefono" placeholder="Numero de telefono">
+                                </div>
+                                <div class="form-group">
+                                    <label>Cedula <span class="optional">(opcional)</span></label>
+                                    <input type="text" id="fCedula" placeholder="Numero de cedula">
+                                </div>
+                                <div class="form-group">
+                                    <label>Valor del Servicio <span class="required">*</span></label>
+                                    <input type="number" id="fValor" placeholder="0" min="0" step="100" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Modo de Pago <span class="required">*</span></label>
+                                    <select id="fModoPago" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="quincenal">Quincenal</option>
+                                        <option value="mensual">Mensual</option>
+                                        <option value="bimensual">Bimensual</option>
+                                        <option value="trimensual">Trimensual</option>
+                                        <option value="cuatrimestral">Cuatrimestral</option>
+                                        <option value="quintrimestral">Quintrimestral</option>
+                                        <option value="semestral">Semestral</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i>
+                                    Guardar Cliente
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- CLIENTS -->
+                <div class="clients-section">
+                    <div class="section-title">
+                        <i class="fas fa-address-book"></i>
+                        Mis Clientes
+                    </div>
+                    <div class="clients-grid" id="clientsGrid"></div>
+                    <div class="empty-state" id="emptyClients" style="display:none;">
+                        <i class="fas fa-water"></i>
+                        <p>No tienes clientes registrados aun</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABONOS SECTION (SIDEBAR) -->
+            <div class="section-page" id="section-abonos">
+                <div class="section-title">
+                    <i class="fas fa-coins"></i>
+                    Historial de Abonos
+                </div>
+                <div class="filters-bar">
+                    <input type="text" id="filterNombre" placeholder="Buscar por nombre...">
+                    <input type="date" id="filterDesde" title="Desde">
+                    <input type="date" id="filterHasta" title="Hasta">
+                    <button class="btn btn-primary btn-sm" id="btnFiltrarAbonos">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="btnLimpiarFiltros">
+                        <i class="fas fa-times"></i> Limpiar
+                    </button>
+                </div>
+                <div class="abonos-list" id="abonosList"></div>
+                <div class="empty-state" id="emptyAbonos" style="display:none;">
+                    <i class="fas fa-coins"></i>
+                    <p>No hay abonos registrados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR ABONO -->
+    <div class="modal-overlay" id="modalAbono">
+        <div class="modal" style="position:relative;">
+            <button class="modal-close" onclick="closeModal('modalAbono')"><i class="fas fa-times"></i></button>
+            <h3><i class="fas fa-hand-holding-usd" style="color:var(--green)"></i> Registrar Abono</h3>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;">
+                Cliente: <strong id="abonoClienteNombre"></strong> |
+                Deuda: <strong id="abonoClienteDeuda" style="color:var(--orange)"></strong>
+            </p>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label>Monto del Abono <span class="required">*</span></label>
+                <input type="number" id="abonoMonto" placeholder="0" min="1" step="100">
+            </div>
+            <div class="form-group" style="margin-bottom:24px;">
+                <label>Nota <span class="optional">(opcional)</span></label>
+                <input type="text" id="abonoNota" placeholder="Referencia o nota...">
+            </div>
+            <button class="btn btn-success" id="btnGuardarAbono" style="width:100%;">
+                <i class="fas fa-check"></i> Registrar Abono
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR CLIENTE -->
+    <div class="modal-overlay" id="modalEditar">
+        <div class="modal" style="position:relative;">
+            <button class="modal-close" onclick="closeModal('modalEditar')"><i class="fas fa-times"></i></button>
+            <h3><i class="fas fa-pen" style="color:var(--accent)"></i> Editar Cliente</h3>
+            <input type="hidden" id="editId">
+            <div class="form-grid" style="gap:16px;">
+                <div class="form-group">
+                    <label>Nombre <span class="required">*</span></label>
+                    <input type="text" id="editNombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Telefono</label>
+                    <input type="tel" id="editTelefono">
+                </div>
+                <div class="form-group">
+                    <label>Cedula</label>
+                    <input type="text" id="editCedula">
+                </div>
+                <div class="form-group">
+                    <label>Valor del Servicio</label>
+                    <input type="number" id="editValor" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Modo de Pago</label>
+                    <select id="editModoPago">
+                        <option value="quincenal">Quincenal</option>
+                        <option value="mensual">Mensual</option>
+                        <option value="bimensual">Bimensual</option>
+                        <option value="trimensual">Trimensual</option>
+                        <option value="cuatrimestral">Cuatrimestral</option>
+                        <option value="quintrimestral">Quintrimestral</option>
+                        <option value="semestral">Semestral</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="btnGuardarEdicion" style="width:100%; margin-top:20px;">
+                <i class="fas fa-save"></i> Guardar Cambios
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: HISTORIAL DE ABONOS DEL CLIENTE -->
+    <div class="modal-overlay" id="modalHistorial">
+        <div class="modal" style="position:relative; max-width:600px;">
+            <button class="modal-close" onclick="closeModal('modalHistorial')"><i class="fas fa-times"></i></button>
+            <h3><i class="fas fa-history" style="color:var(--purple)"></i> Historial de Abonos</h3>
+            <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;">
+                Cliente: <strong id="historialClienteNombre"></strong>
+            </p>
+            <div id="historialContent"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { apiFetch } from "./utils/api.js";
+        import { getToken, getUserInfo, logout, isAuthenticated, startInactivityMonitor } from "./utils/auth.js";
+
+        // ===== AUTH CHECK =====
+        if (!isAuthenticated()) {
+            window.location.href = "index.html";
+        }
+        const userInfo = getUserInfo();
+        if (userInfo && userInfo.tipo !== 4) {
+            window.location.href = "categories.html";
+        }
+        startInactivityMonitor();
+
+        // ===== GLOBAL STATE =====
+        let clientes = [];
+        let abonoClienteId = null;
+
+        // ===== TIME =====
+        function updateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            document.getElementById('currentTime').textContent = now.toLocaleDateString('es-CO', options);
+        }
+        updateTime();
+        setInterval(updateTime, 30000);
+
+        // ===== GREETING =====
+        async function loadUserInfo() {
+            try {
+                const data = await apiFetch("/auth/verify");
+                const name = data.user?.name || "Usuario";
+                document.getElementById('userName').textContent = name;
+                document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+                const hour = new Date().getHours();
+                let saludo = "Buenos dias";
+                if (hour >= 12 && hour < 18) saludo = "Buenas tardes";
+                else if (hour >= 18) saludo = "Buenas noches";
+                document.getElementById('greetingText').textContent = `${saludo}, ${name}. Bienvenido al sistema de acueducto.`;
+            } catch (e) {
+                document.getElementById('userName').textContent = "Usuario";
+                document.getElementById('userAvatar').textContent = "U";
+            }
+        }
+        loadUserInfo();
+
+        // ===== SIDEBAR =====
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const hamburger = document.getElementById('hamburgerBtn');
+
+        function openSidebar() { sidebar.classList.add('open'); overlay.classList.add('active'); }
+        function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
+
+        hamburger.addEventListener('click', openSidebar);
+        overlay.addEventListener('click', closeSidebar);
+
+        // Sidebar nav
+        document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.sidebar-nav-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                const section = item.dataset.section;
+                document.querySelectorAll('.section-page').forEach(s => s.classList.remove('active'));
+                document.getElementById('section-' + section).classList.add('active');
+                closeSidebar();
+                if (section === 'abonos') loadAbonos();
+            });
+        });
+
+        // ===== TOAST =====
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+            toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ===== MODALS =====
+        window.openModal = (id) => document.getElementById(id).classList.add('active');
+        window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+
+        // ===== FORMAT CURRENCY =====
+        function formatCurrency(val) {
+            return '$' + Number(val).toLocaleString('es-CO');
+        }
+        function formatDate(d) {
+            if (!d) return '-';
+            const date = new Date(d);
+            return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        function formatDateTime(d) {
+            if (!d) return '-';
+            const date = new Date(d);
+            return date.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+                   date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // ===== LOAD CLIENTS =====
+        async function loadClients() {
+            try {
+                clientes = await apiFetch("/acueducto/clientes");
+                renderClients();
+                loadDashboard();
+            } catch (e) {
+                showToast("Error al cargar clientes", "error");
+            }
+        }
+
+        function renderClients() {
+            const grid = document.getElementById('clientsGrid');
+            const empty = document.getElementById('emptyClients');
+            if (clientes.length === 0) {
+                grid.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            grid.innerHTML = clientes.map(c => `
+                <div class="client-card card-enter">
+                    <div class="client-header">
+                        <div class="client-name">${c.nombre}</div>
+                        <div class="client-mode">${c.modoPago}</div>
+                    </div>
+                    <div class="client-info">
+                        ${c.cedula ? `<div class="client-info-row"><i class="fas fa-id-card"></i> Cedula: <strong>${c.cedula}</strong></div>` : ''}
+                        ${c.telefono ? `<div class="client-info-row"><i class="fas fa-phone"></i> Tel: <strong>${c.telefono}</strong></div>` : ''}
+                        <div class="client-info-row"><i class="fas fa-file-invoice-dollar"></i> Servicio: <strong>${formatCurrency(c.valorServicio)}</strong></div>
+                    </div>
+                    <div class="client-debt">
+                        <div>
+                            <div class="client-debt-label">Deuda Pendiente</div>
+                            <div class="client-debt-value ${c.deudaPendiente === 0 ? 'paid' : ''}">${formatCurrency(c.deudaPendiente)}</div>
+                        </div>
+                    </div>
+                    <div class="client-next-payment">
+                        Proximo pago: <strong>${formatDate(c.proximoPago)}</strong>
+                    </div>
+                    <div class="client-actions">
+                        <button class="btn btn-success btn-sm" onclick="openAbonoModal('${c._id}', '${c.nombre}', ${c.deudaPendiente})">
+                            <i class="fas fa-hand-holding-usd"></i> Abono
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="openHistorialModal('${c._id}', '${c.nombre}')">
+                            <i class="fas fa-history"></i> Historial
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="openEditModal('${c._id}')">
+                            <i class="fas fa-pen"></i> Editar
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteClient('${c._id}', '${c.nombre}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ===== DASHBOARD STATS =====
+        async function loadDashboard() {
+            try {
+                const data = await apiFetch("/acueducto/dashboard");
+                document.getElementById('statClientes').textContent = data.totalClientes;
+                document.getElementById('statDeuda').textContent = formatCurrency(data.totalDeuda);
+                document.getElementById('statProximos').textContent = data.proximosAVencer;
+            } catch (e) {}
+        }
+
+        // ===== CREATE CLIENT =====
+        document.getElementById('clientForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                nombre: document.getElementById('fNombre').value,
+                telefono: document.getElementById('fTelefono').value,
+                cedula: document.getElementById('fCedula').value,
+                valorServicio: parseFloat(document.getElementById('fValor').value),
+                modoPago: document.getElementById('fModoPago').value
+            };
+            try {
+                await apiFetch("/acueducto/clientes", "POST", body);
+                showToast("Cliente registrado exitosamente", "success");
+                e.target.reset();
+                loadClients();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        });
+
+        // ===== DELETE CLIENT =====
+        window.deleteClient = async (id, nombre) => {
+            if (!confirm(`Eliminar al cliente "${nombre}"?`)) return;
+            try {
+                await apiFetch(`/acueducto/clientes/${id}`, "DELETE");
+                showToast("Cliente eliminado", "success");
+                loadClients();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        };
+
+        // ===== EDIT CLIENT =====
+        window.openEditModal = (id) => {
+            const c = clientes.find(cl => cl._id === id);
+            if (!c) return;
+            document.getElementById('editId').value = c._id;
+            document.getElementById('editNombre').value = c.nombre;
+            document.getElementById('editTelefono').value = c.telefono || '';
+            document.getElementById('editCedula').value = c.cedula || '';
+            document.getElementById('editValor').value = c.valorServicio;
+            document.getElementById('editModoPago').value = c.modoPago;
+            openModal('modalEditar');
+        };
+
+        document.getElementById('btnGuardarEdicion').addEventListener('click', async () => {
+            const id = document.getElementById('editId').value;
+            const body = {
+                nombre: document.getElementById('editNombre').value,
+                telefono: document.getElementById('editTelefono').value,
+                cedula: document.getElementById('editCedula').value,
+                valorServicio: parseFloat(document.getElementById('editValor').value),
+                modoPago: document.getElementById('editModoPago').value
+            };
+            try {
+                await apiFetch(`/acueducto/clientes/${id}`, "PUT", body);
+                showToast("Cliente actualizado", "success");
+                closeModal('modalEditar');
+                loadClients();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        });
+
+        // ===== ABONO MODAL =====
+        window.openAbonoModal = (id, nombre, deuda) => {
+            abonoClienteId = id;
+            document.getElementById('abonoClienteNombre').textContent = nombre;
+            document.getElementById('abonoClienteDeuda').textContent = formatCurrency(deuda);
+            document.getElementById('abonoMonto').value = '';
+            document.getElementById('abonoMonto').max = deuda;
+            document.getElementById('abonoNota').value = '';
+            openModal('modalAbono');
+        };
+
+        document.getElementById('btnGuardarAbono').addEventListener('click', async () => {
+            const monto = parseFloat(document.getElementById('abonoMonto').value);
+            const nota = document.getElementById('abonoNota').value;
+            if (!monto || monto <= 0) return showToast("Ingresa un monto valido", "error");
+            try {
+                await apiFetch("/acueducto/abonos", "POST", { clienteId: abonoClienteId, monto, nota });
+                showToast("Abono registrado", "success");
+                closeModal('modalAbono');
+                loadClients();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        });
+
+        // ===== HISTORIAL MODAL =====
+        window.openHistorialModal = async (id, nombre) => {
+            document.getElementById('historialClienteNombre').textContent = nombre;
+            const content = document.getElementById('historialContent');
+            content.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:20px;">Cargando...</p>';
+            openModal('modalHistorial');
+            try {
+                const abonos = await apiFetch(`/acueducto/abonos/cliente/${id}`);
+                if (abonos.length === 0) {
+                    content.innerHTML = '<div class="empty-state"><i class="fas fa-coins"></i><p>Sin abonos registrados</p></div>';
+                    return;
+                }
+                content.innerHTML = abonos.map(a => `
+                    <div class="abono-item" style="margin-bottom:8px;">
+                        <div class="abono-left">
+                            <div class="abono-date">${formatDateTime(a.fecha)}</div>
+                            ${a.nota ? `<div style="font-size:11px; color:var(--text-muted);">${a.nota}</div>` : ''}
+                        </div>
+                        <div class="abono-amount">-${formatCurrency(a.monto)}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                content.innerHTML = '<p style="color:var(--red);">Error al cargar historial</p>';
+            }
+        };
+
+        // ===== ABONOS SIDEBAR =====
+        async function loadAbonos(nombre = '', desde = '', hasta = '') {
+            const list = document.getElementById('abonosList');
+            const empty = document.getElementById('emptyAbonos');
+            let url = "/acueducto/abonos?";
+            if (nombre) url += `nombre=${encodeURIComponent(nombre)}&`;
+            if (desde) url += `desde=${desde}&`;
+            if (hasta) url += `hasta=${hasta}&`;
+            try {
+                const abonos = await apiFetch(url);
+                if (abonos.length === 0) {
+                    list.innerHTML = '';
+                    empty.style.display = 'block';
+                    return;
+                }
+                empty.style.display = 'none';
+                list.innerHTML = abonos.map(a => `
+                    <div class="abono-item">
+                        <div class="abono-left">
+                            <div class="abono-client">${a.cliente?.nombre || 'Cliente'}</div>
+                            <div class="abono-date">${formatDateTime(a.fecha)}${a.nota ? ' - ' + a.nota : ''}</div>
+                        </div>
+                        <div class="abono-amount">${formatCurrency(a.monto)}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+            }
+        }
+
+        document.getElementById('btnFiltrarAbonos').addEventListener('click', () => {
+            const nombre = document.getElementById('filterNombre').value;
+            const desde = document.getElementById('filterDesde').value;
+            const hasta = document.getElementById('filterHasta').value;
+            loadAbonos(nombre, desde, hasta);
+        });
+        document.getElementById('btnLimpiarFiltros').addEventListener('click', () => {
+            document.getElementById('filterNombre').value = '';
+            document.getElementById('filterDesde').value = '';
+            document.getElementById('filterHasta').value = '';
+            loadAbonos();
+        });
+
+        // ===== LOGOUT =====
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            logout();
+        });
+
+        // ===== INIT =====
+        loadClients();
+    </script>
+</body>
+</html>

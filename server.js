@@ -11,6 +11,7 @@ const salesCommissionRoutes = require("./routes/salesCommissionRoutes");
 const liquidationRoutes = require("./routes/liquidationRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const cashMovementRoutes = require("./routes/cashMovementRoutes");   // 1) importar
+const acueductoRoutes = require("./routes/acueductoRoutes");
 
 
 
@@ -46,6 +47,7 @@ app.use("/api/sales-commission", salesCommissionRoutes);
 app.use("/api/liquidation", liquidationRoutes);
 app.use("/api/cash-movement", cashMovementRoutes);
 app.use("/api/expenses", expenseRoutes);
+app.use("/api/acueducto", acueductoRoutes);
 
 
 const PORT = process.env.PORT || 5000;

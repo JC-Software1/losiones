@@ -234,6 +234,9 @@ async function handleLogin(event) {
         } else if (userInfo.tipo === 2) {
             console.log("Redirigiendo a gestor de vendedores...");
             window.location.href = "gestorVendedores.html";
+        } else if (userInfo.tipo === 4) {
+            console.log("Redirigiendo a acueducto...");
+            window.location.href = "acueducto.html";
         } else {
             console.log("Redirigiendo a categorías...");
             window.location.href = "categories.html";

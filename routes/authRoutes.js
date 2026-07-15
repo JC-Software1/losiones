@@ -174,7 +174,7 @@ router.put("/users/:id", auth, async (req, res) => {
     
     // Si se proporciona tipo, validarlo
     if (tipo !== undefined) {
-      if (![1, 2, 3].includes(parseInt(tipo))) {
+      if (![1, 2, 3, 4].includes(parseInt(tipo))) {
         return res.status(400).json({ error: "Tipo de usuario inválido" });
       }
       updateData.tipo = parseInt(tipo);
