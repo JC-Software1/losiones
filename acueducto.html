@@ -642,6 +642,56 @@
             background: rgba(239, 68, 68, 0.15);
             color: var(--red);
         }
+        .gasto-input-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 12px;
+            padding: 14px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            animation: fadeInUp 0.3s ease;
+        }
+        .gasto-input-row .form-group { margin-bottom: 0; }
+        .gasto-input-row .btn-remove-gasto {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        .gasto-input-row .btn-remove-gasto:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+        .gasto-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+            border-left: 3px solid var(--text-muted);
+        }
+        .gasto-card.efectivo { border-left-color: var(--green); }
+        .gasto-card.transferencia { border-left-color: var(--purple); }
+        .gasto-card:hover {
+            border-color: var(--border-light);
+            transform: translateX(4px);
+        }
+        @media (max-width: 640px) {
+            .gasto-input-row {
+                grid-template-columns: 1fr;
+            }
+        }
 
         /* ===== MODALS ===== */
         .modal-overlay {
@@ -814,6 +864,10 @@
                 <i class="fas fa-coins"></i>
                 <span>Todos los Abonos</span>
             </div>
+            <div class="sidebar-nav-item" data-section="gastos">
+                <i class="fas fa-receipt"></i>
+                <span>Gastos</span>
+            </div>
         </div>
         <div class="sidebar-footer">
             <button id="logoutBtn">
@@ -925,6 +979,9 @@
                         <i class="fas fa-address-book"></i>
                         Mis Clientes
                     </div>
+                    <div class="filters-bar" style="margin-bottom:16px;">
+                        <input type="text" id="filterClienteNombre" placeholder="Buscar cliente por nombre..." style="max-width:300px;">
+                    </div>
                     <div class="clients-grid" id="clientsGrid"></div>
                     <div class="empty-state" id="emptyClients" style="display:none;">
                         <i class="fas fa-water"></i>
@@ -968,6 +1025,68 @@
                 <div class="empty-state" id="emptyAbonos" style="display:none;">
                     <i class="fas fa-coins"></i>
                     <p>No hay abonos registrados</p>
+                </div>
+            </div>
+
+            <!-- GASTOS SECTION -->
+            <div class="section-page" id="section-gastos">
+                <div class="section-title">
+                    <i class="fas fa-receipt"></i>
+                    Registro de Gastos
+                </div>
+
+                <!-- FORMULARIO DINAMICO -->
+                <div class="form-card" style="margin-bottom:24px;">
+                    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+                        <div class="form-group" style="flex:1; min-width:200px;">
+                            <label>Cuantos gastos vas a registrar hoy?</label>
+                            <input type="number" id="gastoCantidad" min="1" max="50" value="1" placeholder="Cantidad">
+                        </div>
+                        <button class="btn btn-primary" id="btnGenerarInputs" style="margin-top:18px;">
+                            <i class="fas fa-plus-circle"></i> Generar
+                        </button>
+                    </div>
+                    <div id="gastosInputsContainer"></div>
+                    <div style="display:flex; justify-content:flex-end; margin-top:20px;" id="gastosSubmitWrap" style="display:none;">
+                        <button class="btn btn-success" id="btnGuardarGastos">
+                            <i class="fas fa-save"></i> Guardar Todos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TOTALES -->
+                <div class="totals-bar" id="gastosTotalsBar">
+                    <div class="stat-card">
+                        <div class="stat-value" id="gastoTotalGeneral">$0</div>
+                        <div class="stat-label">Total Gastos</div>
+                    </div>
+                    <div class="stat-card" style="border-left: 3px solid var(--green);">
+                        <div class="stat-value" id="gastoTotalEfectivo" style="color:var(--green);">$0</div>
+                        <div class="stat-label">Efectivo</div>
+                    </div>
+                    <div class="stat-card" style="border-left: 3px solid var(--purple);">
+                        <div class="stat-value" id="gastoTotalTransferencia" style="color:var(--purple);">$0</div>
+                        <div class="stat-label">Transferencia</div>
+                    </div>
+                </div>
+
+                <!-- FILTROS -->
+                <div class="filters-bar">
+                    <input type="date" id="gastoFilterDesde" title="Desde">
+                    <input type="date" id="gastoFilterHasta" title="Hasta">
+                    <button class="btn btn-primary btn-sm" id="btnFiltrarGastos">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="btnLimpiarGastos">
+                        <i class="fas fa-times"></i> Limpiar
+                    </button>
+                </div>
+
+                <!-- LISTA DE GASTOS -->
+                <div class="abonos-list" id="gastosList"></div>
+                <div class="empty-state" id="emptyGastos" style="display:none;">
+                    <i class="fas fa-receipt"></i>
+                    <p>No hay gastos registrados</p>
                 </div>
             </div>
         </div>
@@ -1124,6 +1243,7 @@
                 document.getElementById('section-' + section).classList.add('active');
                 closeSidebar();
                 if (section === 'abonos') loadAbonos();
+                if (section === 'gastos') loadGastos();
             });
         });
 
@@ -1162,23 +1282,32 @@
         async function loadClients() {
             try {
                 clientes = await apiFetch("/acueducto/clientes");
-                renderClients();
+                const filtro = document.getElementById('filterClienteNombre')?.value || '';
+                renderClients(filtro);
                 loadDashboard();
             } catch (e) {
                 showToast("Error al cargar clientes", "error");
             }
         }
 
-        function renderClients() {
+        document.getElementById('filterClienteNombre').addEventListener('input', (e) => {
+            renderClients(e.target.value);
+        });
+
+        function renderClients(filtro = '') {
             const grid = document.getElementById('clientsGrid');
             const empty = document.getElementById('emptyClients');
-            if (clientes.length === 0) {
+            let lista = clientes;
+            if (filtro) {
+                lista = clientes.filter(c => c.nombre.toLowerCase().includes(filtro.toLowerCase()));
+            }
+            if (lista.length === 0) {
                 grid.innerHTML = '';
                 empty.style.display = 'block';
                 return;
             }
             empty.style.display = 'none';
-            grid.innerHTML = clientes.map(c => `
+            grid.innerHTML = lista.map(c => `
                 <div class="client-card card-enter">
                     <div class="client-header">
                         <div class="client-name">${c.nombre}</div>
@@ -1441,6 +1570,141 @@
             document.getElementById('filterDesde').value = '';
             document.getElementById('filterHasta').value = '';
             loadAbonos();
+        });
+
+        // ===== GASTOS =====
+        document.getElementById('btnGenerarInputs').addEventListener('click', () => {
+            const cantidad = parseInt(document.getElementById('gastoCantidad').value) || 1;
+            const container = document.getElementById('gastosInputsContainer');
+            container.innerHTML = '';
+            for (let i = 0; i < cantidad; i++) {
+                const row = document.createElement('div');
+                row.className = 'gasto-input-row';
+                row.innerHTML = `
+                    <div class="form-group">
+                        <label>Descripcion</label>
+                        <input type="text" class="gasto-desc" placeholder="Que se gasto?">
+                    </div>
+                    <div class="form-group">
+                        <label>Monto</label>
+                        <input type="number" class="gasto-monto" placeholder="0" min="1" step="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Metodo</label>
+                        <select class="gasto-metodo">
+                            <option value="efectivo">Efectivo</option>
+                            <option value="transferencia">Transferencia</option>
+                        </select>
+                    </div>
+                    <button class="btn-remove-gasto" onclick="this.parentElement.remove();" title="Quitar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                container.appendChild(row);
+            }
+            document.getElementById('gastosSubmitWrap').style.display = 'flex';
+        });
+
+        document.getElementById('btnGuardarGastos').addEventListener('click', async () => {
+            const rows = document.querySelectorAll('.gasto-input-row');
+            if (rows.length === 0) return showToast("Genera los inputs primero", "error");
+
+            const gastos = [];
+            let valid = true;
+            rows.forEach(row => {
+                const desc = row.querySelector('.gasto-desc').value.trim();
+                const monto = parseFloat(row.querySelector('.gasto-monto').value);
+                const metodo = row.querySelector('.gasto-metodo').value;
+                if (!desc) { valid = false; return; }
+                if (!monto || monto <= 0) { valid = false; return; }
+                gastos.push({ descripcion: desc, monto, metodoPago: metodo });
+            });
+
+            if (!valid || gastos.length === 0) return showToast("Completa todos los campos de cada gasto", "error");
+
+            try {
+                await apiFetch("/acueducto/gastos", "POST", { gastos });
+                showToast(`${gastos.length} gasto(s) registrado(s)`, "success");
+                document.getElementById('gastosInputsContainer').innerHTML = '';
+                document.getElementById('gastosSubmitWrap').style.display = 'none';
+                document.getElementById('gastoCantidad').value = 1;
+                loadGastos();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        });
+
+        async function loadGastos(desde = '', hasta = '') {
+            const list = document.getElementById('gastosList');
+            const empty = document.getElementById('emptyGastos');
+            let url = "/acueducto/gastos?";
+            if (desde) url += `desde=${desde}&`;
+            if (hasta) url += `hasta=${hasta}&`;
+            try {
+                const gastos = await apiFetch(url);
+                if (gastos.length === 0) {
+                    list.innerHTML = '';
+                    empty.style.display = 'block';
+                    updateGastosTotals([]);
+                    return;
+                }
+                empty.style.display = 'none';
+                updateGastosTotals(gastos);
+                list.innerHTML = gastos.map(g => `
+                    <div class="gasto-card ${g.metodoPago}">
+                        <div class="abono-left">
+                            <div class="abono-client">${g.descripcion}</div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <div class="abono-date">${formatDateTime(g.fecha)}</div>
+                                <span class="metodo-badge metodo-${g.metodoPago}">${g.metodoPago === 'transferencia' ? 'Transferencia' : 'Efectivo'}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="abono-amount" style="color:var(--red);">${formatCurrency(g.monto)}</div>
+                            <button class="btn-delete-abono" onclick="deleteGasto('${g._id}')" title="Eliminar gasto">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                updateGastosTotals([]);
+            }
+        }
+
+        function updateGastosTotals(gastos) {
+            const total = gastos.reduce((sum, g) => sum + g.monto, 0);
+            const efectivo = gastos.filter(g => g.metodoPago !== 'transferencia').reduce((sum, g) => sum + g.monto, 0);
+            const transferencia = gastos.filter(g => g.metodoPago === 'transferencia').reduce((sum, g) => sum + g.monto, 0);
+            document.getElementById('gastoTotalGeneral').textContent = formatCurrency(total);
+            document.getElementById('gastoTotalEfectivo').textContent = formatCurrency(efectivo);
+            document.getElementById('gastoTotalTransferencia').textContent = formatCurrency(transferencia);
+        }
+
+        window.deleteGasto = async (id) => {
+            if (!confirm("Eliminar este gasto?")) return;
+            try {
+                await apiFetch(`/acueducto/gastos/${id}`, "DELETE");
+                showToast("Gasto eliminado", "success");
+                const desde = document.getElementById('gastoFilterDesde').value;
+                const hasta = document.getElementById('gastoFilterHasta').value;
+                loadGastos(desde, hasta);
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        };
+
+        document.getElementById('btnFiltrarGastos').addEventListener('click', () => {
+            const desde = document.getElementById('gastoFilterDesde').value;
+            const hasta = document.getElementById('gastoFilterHasta').value;
+            loadGastos(desde, hasta);
+        });
+        document.getElementById('btnLimpiarGastos').addEventListener('click', () => {
+            document.getElementById('gastoFilterDesde').value = '';
+            document.getElementById('gastoFilterHasta').value = '';
+            loadGastos();
         });
 
         // ===== LOGOUT =====

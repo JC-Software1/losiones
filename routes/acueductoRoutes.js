@@ -2,6 +2,7 @@ const express = require("express");
 const auth = require("../middleware/auth");
 const AcueductoClient = require("../models/AcueductoClient");
 const AcueductoAbono = require("../models/AcueductoAbono");
+const AcueductoGasto = require("../models/AcueductoGasto");
 
 const router = express.Router();
 
@@ -260,6 +261,77 @@ router.get("/dashboard", auth, async (req, res) => {
         });
     } catch (e) {
         res.status(500).json({ error: "Error al obtener dashboard" });
+    }
+});
+
+/* ----------  CREAR GASTOS (BATCH)  ---------- */
+router.post("/gastos", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const { gastos } = req.body;
+        if (!Array.isArray(gastos) || gastos.length === 0) {
+            return res.status(400).json({ error: "Debes enviar al menos un gasto" });
+        }
+
+        const creados = [];
+        for (const g of gastos) {
+            if (!g.descripcion?.trim() || !g.monto || g.monto <= 0) continue;
+            const gasto = new AcueductoGasto({
+                descripcion: g.descripcion.trim(),
+                monto: g.monto,
+                metodoPago: ["efectivo", "transferencia"].includes(g.metodoPago) ? g.metodoPago : "efectivo",
+                user: req.user.id,
+                fecha: g.fecha ? new Date(g.fecha) : new Date()
+            });
+            await gasto.save();
+            creados.push(gasto);
+        }
+
+        res.status(201).json(creados);
+    } catch (e) {
+        console.error("Error creando gastos:", e);
+        res.status(500).json({ error: "Error al crear gastos" });
+    }
+});
+
+/* ----------  OBTENER GASTOS CON FILTROS  ---------- */
+router.get("/gastos", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const { desde, hasta } = req.query;
+        const filtro = { user: req.user.id };
+
+        if (desde || hasta) {
+            filtro.fecha = {};
+            if (desde) filtro.fecha.$gte = new Date(desde);
+            if (hasta) {
+                const hastaDate = new Date(hasta);
+                hastaDate.setHours(23, 59, 59, 999);
+                filtro.fecha.$lte = hastaDate;
+            }
+        }
+
+        const gastos = await AcueductoGasto.find(filtro).sort({ fecha: -1 });
+        res.json(gastos);
+    } catch (e) {
+        console.error("Error obteniendo gastos:", e);
+        res.status(500).json({ error: "Error al obtener gastos" });
+    }
+});
+
+/* ----------  ELIMINAR GASTO  ---------- */
+router.delete("/gastos/:id", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const gasto = await AcueductoGasto.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+        if (!gasto) return res.status(404).json({ error: "Gasto no encontrado" });
+
+        res.json({ message: "Gasto eliminado exitosamente" });
+    } catch (e) {
+        res.status(500).json({ error: "Error al eliminar gasto" });
     }
 });
 
