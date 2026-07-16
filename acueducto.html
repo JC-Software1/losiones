@@ -600,6 +600,48 @@
             font-weight: 800;
             color: var(--green);
         }
+        .metodo-badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .metodo-efectivo {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+        }
+        .metodo-transferencia {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--purple);
+        }
+        .totals-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .totals-bar .stat-card {
+            padding: 16px;
+        }
+        .totals-bar .stat-card .stat-value {
+            font-size: 22px;
+        }
+        .btn-delete-abono {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            transition: var(--transition);
+            font-size: 13px;
+        }
+        .btn-delete-abono:hover {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+        }
 
         /* ===== MODALS ===== */
         .modal-overlay {
@@ -897,6 +939,20 @@
                     <i class="fas fa-coins"></i>
                     Historial de Abonos
                 </div>
+                <div class="totals-bar" id="totalsBar">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalGeneral">$0</div>
+                        <div class="stat-label">Total General</div>
+                    </div>
+                    <div class="stat-card" style="border-left: 3px solid var(--green);">
+                        <div class="stat-value" id="totalEfectivo" style="color:var(--green);">$0</div>
+                        <div class="stat-label">Efectivo</div>
+                    </div>
+                    <div class="stat-card" style="border-left: 3px solid var(--purple);">
+                        <div class="stat-value" id="totalTransferencia" style="color:var(--purple);">$0</div>
+                        <div class="stat-label">Transferencia</div>
+                    </div>
+                </div>
                 <div class="filters-bar">
                     <input type="text" id="filterNombre" placeholder="Buscar por nombre...">
                     <input type="date" id="filterDesde" title="Desde">
@@ -929,6 +985,13 @@
             <div class="form-group" style="margin-bottom:16px;">
                 <label>Monto del Abono <span class="required">*</span></label>
                 <input type="number" id="abonoMonto" placeholder="0" min="1" step="100">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label>Metodo de Pago <span class="required">*</span></label>
+                <select id="abonoMetodo">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                </select>
             </div>
             <div class="form-group" style="margin-bottom:24px;">
                 <label>Nota <span class="optional">(opcional)</span></label>
@@ -1234,16 +1297,19 @@
             document.getElementById('abonoClienteDeuda').textContent = formatCurrency(deuda);
             document.getElementById('abonoMonto').value = '';
             document.getElementById('abonoMonto').max = deuda;
+            document.getElementById('abonoMetodo').value = 'efectivo';
             document.getElementById('abonoNota').value = '';
             openModal('modalAbono');
         };
 
         document.getElementById('btnGuardarAbono').addEventListener('click', async () => {
             const monto = parseFloat(document.getElementById('abonoMonto').value);
+            const metodo = document.getElementById('abonoMetodo').value;
             const nota = document.getElementById('abonoNota').value;
             if (!monto || monto <= 0) return showToast("Ingresa un monto valido", "error");
+            if (!metodo) return showToast("Selecciona un metodo de pago", "error");
             try {
-                await apiFetch("/acueducto/abonos", "POST", { clienteId: abonoClienteId, monto, nota });
+                await apiFetch("/acueducto/abonos", "POST", { clienteId: abonoClienteId, monto, nota, metodoPago: metodo });
                 showToast("Abono registrado", "success");
                 closeModal('modalAbono');
                 loadClients();
@@ -1267,14 +1333,34 @@
                 content.innerHTML = abonos.map(a => `
                     <div class="abono-item" style="margin-bottom:8px;">
                         <div class="abono-left">
-                            <div class="abono-date">${formatDateTime(a.fecha)}</div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <div class="abono-date">${formatDateTime(a.fecha)}</div>
+                                <span class="metodo-badge metodo-${a.metodoPago || 'efectivo'}">${a.metodoPago === 'transferencia' ? 'Transferencia' : 'Efectivo'}</span>
+                            </div>
                             ${a.nota ? `<div style="font-size:11px; color:var(--text-muted);">${a.nota}</div>` : ''}
                         </div>
-                        <div class="abono-amount">-${formatCurrency(a.monto)}</div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div class="abono-amount">-${formatCurrency(a.monto)}</div>
+                            <button class="btn-delete-abono" onclick="deleteAbono('${a._id}', '${id}', '${nombre}')" title="Eliminar abono">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 `).join('');
             } catch (err) {
                 content.innerHTML = '<p style="color:var(--red);">Error al cargar historial</p>';
+            }
+        };
+
+        window.deleteAbono = async (abonoId, clienteId, clienteNombre) => {
+            if (!confirm("Eliminar este abono? El monto se devolvera a la deuda del cliente.")) return;
+            try {
+                await apiFetch(`/acueducto/abonos/${abonoId}`, "DELETE");
+                showToast("Abono eliminado", "success");
+                loadClients();
+                openHistorialModal(clienteId, clienteNombre);
+            } catch (err) {
+                showToast(err.message, "error");
             }
         };
 
@@ -1291,23 +1377,58 @@
                 if (abonos.length === 0) {
                     list.innerHTML = '';
                     empty.style.display = 'block';
+                    updateTotals([]);
                     return;
                 }
                 empty.style.display = 'none';
+                updateTotals(abonos);
                 list.innerHTML = abonos.map(a => `
                     <div class="abono-item">
                         <div class="abono-left">
                             <div class="abono-client">${a.cliente?.nombre || 'Cliente'}</div>
-                            <div class="abono-date">${formatDateTime(a.fecha)}${a.nota ? ' - ' + a.nota : ''}</div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <div class="abono-date">${formatDateTime(a.fecha)}${a.nota ? ' - ' + a.nota : ''}</div>
+                                <span class="metodo-badge metodo-${a.metodoPago || 'efectivo'}">${a.metodoPago === 'transferencia' ? 'Transferencia' : 'Efectivo'}</span>
+                            </div>
                         </div>
-                        <div class="abono-amount">${formatCurrency(a.monto)}</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div class="abono-amount">${formatCurrency(a.monto)}</div>
+                            <button class="btn-delete-abono" onclick="deleteAbonoFromList('${a._id}')" title="Eliminar abono">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 `).join('');
             } catch (err) {
                 list.innerHTML = '';
                 empty.style.display = 'block';
+                updateTotals([]);
             }
         }
+
+        function updateTotals(abonos) {
+            const total = abonos.reduce((sum, a) => sum + a.monto, 0);
+            const efectivo = abonos.filter(a => a.metodoPago !== 'transferencia').reduce((sum, a) => sum + a.monto, 0);
+            const transferencia = abonos.filter(a => a.metodoPago === 'transferencia').reduce((sum, a) => sum + a.monto, 0);
+            document.getElementById('totalGeneral').textContent = formatCurrency(total);
+            document.getElementById('totalEfectivo').textContent = formatCurrency(efectivo);
+            document.getElementById('totalTransferencia').textContent = formatCurrency(transferencia);
+        }
+
+        window.deleteAbonoFromList = async (abonoId) => {
+            if (!confirm("Eliminar este abono? El monto se devolvera a la deuda del cliente.")) return;
+            try {
+                await apiFetch(`/acueducto/abonos/${abonoId}`, "DELETE");
+                showToast("Abono eliminado", "success");
+                loadClients();
+                const nombre = document.getElementById('filterNombre').value;
+                const desde = document.getElementById('filterDesde').value;
+                const hasta = document.getElementById('filterHasta').value;
+                loadAbonos(nombre, desde, hasta);
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        };
 
         document.getElementById('btnFiltrarAbonos').addEventListener('click', () => {
             const nombre = document.getElementById('filterNombre').value;

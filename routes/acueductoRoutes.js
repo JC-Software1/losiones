@@ -124,10 +124,13 @@ router.post("/abonos", auth, async (req, res) => {
     try {
         if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
 
-        const { clienteId, monto, nota } = req.body;
+        const { clienteId, monto, nota, metodoPago } = req.body;
 
         if (!clienteId) return res.status(400).json({ error: "El ID del cliente es obligatorio" });
         if (!monto || monto <= 0) return res.status(400).json({ error: "El monto debe ser mayor a 0" });
+        if (!metodoPago || !["efectivo", "transferencia"].includes(metodoPago)) {
+            return res.status(400).json({ error: "El metodo de pago es obligatorio (efectivo o transferencia)" });
+        }
 
         const cliente = await AcueductoClient.findOne({ _id: clienteId, user: req.user.id });
         if (!cliente) return res.status(404).json({ error: "Cliente no encontrado" });
@@ -140,6 +143,7 @@ router.post("/abonos", auth, async (req, res) => {
             cliente: clienteId,
             monto,
             user: req.user.id,
+            metodoPago,
             nota: nota?.trim() || ""
         });
         await abono.save();
@@ -171,6 +175,28 @@ router.get("/abonos/cliente/:clienteId", auth, async (req, res) => {
         res.json(abonos);
     } catch (e) {
         res.status(500).json({ error: "Error al obtener historial" });
+    }
+});
+
+/* ----------  ELIMINAR ABONO  ---------- */
+router.delete("/abonos/:id", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const abono = await AcueductoAbono.findOne({ _id: req.params.id, user: req.user.id });
+        if (!abono) return res.status(404).json({ error: "Abono no encontrado" });
+
+        const cliente = await AcueductoClient.findOne({ _id: abono.cliente, user: req.user.id });
+        if (cliente) {
+            cliente.deudaPendiente += abono.monto;
+            await cliente.save();
+        }
+
+        await AcueductoAbono.findByIdAndDelete(req.params.id);
+        res.json({ message: "Abono eliminado exitosamente", cliente });
+    } catch (e) {
+        console.error("Error eliminando abono:", e);
+        res.status(500).json({ error: "Error al eliminar abono" });
     }
 });
 
