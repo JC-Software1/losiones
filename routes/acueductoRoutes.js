@@ -335,4 +335,45 @@ router.delete("/gastos/:id", auth, async (req, res) => {
     }
 });
 
+/* ----------  EDITAR GASTO  ---------- */
+router.put("/gastos/:id", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const { descripcion, monto, metodoPago } = req.body;
+
+        const gasto = await AcueductoGasto.findOne({ _id: req.params.id, user: req.user.id });
+        if (!gasto) return res.status(404).json({ error: "Gasto no encontrado" });
+
+        if (descripcion?.trim()) gasto.descripcion = descripcion.trim();
+        if (monto !== undefined && monto > 0) gasto.monto = monto;
+        if (metodoPago && ["efectivo", "transferencia"].includes(metodoPago)) gasto.metodoPago = metodoPago;
+
+        await gasto.save();
+        res.json(gasto);
+    } catch (e) {
+        console.error("Error editando gasto:", e);
+        res.status(500).json({ error: "Error al editar gasto" });
+    }
+});
+
+/* ----------  REABRIR DEUDA DE CLIENTE  ---------- */
+router.put("/clientes/:id/reabrir", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const cliente = await AcueductoClient.findOne({ _id: req.params.id, user: req.user.id });
+        if (!cliente) return res.status(404).json({ error: "Cliente no encontrado" });
+
+        cliente.deudaPendiente = cliente.valorServicio;
+        cliente.proximoPago = calcularProximoPago(cliente.modoPago);
+        await cliente.save();
+
+        res.json(cliente);
+    } catch (e) {
+        console.error("Error reabriendo deuda:", e);
+        res.status(500).json({ error: "Error al reabrir deuda" });
+    }
+});
+
 module.exports = router;

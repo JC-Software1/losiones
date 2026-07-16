@@ -692,6 +692,24 @@
                 grid-template-columns: 1fr;
             }
         }
+        .client-card.paid {
+            opacity: 0.5;
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        .client-card.paid::before {
+            background: linear-gradient(180deg, var(--green), #06b6d4);
+        }
+        .client-card.paid:hover {
+            opacity: 0.75;
+        }
+        .client-card.paid .client-debt {
+            background: rgba(16, 185, 129, 0.08);
+        }
+        .client-card.paid .client-debt-value {
+            color: var(--green);
+            text-decoration: line-through;
+            text-decoration-color: var(--green);
+        }
 
         /* ===== MODALS ===== */
         .modal-overlay {
@@ -1176,6 +1194,33 @@
         </div>
     </div>
 
+    <!-- MODAL: EDITAR GASTO -->
+    <div class="modal-overlay" id="modalEditarGasto">
+        <div class="modal" style="position:relative;">
+            <button class="modal-close" onclick="closeModal('modalEditarGasto')"><i class="fas fa-times"></i></button>
+            <h3><i class="fas fa-pen" style="color:var(--accent)"></i> Editar Gasto</h3>
+            <input type="hidden" id="editGastoId">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label>Descripcion <span class="required">*</span></label>
+                <input type="text" id="editGastoDesc" placeholder="Descripcion del gasto">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label>Monto <span class="required">*</span></label>
+                <input type="number" id="editGastoMonto" placeholder="0" min="1" step="100">
+            </div>
+            <div class="form-group" style="margin-bottom:24px;">
+                <label>Metodo de Pago</label>
+                <select id="editGastoMetodo">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" id="btnGuardarEditGasto" style="width:100%;">
+                <i class="fas fa-save"></i> Guardar Cambios
+            </button>
+        </div>
+    </div>
+
     <script type="module">
         import { apiFetch } from "./utils/api.js";
         import { getToken, getUserInfo, logout, isAuthenticated, startInactivityMonitor } from "./utils/auth.js";
@@ -1307,8 +1352,9 @@
                 return;
             }
             empty.style.display = 'none';
+            const isPaid = (c) => c.deudaPendiente === 0;
             grid.innerHTML = lista.map(c => `
-                <div class="client-card card-enter">
+                <div class="client-card card-enter ${isPaid(c) ? 'paid' : ''}">
                     <div class="client-header">
                         <div class="client-name">${c.nombre}</div>
                         <div class="client-mode">${c.modoPago}</div>
@@ -1320,26 +1366,32 @@
                     </div>
                     <div class="client-debt">
                         <div>
-                            <div class="client-debt-label">Deuda Pendiente</div>
-                            <div class="client-debt-value ${c.deudaPendiente === 0 ? 'paid' : ''}">${formatCurrency(c.deudaPendiente)}</div>
+                            <div class="client-debt-label">${isPaid(c) ? 'Deuda Saldada' : 'Deuda Pendiente'}</div>
+                            <div class="client-debt-value ${isPaid(c) ? 'paid' : ''}">${formatCurrency(c.deudaPendiente)}</div>
                         </div>
                     </div>
                     <div class="client-next-payment">
-                        Proximo pago: <strong>${formatDate(c.proximoPago)}</strong>
+                        ${isPaid(c) ? 'Pagado completamente' : `Proximo pago: <strong>${formatDate(c.proximoPago)}</strong>`}
                     </div>
                     <div class="client-actions">
-                        <button class="btn btn-success btn-sm" onclick="openAbonoModal('${c._id}', '${c.nombre}', ${c.deudaPendiente})">
-                            <i class="fas fa-hand-holding-usd"></i> Abono
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="openHistorialModal('${c._id}', '${c.nombre}')">
-                            <i class="fas fa-history"></i> Historial
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="openEditModal('${c._id}')">
-                            <i class="fas fa-pen"></i> Editar
-                        </button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteClient('${c._id}', '${c.nombre}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        ${isPaid(c) ? `
+                            <button class="btn btn-success btn-sm" onclick="reabrirCliente('${c._id}', '${c.nombre}')" style="flex:1;">
+                                <i class="fas fa-redo-alt"></i> Reabrir
+                            </button>
+                        ` : `
+                            <button class="btn btn-success btn-sm" onclick="openAbonoModal('${c._id}', '${c.nombre}', ${c.deudaPendiente})">
+                                <i class="fas fa-hand-holding-usd"></i> Abono
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="openHistorialModal('${c._id}', '${c.nombre}')">
+                                <i class="fas fa-history"></i> Historial
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="openEditModal('${c._id}')">
+                                <i class="fas fa-pen"></i> Editar
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteClient('${c._id}', '${c.nombre}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        `}
                     </div>
                 </div>
             `).join('');
@@ -1381,6 +1433,18 @@
             try {
                 await apiFetch(`/acueducto/clientes/${id}`, "DELETE");
                 showToast("Cliente eliminado", "success");
+                loadClients();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        };
+
+        // ===== REABRIR DEUDA =====
+        window.reabrirCliente = async (id, nombre) => {
+            if (!confirm(`Reabrir la deuda de "${nombre}"? Se restaurara el valor total del servicio.`)) return;
+            try {
+                await apiFetch(`/acueducto/clientes/${id}/reabrir`, "PUT");
+                showToast("Deuda reabierta", "success");
                 loadClients();
             } catch (err) {
                 showToast(err.message, "error");
@@ -1661,6 +1725,9 @@
                         </div>
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div class="abono-amount" style="color:var(--red);">${formatCurrency(g.monto)}</div>
+                            <button class="btn-delete-abono" onclick="openEditGastoModal('${g._id}', '${g.descripcion.replace(/'/g, "\\'")}', ${g.monto}, '${g.metodoPago}')" title="Editar gasto">
+                                <i class="fas fa-pen"></i>
+                            </button>
                             <button class="btn-delete-abono" onclick="deleteGasto('${g._id}')" title="Eliminar gasto">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -1695,6 +1762,36 @@
                 showToast(err.message, "error");
             }
         };
+
+        // ===== EDITAR GASTO =====
+        window.openEditGastoModal = (id, desc, monto, metodo) => {
+            document.getElementById('editGastoId').value = id;
+            document.getElementById('editGastoDesc').value = desc;
+            document.getElementById('editGastoMonto').value = monto;
+            document.getElementById('editGastoMetodo').value = metodo;
+            openModal('modalEditarGasto');
+        };
+
+        document.getElementById('btnGuardarEditGasto').addEventListener('click', async () => {
+            const id = document.getElementById('editGastoId').value;
+            const body = {
+                descripcion: document.getElementById('editGastoDesc').value,
+                monto: parseFloat(document.getElementById('editGastoMonto').value),
+                metodoPago: document.getElementById('editGastoMetodo').value
+            };
+            if (!body.descripcion?.trim()) return showToast("La descripcion es obligatoria", "error");
+            if (!body.monto || body.monto <= 0) return showToast("El monto debe ser mayor a 0", "error");
+            try {
+                await apiFetch(`/acueducto/gastos/${id}`, "PUT", body);
+                showToast("Gasto actualizado", "success");
+                closeModal('modalEditarGasto');
+                const desde = document.getElementById('gastoFilterDesde').value;
+                const hasta = document.getElementById('gastoFilterHasta').value;
+                loadGastos(desde, hasta);
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        });
 
         document.getElementById('btnFiltrarGastos').addEventListener('click', () => {
             const desde = document.getElementById('gastoFilterDesde').value;
