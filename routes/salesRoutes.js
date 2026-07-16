@@ -76,6 +76,29 @@ router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
     }
 });
 
+// Obtener todas las ventas liquidadas de un cliente específico
+router.get("/settled/client/:clientName", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        const clientName = decodeURIComponent(req.params.clientName);
+        
+        const query = {
+            settled: true,
+            clientName: { $regex: new RegExp(`^${clientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+        };
+
+        // Filtrar por usuario si es vendedor
+        if (req.user.tipo === 1 || req.user.linkedVendedor) {
+            query.user = req.user.linkedVendedor || req.user.id;
+        }
+
+        const sales = await Sale.find(query).sort({ settledDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error("Error al obtener ventas liquidadas del cliente:", error);
+        res.status(500).json({ error: "Error al obtener ventas liquidadas del cliente" });
+    }
+});
+
 // Crear nueva venta
 // Crear nueva venta
 router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {

@@ -32,6 +32,7 @@ export async function generatePOS(data) {
     // Si no, asumimos que 'data' ya es el saleData
     const saleData = data.saleData || data;
     const isContado = saleData.paymentType === 'contado';
+    const isSettled = saleData.settled === true || saleData.settledDate;
 
     // Construir el encabezado del negocio si existe
     const bizHeader = bizInfo.businessName 
@@ -40,13 +41,23 @@ ${bizInfo.businessNit ? `NIT: ${bizInfo.businessNit}` : ''}
 ================================`
         : '';
 
+    // Determinar fecha y hora a mostrar
+    const displayDate = isSettled && saleData.settledDate 
+        ? new Date(saleData.settledDate) 
+        : new Date();
+    const dateLabel = isSettled ? 'Fecha liquidación' : 'Fecha';
+
+    // Calcular total pagado y saldo
+    const totalPaid = (saleData.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+    const finalRemainingBalance = Math.max(0, (saleData.price || 0) - totalPaid);
+
     // Generar contenido del ticket en texto plano
     const ticketText = `
 ${bizHeader}
-      ${isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA'}
+      ${isSettled ? 'COMPROBANTE DE LIQUIDACIÓN' : (isContado ? 'COMPROBANTE DE PAGO' : 'COMPROBANTE DE VENTA')}
 ================================
-Fecha: ${new Date().toLocaleDateString('es-CO')}
-Hora: ${new Date().toLocaleTimeString('es-CO')}
+${dateLabel}: ${displayDate.toLocaleDateString('es-CO')}
+Hora: ${displayDate.toLocaleTimeString('es-CO')}
 
 --------------------------------
 CLIENTE
@@ -69,14 +80,14 @@ DETALLE DE PAGO
 --------------------------------
 Total: $${(saleData.price || 0).toLocaleString('es-CO')}
 Tipo: ${isContado ? 'CONTADO' : 'A CUOTAS'}
+Total pagado: $${totalPaid.toLocaleString('es-CO')}
 
 ${!isContado ? `Cuotas: ${saleData.numberOfInstallments || saleData.installments || 1}
 Valor cuota: $${(saleData.paymentPerInstallment || 0).toLocaleString('es-CO')}
-Pago inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}` : `Pago realizado: $${(saleData.price || 0).toLocaleString('es-CO')}
-SALDO: $0`}
+Pago inicial: $${(saleData.advancePayment || 0).toLocaleString('es-CO')}` : `Pago realizado: $${(saleData.price || 0).toLocaleString('es-CO')}`}
 
 --------------------------------
-${isContado ? '✓ PAGO COMPLETO' : `Saldo pendiente: $${(saleData.remainingBalance !== undefined ? saleData.remainingBalance : (saleData.price - (saleData.advancePayment || 0))).toLocaleString('es-CO')}`}
+${isSettled ? '✓ DEUDA LIQUIDADA COMPLETAMENTE' : (isContado ? '✓ PAGO COMPLETO' : `Saldo pendiente: $${finalRemainingBalance.toLocaleString('es-CO')}`)}
 ================================
 
 Gracias por su compra!
