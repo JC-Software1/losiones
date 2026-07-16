@@ -149,14 +149,17 @@ router.post("/abonos", auth, async (req, res) => {
         });
         await abono.save();
 
+        const deudaAnterior = cliente.deudaPendiente;
         cliente.deudaPendiente = Math.max(0, cliente.deudaPendiente - monto);
-        if (cliente.deudaPendiente === 0) {
+        let justSettled = false;
+        if (deudaAnterior > 0 && cliente.deudaPendiente === 0) {
+            justSettled = true;
             cliente.proximoPago = calcularProximoPago(cliente.modoPago);
             cliente.deudaPendiente = cliente.valorServicio;
         }
         await cliente.save();
 
-        res.status(201).json({ abono, cliente });
+        res.status(201).json({ abono, cliente, justSettled });
     } catch (e) {
         console.error("Error registrando abono:", e);
         res.status(500).json({ error: "Error al registrar abono" });

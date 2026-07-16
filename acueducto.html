@@ -710,6 +710,21 @@
             text-decoration: line-through;
             text-decoration-color: var(--green);
         }
+        .btn-pos {
+            background: linear-gradient(135deg, #8b5cf6, #a855f7);
+            color: white;
+        }
+        .btn-pos:hover {
+            background: linear-gradient(135deg, #7c3aed, #9333ea);
+            transform: translateY(-1px);
+        }
+        .btn-reabrir {
+            background: linear-gradient(135deg, var(--green), #06b6d4);
+            color: white;
+        }
+        .btn-reabrir:hover {
+            transform: translateY(-1px);
+        }
 
         /* ===== MODALS ===== */
         .modal-overlay {
@@ -1375,20 +1390,26 @@
                     </div>
                     <div class="client-actions">
                         ${isPaid(c) ? `
-                            <button class="btn btn-success btn-sm" onclick="reabrirCliente('${c._id}', '${c.nombre}')" style="flex:1;">
+                            <button class="btn btn-sm btn-pos" onclick="showAcueductoSettlementHistory('${c._id}', '${c.nombre.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-receipt"></i> POS
+                            </button>
+                            <button class="btn btn-sm btn-reabrir" onclick="reabrirCliente('${c._id}', '${c.nombre.replace(/'/g, "\\'")}')">
                                 <i class="fas fa-redo-alt"></i> Reabrir
                             </button>
                         ` : `
-                            <button class="btn btn-success btn-sm" onclick="openAbonoModal('${c._id}', '${c.nombre}', ${c.deudaPendiente})">
+                            <button class="btn btn-success btn-sm" onclick="openAbonoModal('${c._id}', '${c.nombre.replace(/'/g, "\\'")}', ${c.deudaPendiente})">
                                 <i class="fas fa-hand-holding-usd"></i> Abono
                             </button>
-                            <button class="btn btn-secondary btn-sm" onclick="openHistorialModal('${c._id}', '${c.nombre}')">
+                            <button class="btn btn-secondary btn-sm" onclick="openHistorialModal('${c._id}', '${c.nombre.replace(/'/g, "\\'")}')">
                                 <i class="fas fa-history"></i> Historial
                             </button>
                             <button class="btn btn-secondary btn-sm" onclick="openEditModal('${c._id}')">
                                 <i class="fas fa-pen"></i> Editar
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteClient('${c._id}', '${c.nombre}')">
+                            <button class="btn btn-sm btn-pos" onclick="showAcueductoSettlementHistory('${c._id}', '${c.nombre.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-receipt"></i> POS
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteClient('${c._id}', '${c.nombre.replace(/'/g, "\\'")}')">
                                 <i class="fas fa-trash"></i>
                             </button>
                         `}
@@ -1502,9 +1523,22 @@
             if (!monto || monto <= 0) return showToast("Ingresa un monto valido", "error");
             if (!metodo) return showToast("Selecciona un metodo de pago", "error");
             try {
-                await apiFetch("/acueducto/abonos", "POST", { clienteId: abonoClienteId, monto, nota, metodoPago: metodo });
+                const response = await apiFetch("/acueducto/abonos", "POST", { clienteId: abonoClienteId, monto, nota, metodoPago: metodo });
                 showToast("Abono registrado", "success");
                 closeModal('modalAbono');
+
+                if (response.justSettled) {
+                    showToast("¡Deuda saldada! Generando recibo POS...", "success");
+                    try {
+                        const abonos = await apiFetch(`/acueducto/abonos/cliente/${abonoClienteId}`);
+                        const cliente = response.cliente;
+                        saveSettlement(cliente, abonos);
+                        generateAcueductoPOS(cliente, abonos, new Date().toISOString());
+                    } catch (e) {
+                        console.error('Error al generar recibo de liquidación:', e);
+                    }
+                }
+
                 loadClients();
             } catch (err) {
                 showToast(err.message, "error");
@@ -1803,6 +1837,180 @@
             document.getElementById('gastoFilterHasta').value = '';
             loadGastos();
         });
+
+        // ===== ACUEDUCTO POS RECEIPT =====
+        function generateAcueductoPOS(client, abonos, settledDate) {
+            const printWindow = window.open('', '_blank', 'width=400,height=600');
+            if (!printWindow) {
+                showToast("El navegador bloqueó la ventana de impresión. Permite ventanas emergentes.", "error");
+                return;
+            }
+            printWindow.document.write('<html><body><div style="text-align:center;padding:20px;font-family:monospace;">Generando ticket...</div></body></html>');
+
+            const totalPagado = abonos.reduce((sum, a) => sum + a.monto, 0);
+            const fecha = settledDate ? new Date(settledDate) : new Date();
+            const bizName = "ACUEDUCTO";
+
+            const ticketText = `
+      COMPROBANTE DE LIQUIDACIÓN
+================================
+Fecha: ${fecha.toLocaleDateString('es-CO')}
+Hora: ${fecha.toLocaleTimeString('es-CO')}
+
+--------------------------------
+CLIENTE
+--------------------------------
+${client.nombre}
+${client.cedula ? 'CC: ' + client.cedula : ''}
+${client.telefono ? 'Tel: ' + client.telefono : ''}
+
+--------------------------------
+SERVICIO
+--------------------------------
+Valor servicio: $${client.valorServicio.toLocaleString('es-CO')}
+Modo de pago: ${client.modoPago}
+
+--------------------------------
+HISTORIAL DE ABONOS
+--------------------------------
+${abonos.map((a, i) => `${i + 1}. ${new Date(a.fecha).toLocaleDateString('es-CO')} - $${a.monto.toLocaleString('es-CO')} (${a.metodoPago === 'transferencia' ? 'Transf.' : 'Efectivo'})${a.nota ? ' - ' + a.nota : ''}`).join('\n')}
+
+--------------------------------
+TOTAL PAGADO: $${totalPagado.toLocaleString('es-CO')}
+--------------------------------
+
+✓ DEUDA LIQUIDADA COMPLETAMENTE
+================================
+
+Gracias por su pago!
+Volver pronto
+
+================================`;
+
+            printWindow.document.open();
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Ticket POS - ${client.nombre}</title>
+                    <style>
+                        @media print {
+                            body { margin: 0; padding: 10px; font-family: 'Courier New', monospace; font-size: 12px; }
+                            @page { size: 58mm auto; margin: 0; }
+                        }
+                        body {
+                            font-family: 'Courier New', monospace;
+                            font-size: 11px;
+                            white-space: pre-wrap;
+                            width: 58mm;
+                            margin: 0 auto;
+                            padding: 5px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div style="white-space: pre-wrap; text-align: center;">
+${ticketText.trim()}
+                    </div>
+                    <script>
+                        window.onload = function() {
+                            setTimeout(function() { window.print(); window.close(); }, 500);
+                        };
+                    </script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        // ===== SAVE SETTLEMENT TO LOCALSTORAGE =====
+        function saveSettlement(client, abonos) {
+            const settlements = JSON.parse(localStorage.getItem('acueducto_settlements') || '{}');
+            const key = client._id;
+            if (!settlements[key]) settlements[key] = [];
+            settlements[key].push({
+                client: { _id: client._id, nombre: client.nombre, cedula: client.cedula, telefono: client.telefono, valorServicio: client.valorServicio, modoPago: client.modoPago },
+                abonos: abonos.map(a => ({ monto: a.monto, fecha: a.fecha, metodoPago: a.metodoPago, nota: a.nota })),
+                settledDate: new Date().toISOString(),
+                totalPagado: abonos.reduce((sum, a) => sum + a.monto, 0)
+            });
+            localStorage.setItem('acueducto_settlements', JSON.stringify(settlements));
+        }
+
+        // ===== SHOW SETTLEMENT HISTORY (POS) =====
+        window.showAcueductoSettlementHistory = async (clienteId, clienteNombre) => {
+            const settlements = JSON.parse(localStorage.getItem('acueducto_settlements') || '{}');
+            const clientSettlements = settlements[clienteId] || [];
+
+            if (clientSettlements.length === 0) {
+                showToast("No hay liquidaciones registradas para este cliente", "info");
+                return;
+            }
+
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay active';
+            overlay.style.zIndex = '3000';
+            overlay.innerHTML = `
+                <div class="modal" style="position:relative; max-width:550px;">
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                    <h3><i class="fas fa-receipt" style="color:var(--purple)"></i> Facturas POS</h3>
+                    <p style="color:var(--text-muted); font-size:13px; margin-bottom:20px;">
+                        ${clienteNombre} — ${clientSettlements.length} liquidación(es)
+                    </p>
+                    <div id="settlementHistoryList" style="display:flex; flex-direction:column; gap:10px; max-height:50vh; overflow-y:auto;">
+                        ${clientSettlements.map((s, idx) => {
+                            const fecha = new Date(s.settledDate).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                            return `
+                                <div onclick="printAcueductoSettlement('${clienteId}', ${idx})" style="
+                                    background: var(--bg-secondary); border: 1px solid var(--border);
+                                    border-radius: 10px; padding: 14px 16px; cursor: pointer;
+                                    border-left: 4px solid var(--green); transition: all 0.2s;
+                                " onmouseover="this.style.background='rgba(16,185,129,0.08)'; this.style.transform='translateX(4px)'"
+                                   onmouseout="this.style.background='var(--bg-secondary)'; this.style.transform='translateX(0)'">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                        <div style="font-weight:700; color:var(--text-primary); font-size:14px;">
+                                            <i class="fas fa-check-circle" style="color:var(--green); margin-right:6px;"></i>
+                                            Liquidado
+                                        </div>
+                                        <div style="font-weight:700; color:var(--green); font-size:15px;">
+                                            $${s.totalPagado.toLocaleString('es-CO')}
+                                        </div>
+                                    </div>
+                                    <div style="font-size:12px; color:var(--text-muted);">
+                                        <i class="fas fa-calendar"></i> ${fecha} — ${s.abonos.length} abono(s)
+                                    </div>
+                                    <div style="margin-top:6px; font-size:11px; color:var(--purple); font-weight:600;">
+                                        <i class="fas fa-print"></i> Clic para imprimir
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div style="margin-top:16px; text-align:center;">
+                        <button onclick="printAllAcueductoSettlements('${clienteId}')" class="btn btn-pos" style="width:100%;">
+                            <i class="fas fa-print"></i> Imprimir todas
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        };
+
+        window.printAcueductoSettlement = (clienteId, idx) => {
+            const settlements = JSON.parse(localStorage.getItem('acueducto_settlements') || '{}');
+            const s = (settlements[clienteId] || [])[idx];
+            if (!s) return;
+            generateAcueductoPOS(s.client, s.abonos, s.settledDate);
+        };
+
+        window.printAllAcueductoSettlements = (clienteId) => {
+            const settlements = JSON.parse(localStorage.getItem('acueducto_settlements') || '{}');
+            const list = settlements[clienteId] || [];
+            list.forEach((s, i) => {
+                setTimeout(() => generateAcueductoPOS(s.client, s.abonos, s.settledDate), i * 1500);
+            });
+        };
 
         // ===== LOGOUT =====
         document.getElementById('logoutBtn').addEventListener('click', () => {

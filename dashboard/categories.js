@@ -292,7 +292,6 @@ ${(() => {
                     <button class="btn btn-primary btn-sm btn-info"><i class="fas fa-eye"></i> Info</button>
                     <button class="btn btn-warning btn-sm btn-edit"><i class="fas fa-edit"></i> Editar</button>
                     <button class="btn btn-success btn-sm btn-pay"><i class="fas fa-credit-card"></i> Abonar</button>
-                    <button class="btn btn-secondary btn-sm btn-pos-history" style="background: #8e44ad;"><i class="fas fa-receipt"></i> POS</button>
                     <button class="btn btn-danger btn-sm btn-delete"><i class="fas fa-trash"></i> Eliminar</button>
                 </div>
             `;
@@ -300,7 +299,6 @@ ${(() => {
             card.querySelector('.btn-info').onclick = () => viewSaleDetails(sale);
             card.querySelector('.btn-edit').onclick = () => editSale(sale);
             card.querySelector('.btn-pay').onclick = () => openPaymentModal(sale._id);
-            card.querySelector('.btn-pos-history').onclick = () => showClientSettlementHistory(sale.clientName);
             card.querySelector('.btn-delete').onclick = () => deleteSale(sale._id);
 
             list.appendChild(card);
@@ -372,140 +370,6 @@ function viewSaleDetails(sale) {
     localStorage.setItem("saleDetails", JSON.stringify(sale));
     window.location.href = "saleDetails.html";
 }
-
-/* ---------- historial de liquidaciones del cliente (POS) ---------- */
-async function showClientSettlementHistory(clientName) {
-    try {
-        const token = getToken();
-        const settledSales = await apiFetch(`/sales/settled/client/${encodeURIComponent(clientName)}`, 'GET', null, token);
-
-        if (settledSales.length === 0) {
-            showNotification(`No hay ventas liquidadas para ${clientName}`, 'warning');
-            return;
-        }
-
-        // Crear modal
-        const modal = document.createElement('div');
-        modal.className = 'pos-history-modal';
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center;
-            z-index: 10000;
-        `;
-
-        let salesListHTML = settledSales.map(sale => {
-            const settledDate = new Date(sale.settledDate).toLocaleDateString('es-CO', {
-                day: '2-digit', month: '2-digit', year: 'numeric'
-            });
-            const saleDate = new Date(sale.saleDate).toLocaleDateString('es-CO', {
-                day: '2-digit', month: '2-digit', year: 'numeric'
-            });
-            const totalPaid = (sale.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
-
-            return `
-                <div style="
-                    background: #f8f9fa; border-radius: 10px; padding: 15px; margin-bottom: 12px;
-                    border-left: 4px solid #27ae60; cursor: pointer; transition: all 0.2s;
-                " onmouseover="this.style.background='#e8f5e9'; this.style.transform='translateX(5px)'" 
-                   onmouseout="this.style.background='#f8f9fa'; this.style.transform='translateX(0)'"
-                   onclick="printSettledSalePOS('${sale._id}')">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div style="font-weight: 700; color: #2c3e50; font-size: 15px;">
-                            <i class="fas fa-check-circle" style="color: #27ae60; margin-right: 6px;"></i>
-                            Liquidado
-                        </div>
-                        <div style="font-weight: 700; color: #27ae60; font-size: 16px;">
-                            $${sale.price.toLocaleString('es-CO')}
-                        </div>
-                    </div>
-                    <div style="font-size: 13px; color: #555; margin-bottom: 4px;">
-                        <i class="fas fa-box" style="width: 16px;"></i> ${sale.productName}
-                    </div>
-                    <div style="display: flex; gap: 15px; font-size: 12px; color: #777;">
-                        <span><i class="fas fa-calendar-plus"></i> Venta: ${saleDate}</span>
-                        <span><i class="fas fa-check"></i> Liquidado: ${settledDate}</span>
-                        <span><i class="fas fa-money-bill"></i> Pagado: $${totalPaid.toLocaleString('es-CO')}</span>
-                    </div>
-                    <div style="margin-top: 8px; font-size: 11px; color: #8e44ad; font-weight: 600;">
-                        <i class="fas fa-print"></i> Clic para imprimir recibo POS
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        modal.innerHTML = `
-            <div style="
-                background: #fff; border-radius: 15px; padding: 25px; max-width: 550px; width: 92%;
-                max-height: 80vh; overflow-y: auto;
-                box-shadow: 0 15px 40px rgba(0,0,0,.3);
-            ">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div>
-                        <h3 style="margin: 0; color: #2c3e50;">
-                            <i class="fas fa-receipt" style="color: #8e44ad;"></i> Facturas POS
-                        </h3>
-                        <p style="margin: 5px 0 0; color: #777; font-size: 14px;">
-                            ${clientName} — ${settledSales.length} liquidación(es)
-                        </p>
-                    </div>
-                    <button onclick="this.closest('.pos-history-modal').remove()" style="
-                        background: none; border: none; font-size: 24px; cursor: pointer; color: #999;
-                        padding: 5px; line-height: 1;
-                    ">&times;</button>
-                </div>
-
-                ${salesListHTML}
-
-                <div style="margin-top: 15px; text-align: center;">
-                    <button onclick="printAllSettledPOS('${encodeURIComponent(clientName)}')" style="
-                        background: linear-gradient(135deg, #8e44ad, #9b59b6);
-                        color: white; border: none; border-radius: 8px;
-                        padding: 12px 24px; cursor: pointer; font-weight: 600; font-size: 14px;
-                    ">
-                        <i class="fas fa-print"></i> Imprimir todas
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Guardar ventas en variable global para acceso desde onclick
-        window._settledSalesForPOS = settledSales;
-
-    } catch (error) {
-        console.error('Error al obtener historial de liquidaciones:', error);
-        showNotification('Error al cargar el historial de liquidaciones', 'error');
-    }
-}
-
-// Función global para imprimir una venta liquidada específica
-window.printSettledSalePOS = function(saleId) {
-    const sale = (window._settledSalesForPOS || []).find(s => s._id === saleId);
-    if (!sale) {
-        showNotification('Venta no encontrada', 'error');
-        return;
-    }
-    generatePOS({ saleData: { ...sale, remainingBalance: 0 } });
-};
-
-// Función global para imprimir todas las ventas liquidadas de un cliente
-window.printAllSettledPOS = async function(encodedClientName) {
-    const clientName = decodeURIComponent(encodedClientName);
-    const sales = window._settledSalesForPOS || [];
-    
-    if (sales.length === 0) {
-        showNotification('No hay facturas para imprimir', 'warning');
-        return;
-    }
-
-    // Imprimir cada factura con un pequeño delay entre ellas
-    for (let i = 0; i < sales.length; i++) {
-        setTimeout(() => {
-            generatePOS({ saleData: { ...sales[i], remainingBalance: 0 } });
-        }, i * 1500);
-    }
-};
 
 /* ---------- eliminar ---------- */
 async function deleteSale(id) {
@@ -889,33 +753,11 @@ async function addPayment(force = false) {
 
         if (response.justSettled || response.settled) {
             showNotification("¡Venta liquidada automáticamente!", "success");
-            
-            // Buscar los datos completos de la venta para generar el recibo
-            try {
-                const allSales = await apiFetch('/sales/all', 'GET', null, token);
-                const settledSale = allSales.find(s => s._id === id);
-                
-                if (settledSale) {
-                    // Generar recibo POS con fecha de liquidación
-                    const receiptData = {
-                        saleData: {
-                            ...settledSale,
-                            settledDate: new Date().toISOString(),
-                            remainingBalance: 0,
-                            paymentType: settledSale.paymentType || 'cuotas'
-                        }
-                    };
-                    generatePOS(receiptData);
-                }
-            } catch (e) {
-                console.error('Error al generar recibo de liquidación:', e);
+            if (await showConfirm("¿Deseas ir a la sección de ventas liquidadas?")) {
+                window.location.href = "liquidados.html";
+                isAddingPayment = false;
+                return;
             }
-
-            document.getElementById("paymentModal").classList.remove("show");
-            cancelUpdate();
-            loadSales();
-            isAddingPayment = false;
-            return;
         }
 
         document.getElementById("paymentModal").classList.remove("show");
