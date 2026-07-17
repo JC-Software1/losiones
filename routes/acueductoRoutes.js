@@ -3,6 +3,7 @@ const auth = require("../middleware/auth");
 const AcueductoClient = require("../models/AcueductoClient");
 const AcueductoAbono = require("../models/AcueductoAbono");
 const AcueductoGasto = require("../models/AcueductoGasto");
+const AcueductoLiquidacion = require("../models/AcueductoLiquidacion");
 
 const router = express.Router();
 
@@ -376,6 +377,143 @@ router.put("/clientes/:id/reabrir", auth, async (req, res) => {
     } catch (e) {
         console.error("Error reabriendo deuda:", e);
         res.status(500).json({ error: "Error al reabrir deuda" });
+    }
+});
+
+/* ============================================================
+   LIQUIDACION - CIERRE DE CAJA
+   ============================================================ */
+
+/* ----------  ULTIMA LIQUIDACION (CAJA FINAL = CAJA INICIAL SIGUIENTE)  ---------- */
+router.get("/liquidacion/ultima", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const ultima = await AcueductoLiquidacion.findOne({ user: req.user.id })
+            .sort({ fecha: -1 })
+            .limit(1);
+
+        res.json(ultima || { cajaFinal: 0 });
+    } catch (e) {
+        console.error("Error obteniendo ultima liquidacion:", e);
+        res.status(500).json({ error: "Error al obtener ultima liquidacion" });
+    }
+});
+
+/* ----------  OBTENER DATOS PENDIENTES (reciboDia = false)  ---------- */
+router.get("/liquidacion/pendiente", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const abonos = await AcueductoAbono.find({ user: req.user.id, reciboDia: false })
+            .populate("cliente", "nombre cedula telefono")
+            .sort({ fecha: -1 });
+
+        const gastos = await AcueductoGasto.find({ user: req.user.id, reciboDia: false })
+            .sort({ fecha: -1 });
+
+        const totalIngresos = abonos.reduce((sum, a) => sum + a.monto, 0);
+        const totalGastos = gastos.reduce((sum, g) => sum + g.monto, 0);
+
+        res.json({
+            abonos,
+            gastos,
+            totalIngresos,
+            totalGastos,
+            cantidadAbonos: abonos.length,
+            cantidadGastos: gastos.length
+        });
+    } catch (e) {
+        console.error("Error obteniendo datos pendientes:", e);
+        res.status(500).json({ error: "Error al obtener datos pendientes" });
+    }
+});
+
+/* ----------  REALIZAR LIQUIDACION (CERRAR CAJA)  ---------- */
+router.post("/liquidacion", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const { cajaInicial } = req.body;
+
+        // Obtener todos los elementos pendientes
+        const abonos = await AcueductoAbono.find({ user: req.user.id, reciboDia: false });
+        const gastos = await AcueductoGasto.find({ user: req.user.id, reciboDia: false });
+
+        if (abonos.length === 0 && gastos.length === 0) {
+            return res.status(400).json({ error: "No hay datos pendientes para liquidar" });
+        }
+
+        const totalIngresos = abonos.reduce((sum, a) => sum + a.monto, 0);
+        const totalGastos = gastos.reduce((sum, g) => sum + g.monto, 0);
+        const cajaFinal = (cajaInicial || 0) + totalIngresos - totalGastos;
+
+        // Marcar abonos como liquidados
+        const abonoIds = abonos.map(a => a._id);
+        if (abonoIds.length > 0) {
+            await AcueductoAbono.updateMany(
+                { _id: { $in: abonoIds } },
+                { $set: { reciboDia: true } }
+            );
+        }
+
+        // Marcar gastos como liquidados
+        const gastoIds = gastos.map(g => g._id);
+        if (gastoIds.length > 0) {
+            await AcueductoGasto.updateMany(
+                { _id: { $in: gastoIds } },
+                { $set: { reciboDia: true } }
+            );
+        }
+
+        // Crear registro de liquidacion
+        const liquidacion = new AcueductoLiquidacion({
+            user: req.user.id,
+            fecha: new Date(),
+            cajaInicial: cajaInicial || 0,
+            cajaFinal,
+            totalIngresos,
+            totalGastos,
+            cantidadAbonos: abonos.length,
+            cantidadGastos: gastos.length,
+            abonos: abonoIds,
+            gastos: gastoIds
+        });
+
+        await liquidacion.save();
+
+        res.status(201).json(liquidacion);
+    } catch (e) {
+        console.error("Error realizando liquidacion:", e);
+        res.status(500).json({ error: "Error al realizar liquidacion" });
+    }
+});
+
+/* ----------  HISTORIAL DE LIQUIDACIONES  ---------- */
+router.get("/liquidaciones", auth, async (req, res) => {
+    try {
+        if (req.user.tipo !== 4) return res.status(403).json({ error: "No autorizado" });
+
+        const { desde, hasta } = req.query;
+        const filtro = { user: req.user.id };
+
+        if (desde || hasta) {
+            filtro.fecha = {};
+            if (desde) filtro.fecha.$gte = new Date(desde);
+            if (hasta) {
+                const hastaDate = new Date(hasta);
+                hastaDate.setHours(23, 59, 59, 999);
+                filtro.fecha.$lte = hastaDate;
+            }
+        }
+
+        const liquidaciones = await AcueductoLiquidacion.find(filtro)
+            .sort({ fecha: -1 });
+
+        res.json(liquidaciones);
+    } catch (e) {
+        console.error("Error obteniendo liquidaciones:", e);
+        res.status(500).json({ error: "Error al obtener historial de liquidaciones" });
     }
 });
 
