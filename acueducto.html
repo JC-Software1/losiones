@@ -1355,6 +1355,7 @@
         // ===== GLOBAL STATE =====
         let clientes = [];
         let abonoClienteId = null;
+        let userBusinessName = "";
 
         // ===== TIME =====
         function updateTime() {
@@ -1370,6 +1371,7 @@
             try {
                 const data = await apiFetch("/auth/verify");
                 const name = data.user?.name || "Usuario";
+                userBusinessName = data.user?.businessName || "";
                 document.getElementById('userName').textContent = name;
                 document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
                 const hour = new Date().getHours();
@@ -1953,10 +1955,10 @@
 
             const totalPagado = abonos.reduce((sum, a) => sum + a.monto, 0);
             const fecha = settledDate ? new Date(settledDate) : new Date();
-            const bizName = "ACUEDUCTO";
+            const bizName = userBusinessName || "ACUEDUCTO";
 
             const ticketText = `
-      COMPROBANTE DE LIQUIDACIÓN
+${bizName.toUpperCase()}
 ================================
 Fecha: ${fecha.toLocaleDateString('es-CO')}
 Hora: ${fecha.toLocaleTimeString('es-CO')}
@@ -1987,7 +1989,6 @@ TOTAL PAGADO: $${totalPagado.toLocaleString('es-CO')}
 ================================
 
 Gracias por su pago!
-Volver pronto
 
 ================================`;
 

@@ -132,8 +132,13 @@ router.post("/verificar-bloqueo", async (req, res) => {
 });
 
 /* ----------  VERIFY ---------- */
-router.get("/verify", auth, (req, res) => {
-  res.json({ message: "Token válido", user: req.user });
+router.get("/verify", auth, async (req, res) => {
+  try {
+    const dbUser = await User.findById(req.user.id).select('name username tipo businessName businessNit');
+    res.json({ message: "Token válido", user: dbUser || req.user });
+  } catch (e) {
+    res.json({ message: "Token válido", user: req.user });
+  }
 });
 
 /* ============================================================
