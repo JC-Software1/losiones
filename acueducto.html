@@ -1371,7 +1371,7 @@
             try {
                 const data = await apiFetch("/auth/verify");
                 const name = data.user?.name || "Usuario";
-                userBusinessName = data.user?.businessName || "";
+                userBusinessName = data.user?.businessName || data.user?.name || "";
                 document.getElementById('userName').textContent = name;
                 document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
                 const hour = new Date().getHours();
@@ -1989,6 +1989,8 @@ TOTAL PAGADO: $${totalPagado.toLocaleString('es-CO')}
 ================================
 
 Gracias por su pago!
+HAGAMOS BUEN USO DEL AGUA
+USO EXCLUSIVO PARA VIVIENDA
 
 ================================`;
 
