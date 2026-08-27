@@ -225,10 +225,11 @@ router.get("/ventas", auth, soloTipo5, async (req, res) => {
 // POST /api/barberia/ventas — crear nueva venta y descontar stock
 router.post("/ventas", auth, soloTipo5, async (req, res) => {
     try {
-        const { barberoId, items, fecha } = req.body;
+        const { barberoId, items, fecha, metodoPago } = req.body;
 
         if (!barberoId) return res.status(400).json({ error: "Barbero requerido" });
         if (!items || items.length === 0) return res.status(400).json({ error: "Debe agregar al menos un ítem" });
+        const pago = ["efectivo", "transferencia"].includes(metodoPago) ? metodoPago : "efectivo";
 
         // Verificar barbero
         const barbero = await Barbero.findOne({ _id: barberoId, propietario: req.user.id, activo: true });
@@ -259,7 +260,8 @@ router.post("/ventas", auth, soloTipo5, async (req, res) => {
             fecha: fecha ? new Date(fecha) : new Date(),
             items,
             total,
-            numeroRecibo
+            numeroRecibo,
+            metodoPago: pago
         });
 
         await venta.save();

@@ -15,7 +15,8 @@ const VentaBarberiaSchema = new mongoose.Schema({
     fecha: { type: Date, default: Date.now },
     items: [ItemVentaSchema],
     total: { type: Number, required: true },
-    numeroRecibo: { type: Number, required: true }
+    numeroRecibo: { type: Number, required: true },
+    metodoPago: { type: String, enum: ["efectivo", "transferencia"], default: "efectivo" }
 }, { timestamps: true });
 
 module.exports = mongoose.model("VentaBarberia", VentaBarberiaSchema);

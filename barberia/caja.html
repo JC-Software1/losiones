@@ -245,6 +245,13 @@
               <span class="total-label">Total</span>
               <span class="total-value" id="totalDisplay">$0</span>
             </div>
+            <div class="form-group" style="margin-bottom:14px">
+              <label class="form-label" for="selectMetodoPago">Método de pago</label>
+              <select class="form-select" id="selectMetodoPago">
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+              </select>
+            </div>
             <button class="btn btn-primary btn-lg" id="btnConfirmar" style="width:100%;justify-content:center" disabled>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -404,6 +411,7 @@ document.getElementById("btnAddServicio").onclick = () => {
   const sel = document.getElementById("selectServicio");
   const precio = parseFloat(document.getElementById("precioServicio").value);
   const cant = parseInt(document.getElementById("cantServicio").value) || 1;
+  if (!document.getElementById("selectBarbero").value) { toast("Selecciona un barbero primero", "error"); return; }
   if (!sel.value) { toast("Selecciona un servicio", "error"); return; }
   if (isNaN(precio) || precio < 0) { toast("Precio inválido", "error"); return; }
   const nombre = sel.selectedOptions[0].text.split(" — ")[0];
@@ -417,6 +425,7 @@ document.getElementById("btnAddProducto").onclick = () => {
   const sel = document.getElementById("selectProducto");
   const precio = parseFloat(document.getElementById("precioProducto").value);
   const cant = parseInt(document.getElementById("cantProducto").value) || 1;
+  if (!document.getElementById("selectBarbero").value) { toast("Selecciona un barbero primero", "error"); return; }
   if (!sel.value) { toast("Selecciona un producto", "error"); return; }
   const opt = sel.selectedOptions[0];
   const stock = parseInt(opt.dataset.stock);
@@ -472,7 +481,7 @@ document.getElementById("btnLimpiar").onclick = () => {
 document.getElementById("btnConfirmar").onclick = async () => {
   const barberoId = document.getElementById("selectBarbero").value;
   const fecha = document.getElementById("inputFecha").value;
-  if (!barberoId) { toast("Selecciona un barbero", "error"); return; }
+  if (!barberoId) { toast("Selecciona un barbero antes de confirmar la venta", "error"); return; }
   if (items.length === 0) { toast("Agrega al menos un ítem", "error"); return; }
 
   const btn = document.getElementById("btnConfirmar");
@@ -481,6 +490,7 @@ document.getElementById("btnConfirmar").onclick = async () => {
     const venta = await api("/ventas", "POST", {
       barberoId,
       fecha: fecha ? new Date(fecha + "T12:00:00").toISOString() : new Date().toISOString(),
+      metodoPago: document.getElementById("selectMetodoPago").value,
       items: items.map(i => ({
         tipo: i.tipo,
         nombre: i.nombre,
@@ -509,6 +519,7 @@ function mostrarRecibo(venta) {
   const barberoNombre = barberosData.find(b => b._id === venta.barbero._id || b._id === venta.barbero)?.nombre
     || venta.barbero?.nombre || "—";
   const fecha = new Date(venta.fecha).toLocaleString("es-CO", { day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit" });
+  const metodoLabel = venta.metodoPago === "transferencia" ? "Transferencia" : "Efectivo";
 
   document.getElementById("reciboContent").innerHTML = `
     <div class="recibo-header">
@@ -518,6 +529,10 @@ function mostrarRecibo(venta) {
     <div class="recibo-meta">
       <span>Barbero</span>
       <strong style="color:var(--carbon)">${barberoNombre}</strong>
+    </div>
+    <div class="recibo-meta">
+      <span>Método de pago</span>
+      <strong style="color:var(--carbon)">${metodoLabel}</strong>
     </div>
     <div class="recibo-items">
       ${venta.items.map(i => `

@@ -161,12 +161,13 @@
                   <th>Fecha</th>
                   <th>Barbero</th>
                   <th>Detalle</th>
+                  <th>Pago</th>
                   <th>Total</th>
                   <th class="no-print"></th>
                 </tr>
               </thead>
               <tbody id="tbodyVentas">
-                <tr><td colspan="6"><div class="skeleton" style="height:14px;width:60%;margin:8px 0"></div></td></tr>
+                <tr><td colspan="7"><div class="skeleton" style="height:14px;width:60%;margin:8px 0"></div></td></tr>
               </tbody>
             </table>
           </div>
@@ -376,7 +377,7 @@ function applyFilters() {
   // Render Table
   const tbody = document.getElementById("tbodyVentas");
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6">
+    tbody.innerHTML = `<tr><td colspan="7">
       <div class="empty-state" style="padding: 24px">
         <p>No se encontraron recibos con los filtros seleccionados.</p>
       </div>
@@ -387,12 +388,14 @@ function applyFilters() {
   tbody.innerHTML = filtered.map(v => {
     const barberoNombre = v.barbero?.nombre || barberos.find(b => b._id === (v.barbero?._id || v.barbero))?.nombre || "—";
     const itemsDesc = v.items.map(it => `${it.cantidad > 1 ? `${it.cantidad}× ` : ""}${it.nombre}`).join(", ");
+    const pagoLabel = v.metodoPago === "transferencia" ? "Transferencia" : "Efectivo";
     return `
       <tr class="fade-in">
         <td><strong>#${v.numeroRecibo}</strong></td>
         <td class="muted">${formatDate(v.fecha)}</td>
         <td><strong>${barberoNombre}</strong></td>
         <td class="muted" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${itemsDesc}">${itemsDesc}</td>
+        <td><span class="badge badge-active">${pagoLabel}</span></td>
         <td><strong>${formatMoney(v.total)}</strong></td>
         <td class="no-print">
           <button class="anular-btn" onclick="pedirAnular('${v._id}','${v.numeroRecibo}')" title="Anular venta">✕</button>

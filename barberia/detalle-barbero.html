@@ -175,12 +175,13 @@ async function loadDetalle() {
 
     container.innerHTML = ventas.map(v => {
       const itemsDesc = v.items.map(it => `${it.cantidad > 1 ? `${it.cantidad}× ` : ""}${it.nombre}`).join(" · ");
+      const pagoLabel = v.metodoPago === "transferencia" ? "Transferencia" : "Efectivo";
       return `
         <div class="recibo-card">
           <div class="rc-left">
             <strong>Recibo #${v.numeroRecibo}</strong>
             <div class="rc-items">${itemsDesc}</div>
-            <div class="rc-meta">${formatDate(v.fecha)}</div>
+            <div class="rc-meta">${formatDate(v.fecha)} · ${pagoLabel}</div>
           </div>
           <div class="rc-right">
             <div class="rc-total">${formatMoney(v.total)}</div>
