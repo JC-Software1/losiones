@@ -9,7 +9,7 @@ const API_BASE = "https://losiones-fjt0.onrender.com/api";
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
 export function getToken() {
-    return localStorage.getItem("token");
+    return localStorage.getItem("authToken");
 }
 
 export function getUserInfo() {
@@ -30,7 +30,7 @@ export function requireAuth() {
 }
 
 export function logout() {
-    localStorage.removeItem("token");
+    localStorage.removeItem("authToken");
     window.location.href = "../index.html";
 }
 
