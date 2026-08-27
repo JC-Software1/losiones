@@ -143,7 +143,7 @@ router.get("/inventario", auth, soloTipo5, async (req, res) => {
 // POST /api/barberia/inventario
 router.post("/inventario", auth, soloTipo5, async (req, res) => {
     try {
-        const { nombre, categoria, stock, precioVenta, stockMinimo } = req.body;
+        const { nombre, categoria, stock, precioVenta, precioCosto, stockMinimo } = req.body;
         if (!nombre?.trim()) return res.status(400).json({ error: "El nombre es obligatorio" });
         if (precioVenta === undefined || precioVenta < 0) return res.status(400).json({ error: "Precio inválido" });
 
@@ -152,6 +152,7 @@ router.post("/inventario", auth, soloTipo5, async (req, res) => {
             categoria: categoria?.trim() || "General",
             stock: stock || 0,
             precioVenta,
+            precioCosto: precioCosto || 0,
             stockMinimo: stockMinimo || 3,
             propietario: req.user.id
         });
@@ -168,7 +169,7 @@ router.patch("/inventario/:id", auth, soloTipo5, async (req, res) => {
         const producto = await ProductoBarberia.findOne({ _id: req.params.id, propietario: req.user.id });
         if (!producto) return res.status(404).json({ error: "Producto no encontrado" });
 
-        const campos = ["nombre", "categoria", "stock", "precioVenta", "stockMinimo", "activo"];
+        const campos = ["nombre", "categoria", "stock", "precioVenta", "precioCosto", "stockMinimo", "activo"];
         campos.forEach(c => { if (req.body[c] !== undefined) producto[c] = req.body[c]; });
         await producto.save();
         res.json(producto);

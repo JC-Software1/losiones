@@ -601,9 +601,48 @@ tbody td.muted { color: var(--carbon-40); }
 .recibo-total { border-top: 1px dashed var(--beige); padding-top: 12px; display: flex; justify-content: space-between; font-weight: 700; font-size: 1rem; }
 
 @media print {
-  .sidebar, .topbar, .no-print { display: none !important; }
-  .main-content { margin-left: 0; }
-  .recibo { border: none; box-shadow: none; max-width: 100%; }
+  body > *:not(.modal-overlay) {
+    display: none !important;
+  }
+  .modal-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    opacity: 1 !important;
+    pointer-events: none !important;
+  }
+  .modal-overlay:not(.open) {
+    display: none !important;
+  }
+  .modal {
+    transform: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    width: 72mm !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+  }
+  .modal-header, .modal-footer, .modal-close {
+    display: none !important;
+  }
+  .recibo {
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    font-family: monospace !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+  .recibo-header h2 {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+  }
 }
 
 /* ── Animations ─────────────────────────────────────────── */

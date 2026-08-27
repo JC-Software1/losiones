@@ -47,6 +47,63 @@
         ⚠️ <span id="alertaStockMsg"></span>
       </div>
 
+      <!-- Stats de Inventario -->
+      <div class="stats-grid fade-in" style="animation-delay:.04s; margin-bottom: 20px;">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m7.5 4.27 9 5.15"/>
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+            </svg>
+          </div>
+          <div class="stat-label">Total unidades</div>
+          <div class="stat-value" id="statTotalUnidades">0</div>
+          <div class="stat-sub">unidades en stock</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/>
+            </svg>
+          </div>
+          <div class="stat-label">Valor costo</div>
+          <div class="stat-value" id="statValorCosto">$0</div>
+          <div class="stat-sub">inversión total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <div class="stat-label">Valor venta</div>
+          <div class="stat-value" id="statValorVenta">$0</div>
+          <div class="stat-sub">precio público total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" x2="12" y1="20" y2="20"/><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+            </svg>
+          </div>
+          <div class="stat-label">Ganancia estimada</div>
+          <div class="stat-value" id="statGananciaEstimada" style="color: var(--oliva)">$0</div>
+          <div class="stat-sub">margen bruto proyectado</div>
+        </div>
+      </div>
+
+      <!-- Buscador -->
+      <div class="card no-print fade-in" style="margin-bottom:16px; padding: 16px; animation-delay:.05s">
+        <div class="form-group" style="max-width:400px">
+          <label class="form-label" for="searchNombre">Buscar por nombre</label>
+          <input class="form-input" type="text" id="searchNombre" placeholder="Escribe el nombre del producto..." autocomplete="off"/>
+        </div>
+      </div>
+
       <div class="card fade-in" style="animation-delay:.06s">
         <div class="table-wrap">
           <table>
@@ -55,12 +112,13 @@
                 <th>Producto</th>
                 <th>Categoría</th>
                 <th>Stock</th>
+                <th>Precio costo</th>
                 <th>Precio venta</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="tbodyInventario">
-              <tr><td colspan="5"><div class="skeleton" style="height:14px;width:50%;margin:8px 0"></div></td></tr>
+              <tr><td colspan="6"><div class="skeleton" style="height:14px;width:50%;margin:8px 0"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -96,13 +154,17 @@
           <input class="form-input" id="inputStock" type="number" placeholder="0" min="0"/>
         </div>
       </div>
-      <div class="form-grid">
+      <div class="form-grid-3">
         <div class="form-group">
-          <label class="form-label" for="inputPrecio">Precio venta (COP)</label>
+          <label class="form-label" for="inputPrecioCosto">Precio costo</label>
+          <input class="form-input" id="inputPrecioCosto" type="number" placeholder="0" min="0"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputPrecio">Precio venta</label>
           <input class="form-input" id="inputPrecio" type="number" placeholder="0" min="0"/>
         </div>
         <div class="form-group">
-          <label class="form-label" for="inputStockMin">Stock mínimo (alerta)</label>
+          <label class="form-label" for="inputStockMin">Stock mín.</label>
           <input class="form-input" id="inputStockMin" type="number" placeholder="3" min="0"/>
         </div>
       </div>
@@ -174,13 +236,32 @@ let editingId = null;
 let deletingId = null;
 let stockId = null;
 let productos = [];
+let searchQuery = "";
 
 async function loadInventario() {
   try {
     productos = await api("/inventario");
     renderTable();
+    calculateStats();
     checkStockBajo();
   } catch(e) { toast("Error: " + e.message, "error"); }
+}
+
+function calculateStats() {
+  let totalUnidades = 0;
+  let valorCosto = 0;
+  let valorVenta = 0;
+  productos.forEach(p => {
+    totalUnidades += p.stock;
+    valorCosto += p.stock * (p.precioCosto || 0);
+    valorVenta += p.stock * p.precioVenta;
+  });
+  const ganancia = valorVenta - valorCosto;
+
+  document.getElementById("statTotalUnidades").textContent = totalUnidades;
+  document.getElementById("statValorCosto").textContent = formatMoney(valorCosto);
+  document.getElementById("statValorVenta").textContent = formatMoney(valorVenta);
+  document.getElementById("statGananciaEstimada").textContent = formatMoney(ganancia);
 }
 
 function checkStockBajo() {
@@ -201,8 +282,9 @@ function stockClass(p) {
 
 function renderTable() {
   const tbody = document.getElementById("tbodyInventario");
-  if (productos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5">
+  const filtered = productos.filter(p => p.nombre.toLowerCase().includes(searchQuery));
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6">
       <div class="empty-state">
         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -210,12 +292,12 @@ function renderTable() {
           <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
         </svg>
         <h3>Inventario vacío</h3>
-        <p>Agrega productos como gaseosas, cervezas, papitas, etc.</p>
+        <p>${searchQuery ? "No se encontraron productos con ese nombre" : "Agrega productos como gaseosas, cervezas, papitas, etc."}</p>
       </div>
     </td></tr>`;
     return;
   }
-  tbody.innerHTML = productos.map(p => `
+  tbody.innerHTML = filtered.map(p => `
     <tr class="fade-in">
       <td><strong>${p.nombre}</strong></td>
       <td class="muted">${p.categoria}</td>
@@ -223,6 +305,7 @@ function renderTable() {
         <span ${stockClass(p)}>${p.stock}</span>
         ${p.stock <= p.stockMinimo ? `<span class="badge badge-low" style="margin-left:6px">Bajo</span>` : ""}
       </td>
+      <td><strong>${formatMoney(p.precioCosto || 0)}</strong></td>
       <td><strong>${formatMoney(p.precioVenta)}</strong></td>
       <td>
         <div style="display:flex;gap:6px;justify-content:flex-end">
@@ -253,7 +336,7 @@ function renderTable() {
 }
 
 function resetForm() {
-  ["inputNombre","inputCategoria","inputPrecio"].forEach(id => document.getElementById(id).value = "");
+  ["inputNombre","inputCategoria","inputPrecio","inputPrecioCosto"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("inputStock").value = "0";
   document.getElementById("inputStockMin").value = "3";
 }
@@ -275,17 +358,19 @@ document.getElementById("btnGuardar").onclick = async () => {
   const categoria = document.getElementById("inputCategoria").value.trim() || "General";
   const stock = parseInt(document.getElementById("inputStock").value) || 0;
   const precioVenta = parseFloat(document.getElementById("inputPrecio").value);
+  const precioCosto = parseFloat(document.getElementById("inputPrecioCosto").value) || 0;
   const stockMinimo = parseInt(document.getElementById("inputStockMin").value) || 3;
   if (!nombre) { toast("El nombre es obligatorio", "error"); return; }
-  if (isNaN(precioVenta) || precioVenta < 0) { toast("Precio inválido", "error"); return; }
+  if (isNaN(precioVenta) || precioVenta < 0) { toast("Precio venta inválido", "error"); return; }
+  if (isNaN(precioCosto) || precioCosto < 0) { toast("Precio costo inválido", "error"); return; }
   const btn = document.getElementById("btnGuardar");
   btn.disabled = true; btn.textContent = "Guardando...";
   try {
     if (editingId) {
-      await api(`/inventario/${editingId}`, "PATCH", { nombre, categoria, precioVenta, stockMinimo });
+      await api(`/inventario/${editingId}`, "PATCH", { nombre, categoria, precioVenta, precioCosto, stockMinimo });
       toast("Producto actualizado");
     } else {
-      await api("/inventario", "POST", { nombre, categoria, stock, precioVenta, stockMinimo });
+      await api("/inventario", "POST", { nombre, categoria, stock, precioVenta, precioCosto, stockMinimo });
       toast("Producto agregado");
     }
     closeModal("modalProducto");
@@ -303,6 +388,7 @@ window.editarProducto = (id) => {
   document.getElementById("inputCategoria").value = p.categoria;
   document.getElementById("inputStock").value = p.stock;
   document.getElementById("inputPrecio").value = p.precioVenta;
+  document.getElementById("inputPrecioCosto").value = p.precioCosto || 0;
   document.getElementById("inputStockMin").value = p.stockMinimo;
   openModal("modalProducto");
 };
@@ -344,6 +430,11 @@ document.getElementById("btnConfirmarEliminar").onclick = async () => {
   } catch(e) { toast(e.message, "error"); }
   finally { btn.disabled = false; btn.textContent = "Eliminar"; }
 };
+
+document.getElementById("searchNombre").addEventListener("input", e => {
+  searchQuery = e.target.value.toLowerCase().trim();
+  renderTable();
+});
 
 document.querySelectorAll(".modal-overlay").forEach(o =>
   o.addEventListener("click", e => { if(e.target === o) o.classList.remove("open"); })

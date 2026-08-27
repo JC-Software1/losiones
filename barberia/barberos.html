@@ -147,7 +147,7 @@ function renderTable() {
     return;
   }
   tbody.innerHTML = barberos.map(b => `
-    <tr class="fade-in">
+    <tr class="fade-in" style="cursor:pointer" onclick="verDetalleBarbero(event, '${b._id}')">
       <td><strong>${b.nombre}</strong></td>
       <td>
         <span class="badge ${b.activo ? "badge-active" : "badge-inactive"}">
@@ -270,6 +270,11 @@ document.querySelectorAll(".modal-overlay").forEach(overlay => {
 document.getElementById("inputNombre").addEventListener("keydown", e => {
   if (e.key === "Enter") document.getElementById("btnGuardar").click();
 });
+
+window.verDetalleBarbero = (e, id) => {
+  if (e.target.closest("button") || e.target.closest("svg") || e.target.closest("a")) return;
+  window.location.href = `detalle-barbero.html?id=${id}`;
+};
 
 loadBarberos();
 </script>

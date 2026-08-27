@@ -3,8 +3,19 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-  <title>Dashboard — Barbería</title>
+  <title>Resumen — Barbería</title>
   <link rel="stylesheet" href="css/barberia.css"/>
+  <style>
+    .rt-margin {
+      color: var(--oliva) !important;
+    }
+    .anular-btn {
+      background: none; border: none; cursor: pointer;
+      color: rgba(192,57,43,.5); padding: 2px 6px; border-radius: 4px;
+      transition: all var(--speed); font-size: .85rem;
+    }
+    .anular-btn:hover { background: rgba(192,57,43,.08); color: #c0392b; }
+  </style>
 </head>
 <body>
 <div id="sidebarMount"></div>
@@ -22,7 +33,7 @@
             <line x1="4" x2="20" y1="18" y2="18"/>
           </svg>
         </button>
-        <span class="topbar-title">Dashboard</span>
+        <span class="topbar-title">Resumen de Ventas</span>
       </div>
       <div class="topbar-right">
         <span class="topbar-date" id="liveClock"></span>
@@ -33,13 +44,54 @@
     <main class="page-body">
 
       <!-- Welcome -->
-      <div style="margin-bottom:28px" class="fade-in">
-        <h1 id="welcomeTitle">Buen día</h1>
-        <p style="margin-top:4px;font-size:.9rem">Resumen de actividad del día de hoy</p>
+      <div style="margin-bottom:24px" class="fade-in">
+        <h1 id="welcomeTitle">Resumen</h1>
+        <p style="margin-top:4px;font-size:.9rem">Panel general de control y consulta de ventas</p>
+      </div>
+
+      <!-- Advanced Filters -->
+      <div class="card no-print fade-in" style="margin-bottom:20px; animation-delay:.02s">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; align-items:flex-end;">
+          <div class="form-group">
+            <label class="form-label" for="filterDesde">Desde</label>
+            <input class="form-input" type="date" id="filterDesde"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filterHasta">Hasta</label>
+            <input class="form-input" type="date" id="filterHasta"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filterBarbero">Barbero</label>
+            <select class="form-select" id="filterBarbero">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filterServicio">Servicio</label>
+            <select class="form-select" id="filterServicio">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filterProducto">Producto</label>
+            <select class="form-select" id="filterProducto">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div>
+            <button class="btn btn-primary" id="btnBuscar" style="width:100%; justify-content:center; padding: 10px 0;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              Filtrar
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Stats -->
-      <div class="stats-grid fade-in" style="animation-delay:.05s">
+      <div class="stats-grid fade-in" id="statsGrid" style="animation-delay:.04s">
         <div class="stat-card">
           <div class="stat-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -48,9 +100,9 @@
               <path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
             </svg>
           </div>
-          <div class="stat-label">Ventas hoy</div>
-          <div class="stat-value" id="statVentas">—</div>
-          <div class="stat-sub" id="statVentasSub">cargando...</div>
+          <div class="stat-label">Ventas filtradas</div>
+          <div class="stat-value" id="statVentas">0</div>
+          <div class="stat-sub" id="statVentasSub">recibos coinciden</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon">
@@ -59,71 +111,69 @@
               <line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
             </svg>
           </div>
-          <div class="stat-label">Total del día</div>
-          <div class="stat-value" id="statTotal">—</div>
-          <div class="stat-sub">ingresos acumulados</div>
+          <div class="stat-label">Recaudo total</div>
+          <div class="stat-value" id="statTotal" style="color:var(--oliva)">$0</div>
+          <div class="stat-sub">ingresos del período</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12" y1="17" y2="17"/>
             </svg>
           </div>
-          <div class="stat-label">Barbero estrella</div>
-          <div class="stat-value" id="statBarbero" style="font-size:1.25rem">—</div>
-          <div class="stat-sub" id="statBarberoSub">mayor recaudación</div>
+          <div class="stat-label">Items vendidos</div>
+          <div class="stat-value" id="statItems">0</div>
+          <div class="stat-sub">cortes + productos</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-              <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+              <rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/>
             </svg>
           </div>
-          <div class="stat-label">Productos críticos</div>
-          <div class="stat-value" id="statCriticos">—</div>
-          <div class="stat-sub">stock bajo</div>
+          <div class="stat-label">Margen estimado</div>
+          <div class="stat-value rt-margin" id="statMargen">$0</div>
+          <div class="stat-sub">menos costo inventario</div>
         </div>
       </div>
 
-      <!-- Two columns: barbero table + accesos rápidos -->
+      <!-- Two columns layout -->
       <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start" id="dashGrid">
 
-        <!-- Barberos hoy -->
-        <div class="card fade-in" style="animation-delay:.1s">
+        <!-- Sales details -->
+        <div class="card fade-in" style="animation-delay:.08s">
           <div class="card-header">
             <h3 class="card-title">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
               </svg>
-              Actividad por barbero
+              Historial de recibos
             </h3>
-            <a href="reportes.html" class="btn btn-ghost btn-sm no-print">Ver reporte completo</a>
           </div>
           <div class="table-wrap">
-            <table id="tablaBarberos">
+            <table id="tablaVentas">
               <thead>
                 <tr>
+                  <th>Recibo</th>
+                  <th>Fecha</th>
                   <th>Barbero</th>
-                  <th>Servicios</th>
+                  <th>Detalle</th>
                   <th>Total</th>
+                  <th class="no-print"></th>
                 </tr>
               </thead>
-              <tbody id="tbodyBarberos">
-                <tr><td colspan="3"><div class="skeleton" style="height:14px;width:60%;margin:8px 0"></div></td></tr>
+              <tbody id="tbodyVentas">
+                <tr><td colspan="6"><div class="skeleton" style="height:14px;width:60%;margin:8px 0"></div></td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Accesos rápidos -->
-        <div class="card fade-in" style="animation-delay:.15s">
+        <!-- Quick Actions -->
+        <div class="card fade-in no-print" style="animation-delay:.12s">
           <div class="card-header">
             <h3 class="card-title">Acciones</h3>
           </div>
@@ -167,22 +217,55 @@
   </div>
 </div>
 
-<script type="module">
-import { requireAuth, initSidebar, startClock, api, formatMoney, renderSidebarHTML, toast } from "./js/barberia-core.js";
+<!-- Modal anular -->
+<div class="modal-overlay" id="modalAnular">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h3 class="modal-title">Anular venta</h3>
+      <button class="modal-close" id="btnCerrarAnular">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>¿Anular el recibo <strong id="reciboAnular"></strong>? El stock de productos del inventario será devuelto de inmediato.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelarAnular">Cancelar</button>
+      <button class="btn btn-danger" id="btnConfirmarAnular">Anular</button>
+    </div>
+  </div>
+</div>
 
-const user = requireAuth();
+<script type="module">
+import { requireAuth, initSidebar, startClock, api, formatMoney, formatDate, renderSidebarHTML, toast, openModal, closeModal, todayISO } from "./js/barberia-core.js";
+
+requireAuth();
 
 // Inject sidebar
 document.getElementById("sidebarMount").innerHTML = renderSidebarHTML();
 initSidebar("index.html");
 startClock(document.getElementById("liveClock"));
 
+// Default dates
+const today = todayISO();
+document.getElementById("filterDesde").value = today;
+document.getElementById("filterHasta").value = today;
+
+let rawSales = [];
+let barberos = [];
+let servicios = [];
+let productos = [];
+let anulandoId = null;
+
 // Welcome greeting
 const hour = new Date().getHours();
 const greet = hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
 document.getElementById("welcomeTitle").textContent = `${greet}`;
 
-// Responsive dash grid
+// Responsive layout
 function adjustGrid() {
   const g = document.getElementById("dashGrid");
   if (window.innerWidth < 900) g.style.gridTemplateColumns = "1fr";
@@ -191,53 +274,170 @@ function adjustGrid() {
 adjustGrid();
 window.addEventListener("resize", adjustGrid);
 
-// Load data
-async function loadDashboard() {
+// Fill select elements
+async function loadFilterOptions() {
   try {
-    const [reporte, inventario] = await Promise.all([
-      api(`/reporte?desde=${new Date().toISOString().split("T")[0]}&hasta=${new Date().toISOString().split("T")[0]}`),
+    const [bList, sList, pList] = await Promise.all([
+      api("/barberos"),
+      api("/servicios"),
       api("/inventario")
     ]);
+    barberos = bList;
+    servicios = sList;
+    productos = pList;
 
-    // Stats
-    document.getElementById("statVentas").textContent = reporte.totalVentas;
-    document.getElementById("statVentasSub").textContent = reporte.totalVentas === 1 ? "venta registrada" : "ventas registradas";
-    document.getElementById("statTotal").textContent = formatMoney(reporte.totalGlobal);
+    const bSel = document.getElementById("filterBarbero");
+    bSel.innerHTML = '<option value="">Todos</option>' + 
+      barberos.map(b => `<option value="${b._id}">${b.nombre}</option>`).join("");
 
-    const barberos = reporte.resumenBarberos || [];
-    if (barberos.length > 0) {
-      document.getElementById("statBarbero").textContent = barberos[0].nombre;
-      document.getElementById("statBarberoSub").textContent = `${formatMoney(barberos[0].total)} · ${barberos[0].cortes} servicio${barberos[0].cortes !== 1 ? "s" : ""}`;
-    } else {
-      document.getElementById("statBarbero").textContent = "—";
-    }
+    const sSel = document.getElementById("filterServicio");
+    sSel.innerHTML = '<option value="">Todos</option>' + 
+      servicios.map(s => `<option value="${s.nombre}">${s.nombre}</option>`).join("");
 
-    const criticos = inventario.filter(p => p.stock <= p.stockMinimo).length;
-    document.getElementById("statCriticos").textContent = criticos;
+    const pSel = document.getElementById("filterProducto");
+    pSel.innerHTML = '<option value="">Todos</option>' + 
+      productos.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join("");
 
-    // Table
-    const tbody = document.getElementById("tbodyBarberos");
-    if (barberos.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="3">
-        <div class="empty-state" style="padding:24px">
-          <p>Sin actividad hoy. <a href="caja.html">Registrar primera venta</a></p>
-        </div>
-      </td></tr>`;
-    } else {
-      tbody.innerHTML = barberos.map(b => `
-        <tr>
-          <td><strong>${b.nombre}</strong></td>
-          <td class="muted">${b.cortes} servicio${b.cortes !== 1 ? "s" : ""}</td>
-          <td><strong>${formatMoney(b.total)}</strong></td>
-        </tr>
-      `).join("");
-    }
+  } catch(e) { console.error("Error loading filter configurations", e); }
+}
+
+async function cargarResumen() {
+  const desde = document.getElementById("filterDesde").value;
+  const hasta = document.getElementById("filterHasta").value;
+  const btn = document.getElementById("btnBuscar");
+  btn.disabled = true; btn.textContent = "Filtrando...";
+
+  try {
+    // Fetch all sales for date range
+    rawSales = await api(`/ventas?desde=${desde}&hasta=${hasta}`);
+    applyFilters();
   } catch(e) {
-    toast("Error cargando datos: " + e.message, "error");
+    toast("Error cargando ventas: " + e.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </svg> Filtrar`;
   }
 }
 
-loadDashboard();
+function applyFilters() {
+  const selectedBarbero = document.getElementById("filterBarbero").value;
+  const selectedServicio = document.getElementById("filterServicio").value;
+  const selectedProducto = document.getElementById("filterProducto").value;
+
+  // Filter client-side
+  const filtered = rawSales.filter(sale => {
+    // 1. Barbero
+    if (selectedBarbero) {
+      const bid = sale.barbero?._id || sale.barbero;
+      if (bid !== selectedBarbero) return false;
+    }
+    // 2. Servicio
+    if (selectedServicio) {
+      const hasServ = sale.items.some(it => it.tipo === "servicio" && it.nombre === selectedServicio);
+      if (!hasServ) return false;
+    }
+    // 3. Producto
+    if (selectedProducto) {
+      const hasProd = sale.items.some(it => it.tipo === "producto" && it.nombre === selectedProducto);
+      if (!hasProd) return false;
+    }
+    return true;
+  });
+
+  // Calculate statistics
+  let totalRecaudo = 0;
+  let totalItems = 0;
+  let totalCosto = 0;
+
+  filtered.forEach(v => {
+    totalRecaudo += v.total;
+    v.items.forEach(it => {
+      totalItems += it.cantidad || 1;
+      if (it.tipo === "producto" && it.productoRef) {
+        // Map to inventory product's cost price
+        const matchingProd = productos.find(p => p._id === (it.productoRef?._id || it.productoRef));
+        const cost = matchingProd ? (matchingProd.precioCosto || 0) : 0;
+        totalCosto += cost * (it.cantidad || 1);
+      }
+    });
+  });
+
+  const margen = totalRecaudo - totalCosto;
+
+  document.getElementById("statVentas").textContent = filtered.length;
+  document.getElementById("statVentasSub").textContent = filtered.length === 1 ? "recibo coincide" : "recibos coinciden";
+  document.getElementById("statTotal").textContent = formatMoney(totalRecaudo);
+  document.getElementById("statItems").textContent = totalItems;
+  document.getElementById("statMargen").textContent = formatMoney(margen);
+
+  // Render Table
+  const tbody = document.getElementById("tbodyVentas");
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6">
+      <div class="empty-state" style="padding: 24px">
+        <p>No se encontraron recibos con los filtros seleccionados.</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(v => {
+    const barberoNombre = v.barbero?.nombre || barberos.find(b => b._id === (v.barbero?._id || v.barbero))?.nombre || "—";
+    const itemsDesc = v.items.map(it => `${it.cantidad > 1 ? `${it.cantidad}× ` : ""}${it.nombre}`).join(", ");
+    return `
+      <tr class="fade-in">
+        <td><strong>#${v.numeroRecibo}</strong></td>
+        <td class="muted">${formatDate(v.fecha)}</td>
+        <td><strong>${barberoNombre}</strong></td>
+        <td class="muted" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${itemsDesc}">${itemsDesc}</td>
+        <td><strong>${formatMoney(v.total)}</strong></td>
+        <td class="no-print">
+          <button class="anular-btn" onclick="pedirAnular('${v._id}','${v.numeroRecibo}')" title="Anular venta">✕</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+// Void receipt handling
+window.pedirAnular = (id, num) => {
+  anulandoId = id;
+  document.getElementById("reciboAnular").textContent = `#${num}`;
+  openModal("modalAnular");
+};
+
+document.getElementById("btnCerrarAnular").onclick = () => closeModal("modalAnular");
+document.getElementById("btnCancelarAnular").onclick = () => closeModal("modalAnular");
+document.getElementById("btnConfirmarAnular").onclick = async () => {
+  const btn = document.getElementById("btnConfirmarAnular");
+  btn.disabled = true; btn.textContent = "Anulando...";
+  try {
+    await api(`/ventas/${anulandoId}`, "DELETE");
+    toast("Venta anulada. Inventario restaurado.");
+    closeModal("modalAnular");
+    // Reload items to update stock values and reload sales
+    productos = await api("/inventario");
+    await cargarResumen();
+  } catch(e) {
+    toast("Error anulando venta: " + e.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Anular";
+  }
+};
+
+document.getElementById("btnBuscar").onclick = cargarResumen;
+
+// Initial Load
+async function init() {
+  await loadFilterOptions();
+  await cargarResumen();
+}
+
+init();
 </script>
 </body>
 </html>
