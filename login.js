@@ -237,6 +237,9 @@ async function handleLogin(event) {
         } else if (userInfo.tipo === 4) {
             console.log("Redirigiendo a acueducto...");
             window.location.href = "acueducto.html";
+        } else if (userInfo.tipo === 5) {
+            console.log("Redirigiendo a barbería...");
+            window.location.href = "barberia/index.html";
         } else {
             console.log("Redirigiendo a categorías...");
             window.location.href = "categories.html";

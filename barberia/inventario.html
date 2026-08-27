@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Inventario — Barbería</title>
+  <link rel="stylesheet" href="css/barberia.css"/>
+</head>
+<body>
+<div id="sidebarMount"></div>
+
+<div class="app-shell">
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn-hamburger" id="btnHamburger" aria-label="Menú">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/>
+            <line x1="4" x2="20" y1="18" y2="18"/>
+          </svg>
+        </button>
+        <span class="topbar-title">Inventario</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-date" id="liveClock"></span>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px" class="fade-in">
+        <div>
+          <h1>Inventario</h1>
+          <p style="margin-top:4px;font-size:.9rem">Control de productos disponibles para la venta</p>
+        </div>
+        <button class="btn btn-primary" id="btnAgregar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>
+          </svg>
+          Agregar producto
+        </button>
+      </div>
+
+      <!-- Alerta stock bajo -->
+      <div id="alertaStock" style="display:none;margin-bottom:16px;padding:12px 16px;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:var(--radius-sm);font-size:.875rem;color:#c0392b;font-weight:500" class="fade-in">
+        ⚠️ <span id="alertaStockMsg"></span>
+      </div>
+
+      <div class="card fade-in" style="animation-delay:.06s">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Stock</th>
+                <th>Precio venta</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyInventario">
+              <tr><td colspan="5"><div class="skeleton" style="height:14px;width:50%;margin:8px 0"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal producto -->
+<div class="modal-overlay" id="modalProducto">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Nuevo producto</h3>
+      <button class="modal-close" id="btnCerrarModal">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" for="inputNombre">Nombre</label>
+        <input class="form-input" id="inputNombre" type="text" placeholder="Ej: Gaseosa Cola y Pola" autocomplete="off"/>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="inputCategoria">Categoría</label>
+          <input class="form-input" id="inputCategoria" type="text" placeholder="Bebida, Snack..."/>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputStock">Stock inicial</label>
+          <input class="form-input" id="inputStock" type="number" placeholder="0" min="0"/>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="inputPrecio">Precio venta (COP)</label>
+          <input class="form-input" id="inputPrecio" type="number" placeholder="0" min="0"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputStockMin">Stock mínimo (alerta)</label>
+          <input class="form-input" id="inputStockMin" type="number" placeholder="3" min="0"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelar">Cancelar</button>
+      <button class="btn btn-primary" id="btnGuardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ajuste de stock -->
+<div class="modal-overlay" id="modalStock">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h3 class="modal-title">Ajustar stock</h3>
+      <button class="modal-close" id="btnCerrarStock">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:8px;font-size:.875rem">Producto: <strong id="stockProductoNombre"></strong></p>
+      <div class="form-group">
+        <label class="form-label" for="inputNuevoStock">Nuevo stock</label>
+        <input class="form-input" id="inputNuevoStock" type="number" min="0"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelarStock">Cancelar</button>
+      <button class="btn btn-primary" id="btnGuardarStock">Actualizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal eliminar -->
+<div class="modal-overlay" id="modalEliminar">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h3 class="modal-title">Eliminar producto</h3>
+      <button class="modal-close" id="btnCerrarEliminar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>¿Eliminar el producto <strong id="nombreEliminar"></strong>?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelarEliminar">Cancelar</button>
+      <button class="btn btn-danger" id="btnConfirmarEliminar">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, initSidebar, startClock, api, formatMoney, renderSidebarHTML, toast, openModal, closeModal } from "./js/barberia-core.js";
+
+requireAuth();
+document.getElementById("sidebarMount").innerHTML = renderSidebarHTML();
+initSidebar("inventario.html");
+startClock(document.getElementById("liveClock"));
+
+let editingId = null;
+let deletingId = null;
+let stockId = null;
+let productos = [];
+
+async function loadInventario() {
+  try {
+    productos = await api("/inventario");
+    renderTable();
+    checkStockBajo();
+  } catch(e) { toast("Error: " + e.message, "error"); }
+}
+
+function checkStockBajo() {
+  const bajos = productos.filter(p => p.stock <= p.stockMinimo);
+  const alerta = document.getElementById("alertaStock");
+  if (bajos.length > 0) {
+    alerta.style.display = "block";
+    document.getElementById("alertaStockMsg").textContent = `${bajos.length} producto${bajos.length>1?"s":""} con stock bajo: ${bajos.map(p=>p.nombre).join(", ")}`;
+  } else {
+    alerta.style.display = "none";
+  }
+}
+
+function stockClass(p) {
+  if (p.stock <= p.stockMinimo) return "style='color:#c0392b;font-weight:700'";
+  return "style='color:var(--oliva);font-weight:600'";
+}
+
+function renderTable() {
+  const tbody = document.getElementById("tbodyInventario");
+  if (productos.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5">
+      <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m7.5 4.27 9 5.15"/>
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+        </svg>
+        <h3>Inventario vacío</h3>
+        <p>Agrega productos como gaseosas, cervezas, papitas, etc.</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = productos.map(p => `
+    <tr class="fade-in">
+      <td><strong>${p.nombre}</strong></td>
+      <td class="muted">${p.categoria}</td>
+      <td>
+        <span ${stockClass(p)}>${p.stock}</span>
+        ${p.stock <= p.stockMinimo ? `<span class="badge badge-low" style="margin-left:6px">Bajo</span>` : ""}
+      </td>
+      <td><strong>${formatMoney(p.precioVenta)}</strong></td>
+      <td>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="ajustarStock('${p._id}','${p.nombre}',${p.stock})" title="Ajustar stock">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Stock
+          </button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="editarProducto('${p._id}')" title="Editar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="pedirEliminar('${p._id}','${p.nombre}')" title="Eliminar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function resetForm() {
+  ["inputNombre","inputCategoria","inputPrecio"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("inputStock").value = "0";
+  document.getElementById("inputStockMin").value = "3";
+}
+
+document.getElementById("btnAgregar").onclick = () => {
+  editingId = null;
+  document.getElementById("modalTitle").textContent = "Nuevo producto";
+  resetForm();
+  openModal("modalProducto");
+  document.getElementById("inputNombre").focus();
+};
+
+["btnCerrarModal","btnCancelar"].forEach(id => document.getElementById(id).onclick = () => closeModal("modalProducto"));
+["btnCerrarEliminar","btnCancelarEliminar"].forEach(id => document.getElementById(id).onclick = () => closeModal("modalEliminar"));
+["btnCerrarStock","btnCancelarStock"].forEach(id => document.getElementById(id).onclick = () => closeModal("modalStock"));
+
+document.getElementById("btnGuardar").onclick = async () => {
+  const nombre = document.getElementById("inputNombre").value.trim();
+  const categoria = document.getElementById("inputCategoria").value.trim() || "General";
+  const stock = parseInt(document.getElementById("inputStock").value) || 0;
+  const precioVenta = parseFloat(document.getElementById("inputPrecio").value);
+  const stockMinimo = parseInt(document.getElementById("inputStockMin").value) || 3;
+  if (!nombre) { toast("El nombre es obligatorio", "error"); return; }
+  if (isNaN(precioVenta) || precioVenta < 0) { toast("Precio inválido", "error"); return; }
+  const btn = document.getElementById("btnGuardar");
+  btn.disabled = true; btn.textContent = "Guardando...";
+  try {
+    if (editingId) {
+      await api(`/inventario/${editingId}`, "PATCH", { nombre, categoria, precioVenta, stockMinimo });
+      toast("Producto actualizado");
+    } else {
+      await api("/inventario", "POST", { nombre, categoria, stock, precioVenta, stockMinimo });
+      toast("Producto agregado");
+    }
+    closeModal("modalProducto");
+    await loadInventario();
+  } catch(e) { toast(e.message, "error"); }
+  finally { btn.disabled = false; btn.textContent = "Guardar"; }
+};
+
+window.editarProducto = (id) => {
+  const p = productos.find(x => x._id === id);
+  if (!p) return;
+  editingId = id;
+  document.getElementById("modalTitle").textContent = "Editar producto";
+  document.getElementById("inputNombre").value = p.nombre;
+  document.getElementById("inputCategoria").value = p.categoria;
+  document.getElementById("inputStock").value = p.stock;
+  document.getElementById("inputPrecio").value = p.precioVenta;
+  document.getElementById("inputStockMin").value = p.stockMinimo;
+  openModal("modalProducto");
+};
+
+window.ajustarStock = (id, nombre, stockActual) => {
+  stockId = id;
+  document.getElementById("stockProductoNombre").textContent = nombre;
+  document.getElementById("inputNuevoStock").value = stockActual;
+  openModal("modalStock");
+  document.getElementById("inputNuevoStock").focus();
+};
+document.getElementById("btnGuardarStock").onclick = async () => {
+  const stock = parseInt(document.getElementById("inputNuevoStock").value);
+  if (isNaN(stock) || stock < 0) { toast("Stock inválido", "error"); return; }
+  const btn = document.getElementById("btnGuardarStock");
+  btn.disabled = true; btn.textContent = "Actualizando...";
+  try {
+    await api(`/inventario/${stockId}`, "PATCH", { stock });
+    toast("Stock actualizado");
+    closeModal("modalStock");
+    await loadInventario();
+  } catch(e) { toast(e.message, "error"); }
+  finally { btn.disabled = false; btn.textContent = "Actualizar"; }
+};
+
+window.pedirEliminar = (id, nombre) => {
+  deletingId = id;
+  document.getElementById("nombreEliminar").textContent = nombre;
+  openModal("modalEliminar");
+};
+document.getElementById("btnConfirmarEliminar").onclick = async () => {
+  const btn = document.getElementById("btnConfirmarEliminar");
+  btn.disabled = true; btn.textContent = "Eliminando...";
+  try {
+    await api(`/inventario/${deletingId}`, "DELETE");
+    toast("Producto eliminado");
+    closeModal("modalEliminar");
+    await loadInventario();
+  } catch(e) { toast(e.message, "error"); }
+  finally { btn.disabled = false; btn.textContent = "Eliminar"; }
+};
+
+document.querySelectorAll(".modal-overlay").forEach(o =>
+  o.addEventListener("click", e => { if(e.target === o) o.classList.remove("open"); })
+);
+
+loadInventario();
+</script>
+</body>
+</html>

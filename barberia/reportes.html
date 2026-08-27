@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Reportes — Barbería</title>
+  <link rel="stylesheet" href="css/barberia.css"/>
+  <style>
+    .barbero-block {
+      border: 1px solid var(--beige);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 12px;
+      animation: fadeIn .25s var(--ease);
+    }
+    .barbero-block-header {
+      padding: 14px 18px;
+      background: var(--blanco);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background var(--speed);
+    }
+    .barbero-block-header:hover { background: var(--marfil); }
+    .barbero-block-header .b-name {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .barbero-block-header .b-stats {
+      display: flex; gap: 20px; align-items: center;
+    }
+    .barbero-block-header .b-stat {
+      text-align: right;
+    }
+    .barbero-block-header .b-stat .label {
+      font-size: .7rem;
+      color: var(--carbon-40);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-weight: 600;
+    }
+    .barbero-block-header .b-stat .value {
+      font-weight: 700;
+      font-size: .9375rem;
+      color: var(--carbon);
+    }
+    .b-total { color: var(--oliva) !important; }
+    .barbero-block-body { display: none; background: var(--marfil); }
+    .barbero-block-body.open { display: block; }
+    .venta-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--beige);
+      font-size: .875rem;
+    }
+    .venta-row:last-child { border-bottom: none; }
+    .venta-row .v-num {
+      min-width: 70px;
+      font-weight: 600;
+      color: var(--oliva);
+    }
+    .venta-row .v-items { flex: 1; color: var(--carbon-40); }
+    .venta-row .v-total { font-weight: 700; color: var(--carbon); white-space: nowrap; }
+    .venta-row .v-fecha { font-size: .78rem; color: var(--carbon-40); white-space: nowrap; }
+    .anular-btn {
+      background: none; border: none; cursor: pointer;
+      color: rgba(192,57,43,.5); padding: 2px 6px; border-radius: 4px;
+      transition: all var(--speed); font-size: .75rem;
+    }
+    .anular-btn:hover { background: rgba(192,57,43,.08); color: #c0392b; }
+    .resumen-total {
+      background: var(--carbon);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .resumen-total .rt-label { font-size: .875rem; color: rgba(255,255,255,.6); }
+    .resumen-total .rt-value { font-family: 'DM Sans', sans-serif; font-size: 1.5rem; font-weight: 700; }
+    @media print {
+      .anular-btn, .no-print { display: none !important; }
+      .barbero-block-body { display: block !important; }
+    }
+  </style>
+</head>
+<body>
+<div id="sidebarMount"></div>
+
+<div class="app-shell">
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn-hamburger" id="btnHamburger" aria-label="Menú">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/>
+            <line x1="4" x2="20" y1="18" y2="18"/>
+          </svg>
+        </button>
+        <span class="topbar-title">Reportes</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost btn-sm no-print" onclick="window.print()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect width="12" height="8" x="6" y="14"/>
+          </svg>
+          Imprimir
+        </button>
+        <span class="topbar-date" id="liveClock"></span>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div style="margin-bottom:24px" class="fade-in">
+        <h1>Reporte de actividad</h1>
+        <p style="margin-top:4px;font-size:.9rem">Cortes y ventas por barbero en el período seleccionado</p>
+      </div>
+
+      <!-- Filtros -->
+      <div class="card no-print fade-in" style="margin-bottom:20px;animation-delay:.04s">
+        <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="min-width:140px">
+            <label class="form-label" for="filtroDesde">Desde</label>
+            <input class="form-input" type="date" id="filtroDesde"/>
+          </div>
+          <div class="form-group" style="min-width:140px">
+            <label class="form-label" for="filtroHasta">Hasta</label>
+            <input class="form-input" type="date" id="filtroHasta"/>
+          </div>
+          <button class="btn btn-primary" id="btnBuscar" style="padding:10px 20px">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            Buscar
+          </button>
+          <button class="btn btn-ghost" id="btnHoy">Hoy</button>
+          <button class="btn btn-ghost" id="btnSemana">Esta semana</button>
+        </div>
+      </div>
+
+      <!-- Totales globales -->
+      <div id="resumenContainer" style="display:none" class="fade-in">
+        <div class="resumen-total">
+          <div>
+            <div class="rt-label">Total del período</div>
+            <div class="rt-value" id="totalGlobal">$0</div>
+          </div>
+          <div style="text-align:right">
+            <div class="rt-label">Ventas registradas</div>
+            <div class="rt-value" id="totalVentas">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloques por barbero -->
+      <div id="reporteContent">
+        <div class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+          </svg>
+          <h3>Selecciona un período</h3>
+          <p>Usa los filtros para ver la actividad por barbero</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal anular -->
+<div class="modal-overlay" id="modalAnular">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <h3 class="modal-title">Anular venta</h3>
+      <button class="modal-close" id="btnCerrarAnular">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>¿Anular el recibo <strong id="reciboAnular"></strong>? El stock de productos será repuesto automáticamente.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelarAnular">Cancelar</button>
+      <button class="btn btn-danger" id="btnConfirmarAnular">Anular</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, initSidebar, startClock, api, formatMoney, renderSidebarHTML, toast, openModal, closeModal, todayISO } from "./js/barberia-core.js";
+
+requireAuth();
+document.getElementById("sidebarMount").innerHTML = renderSidebarHTML();
+initSidebar("reportes.html");
+startClock(document.getElementById("liveClock"));
+
+// Default: today
+const hoy = todayISO();
+document.getElementById("filtroDesde").value = hoy;
+document.getElementById("filtroHasta").value = hoy;
+
+let anulando = null;
+
+// Filters
+document.getElementById("btnHoy").onclick = () => {
+  document.getElementById("filtroDesde").value = hoy;
+  document.getElementById("filtroHasta").value = hoy;
+  cargarReporte();
+};
+document.getElementById("btnSemana").onclick = () => {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const lunes = new Date(d.setDate(diff));
+  document.getElementById("filtroDesde").value = lunes.toISOString().split("T")[0];
+  document.getElementById("filtroHasta").value = hoy;
+  cargarReporte();
+};
+document.getElementById("btnBuscar").onclick = cargarReporte;
+
+// Load on start
+cargarReporte();
+
+async function cargarReporte() {
+  const desde = document.getElementById("filtroDesde").value;
+  const hasta = document.getElementById("filtroHasta").value;
+  const btn = document.getElementById("btnBuscar");
+  btn.disabled = true; btn.textContent = "Buscando...";
+
+  try {
+    const data = await api(`/reporte?desde=${desde}&hasta=${hasta}`);
+    renderReporte(data);
+  } catch(e) { toast("Error: " + e.message, "error"); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </svg> Buscar`;
+  }
+}
+
+function renderReporte(data) {
+  const { totalGlobal, totalVentas, resumenBarberos } = data;
+
+  document.getElementById("totalGlobal").textContent = formatMoney(totalGlobal);
+  document.getElementById("totalVentas").textContent = totalVentas;
+  document.getElementById("resumenContainer").style.display = totalVentas > 0 ? "block" : "none";
+
+  const container = document.getElementById("reporteContent");
+  if (!resumenBarberos || resumenBarberos.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+      </svg>
+      <h3>Sin actividad</h3>
+      <p>No hay ventas registradas en este período</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = resumenBarberos.map((b, idx) => `
+    <div class="barbero-block" id="block-${idx}">
+      <div class="barbero-block-header" onclick="toggleBlock(${idx})">
+        <span class="b-name">${b.nombre}</span>
+        <div class="b-stats">
+          <div class="b-stat">
+            <div class="label">Servicios</div>
+            <div class="value">${b.cortes}</div>
+          </div>
+          <div class="b-stat">
+            <div class="label">Total</div>
+            <div class="value b-total">${formatMoney(b.total)}</div>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+               style="color:var(--carbon-40);transition:transform .2s" id="arrow-${idx}">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </div>
+      </div>
+      <div class="barbero-block-body" id="body-${idx}">
+        ${b.ventas.map(v => `
+          <div class="venta-row">
+            <span class="v-num">Rec. #${v.numeroRecibo}</span>
+            <span class="v-items">${v.items.map(i => `${i.cantidad > 1 ? i.cantidad + "× " : ""}${i.nombre}`).join(" · ")}</span>
+            <span class="v-fecha">${new Date(v.fecha).toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit" })}</span>
+            <span class="v-total">${formatMoney(v.total)}</span>
+            <button class="anular-btn no-print" onclick="pedirAnular('${v._id || ""}','${v.numeroRecibo}')" title="Anular">✕</button>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
+}
+
+window.toggleBlock = (idx) => {
+  const body = document.getElementById(`body-${idx}`);
+  const arrow = document.getElementById(`arrow-${idx}`);
+  body.classList.toggle("open");
+  arrow.style.transform = body.classList.contains("open") ? "rotate(180deg)" : "";
+};
+
+// Anular
+window.pedirAnular = (id, num) => {
+  if (!id) { toast("No se puede anular esta venta", "error"); return; }
+  anulando = id;
+  document.getElementById("reciboAnular").textContent = `#${num}`;
+  openModal("modalAnular");
+};
+document.getElementById("btnCerrarAnular").onclick = () => closeModal("modalAnular");
+document.getElementById("btnCancelarAnular").onclick = () => closeModal("modalAnular");
+document.getElementById("btnConfirmarAnular").onclick = async () => {
+  const btn = document.getElementById("btnConfirmarAnular");
+  btn.disabled = true; btn.textContent = "Anulando...";
+  try {
+    await api(`/ventas/${anulando}`, "DELETE");
+    toast("Venta anulada. Stock repuesto.");
+    closeModal("modalAnular");
+    cargarReporte();
+  } catch(e) { toast(e.message, "error"); }
+  finally { btn.disabled = false; btn.textContent = "Anular"; }
+};
+
+document.querySelectorAll(".modal-overlay").forEach(o =>
+  o.addEventListener("click", e => { if(e.target === o) o.classList.remove("open"); })
+);
+</script>
+</body>
+</html>
