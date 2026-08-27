@@ -53,7 +53,8 @@ router.get("/vendedor/:vendedorId/last", auth, async (req, res) => {
 // Get all products
 router.get("/", auth, checkPermission('verProductos'), async (req, res) => {
     try {
-        const query = (req.user.tipo === 1 || req.user.linkedVendedor) 
+        // Filtrar por usuario para tipos 1 (super admin), 5 (barbería) y usuarios con linkedVendedor
+        const query = (req.user.tipo === 1 || req.user.tipo === 5 || req.user.linkedVendedor) 
             ? { user: req.user.linkedVendedor || req.user.id } 
             : {};
         const products = await Product.find(query);
