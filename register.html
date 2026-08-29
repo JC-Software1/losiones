@@ -217,7 +217,7 @@
   <div class="card">
     <div class="header">
       <h1>Crear Cuenta</h1>
-      <p>Únete a JC-C</p>
+      <p>Solo administradores con acceso</p>
     </div>
 
     <div id="alertContainer"></div>
@@ -267,6 +267,23 @@
 
   <script>
     const API_URL = 'https://losiones-fjt0.onrender.com/api/auth';
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = 'index.html';
+    } else {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp * 1000 < Date.now()) {
+          localStorage.removeItem('token');
+          window.location.href = 'index.html';
+        } else if (payload.tipo !== 3) {
+          window.location.href = 'index.html';
+        }
+      } catch {
+        window.location.href = 'index.html';
+      }
+    }
 
     function showAlert(message, type) {
       const alert = document.createElement('div');
@@ -325,7 +342,8 @@
         const response = await fetch(`${API_URL}/register`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             name,

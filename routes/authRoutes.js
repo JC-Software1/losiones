@@ -46,9 +46,13 @@ router.post("/login-as/:userId", auth, async (req, res) => {
   }
 });
 
-/* ----------  REGISTER ---------- */
-router.post("/register", async (req, res) => {
+/* ----------  REGISTER (solo superadmin) ---------- */
+router.post("/register", auth, async (req, res) => {
   try {
+    if (req.user.tipo !== 3) {
+      return res.status(403).json({ error: "Solo el superadmin puede crear usuarios" });
+    }
+
     const { name, username, password, tipo = 1 } = req.body;
 
     if (!username?.trim()) {
