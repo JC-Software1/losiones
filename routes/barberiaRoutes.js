@@ -202,15 +202,13 @@ router.get("/ventas", auth, soloTipo5, async (req, res) => {
         if (barberoId) filtro.barbero = barberoId;
 
         if (fecha) {
-            const inicio = new Date(fecha);
-            inicio.setHours(0, 0, 0, 0);
-            const fin = new Date(fecha);
-            fin.setHours(23, 59, 59, 999);
+            const inicio = new Date(fecha + "T00:00:00.000-05:00");
+            const fin = new Date(fecha + "T23:59:59.999-05:00");
             filtro.fecha = { $gte: inicio, $lte: fin };
         } else if (desde || hasta) {
             filtro.fecha = {};
-            if (desde) { const d = new Date(desde); d.setHours(0,0,0,0); filtro.fecha.$gte = d; }
-            if (hasta) { const h = new Date(hasta); h.setHours(23,59,59,999); filtro.fecha.$lte = h; }
+            if (desde) { filtro.fecha.$gte = new Date(desde + "T00:00:00.000-05:00"); }
+            if (hasta) { filtro.fecha.$lte = new Date(hasta + "T23:59:59.999-05:00"); }
         }
 
         const ventas = await VentaBarberia.find(filtro)
@@ -307,15 +305,14 @@ router.get("/reporte", auth, soloTipo5, async (req, res) => {
 
         if (desde || hasta) {
             filtro.fecha = {};
-            if (desde) { const d = new Date(desde); d.setHours(0,0,0,0); filtro.fecha.$gte = d; }
-            if (hasta) { const h = new Date(hasta); h.setHours(23,59,59,999); filtro.fecha.$lte = h; }
+            if (desde) { filtro.fecha.$gte = new Date(desde + "T00:00:00.000-05:00"); }
+            if (hasta) { filtro.fecha.$lte = new Date(hasta + "T23:59:59.999-05:00"); }
         } else {
-            // Por defecto: hoy
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-            const fin = new Date();
-            fin.setHours(23, 59, 59, 999);
-            filtro.fecha = { $gte: hoy, $lte: fin };
+            const hoy = new Date().toLocaleDateString('en-CA');
+            filtro.fecha = {
+                $gte: new Date(hoy + "T00:00:00.000-05:00"),
+                $lte: new Date(hoy + "T23:59:59.999-05:00")
+            };
         }
 
         const ventas = await VentaBarberia.find(filtro).populate("barbero", "nombre");

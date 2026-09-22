@@ -135,7 +135,7 @@ export function formatDate(d) {
 }
 
 export function todayISO() {
-    return new Date().toISOString().split("T")[0];
+    return new Date().toLocaleDateString('en-CA');
 }
 
 // ── Sidebar HTML (injected) ───────────────────────────────────────────────────

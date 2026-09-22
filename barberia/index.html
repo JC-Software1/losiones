@@ -241,19 +241,60 @@
 </div>
 
 <script type="module">
-import { requireAuth, initSidebar, startClock, api, formatMoney, formatDate, renderSidebarHTML, toast, openModal, closeModal, todayISO } from "./js/barberia-core.js";
+import { requireAuth, initSidebar, startClock, api, formatMoney, formatDate, renderSidebarHTML, toast, openModal, closeModal, todayISO, getToken } from "./js/barberia-core.js";
 
 requireAuth();
+
+// Verificar vencimiento de licencia
+async function verificarVencimiento() {
+    try {
+        const token = getToken();
+        const res = await fetch(`https://losiones-fjt0.onrender.com/api/auth/verificar-vencimiento`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        const response = await res.json();
+        if (response.vencido) {
+            mostrarAlertaVencimiento("Tu acceso ha vencido. Contacta al administrador.", "danger");
+        } else if (response.proximo_vencer) {
+            mostrarAlertaVencimiento(
+                `Tu acceso vencera en ${response.dias_restantes} dia(s). Fecha de vencimiento: ${new Date(response.fecha_pago).toLocaleDateString()}`,
+                "warning"
+            );
+        }
+    } catch (error) {
+        console.error("Error verificando vencimiento:", error);
+    }
+}
+
+function mostrarAlertaVencimiento(mensaje, tipo) {
+    const alerta = document.createElement("div");
+    alerta.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${tipo === 'danger' ? '#dc3545' : '#ffc107'};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 10000;
+        max-width: 400px;
+        font-size: 14px;
+    `;
+    alerta.textContent = mensaje;
+    document.body.appendChild(alerta);
+}
+
+verificarVencimiento();
 
 // Inject sidebar
 document.getElementById("sidebarMount").innerHTML = renderSidebarHTML();
 initSidebar("index.html");
 startClock(document.getElementById("liveClock"));
 
-// Default dates
-const today = todayISO();
-document.getElementById("filterDesde").value = today;
-document.getElementById("filterHasta").value = today;
+// Default dates — empty by default to show all records
+document.getElementById("filterDesde").value = "";
+document.getElementById("filterHasta").value = "";
 
 let rawSales = [];
 let barberos = [];

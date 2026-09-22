@@ -489,7 +489,7 @@ document.getElementById("btnConfirmar").onclick = async () => {
   try {
     const venta = await api("/ventas", "POST", {
       barberoId,
-      fecha: fecha ? new Date(fecha + "T12:00:00").toISOString() : new Date().toISOString(),
+      fecha: fecha ? new Date(fecha) : new Date(),
       metodoPago: document.getElementById("selectMetodoPago").value,
       items: items.map(i => ({
         tipo: i.tipo,

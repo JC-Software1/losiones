@@ -1603,6 +1603,46 @@
         }
         startInactivityMonitor();
 
+        // ===== VERIFICAR VENCIMIENTO =====
+        async function verificarVencimiento() {
+            try {
+                const response = await apiFetch("/auth/verificar-vencimiento", "GET");
+                if (response.vencido) {
+                    mostrarAlertaVencimiento("Tu acceso ha vencido. Contacta al administrador.", "danger");
+                } else if (response.proximo_vencer) {
+                    mostrarAlertaVencimiento(
+                        `Tu acceso vencera en ${response.dias_restantes} dia(s). Fecha de vencimiento: ${new Date(response.fecha_pago).toLocaleDateString()}`,
+                        "warning"
+                    );
+                }
+            } catch (error) {
+                console.error("Error verificando vencimiento:", error);
+            }
+        }
+
+        function mostrarAlertaVencimiento(mensaje, tipo) {
+            const alerta = document.createElement("div");
+            alerta.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${tipo === 'danger' ? '#dc3545' : '#ffc107'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                z-index: 10000;
+                max-width: 400px;
+                font-family: 'Inter', sans-serif;
+                font-size: 14px;
+                animation: slideInRight 0.4s ease;
+            `;
+            alerta.textContent = mensaje;
+            document.body.appendChild(alerta);
+        }
+
+        verificarVencimiento();
+
         // ===== GLOBAL STATE =====
         let clientes = [];
         let abonoClienteId = null;
