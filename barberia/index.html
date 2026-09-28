@@ -119,12 +119,23 @@
           <div class="stat-icon">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </div>
+          <div class="stat-label">Total productos</div>
+          <div class="stat-value" id="statTotalProductos" style="color:var(--azul)">$0</div>
+          <div class="stat-sub">ventas de inventario</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12" y1="17" y2="17"/>
             </svg>
           </div>
-          <div class="stat-label">Items vendidos</div>
-          <div class="stat-value" id="statItems">0</div>
-          <div class="stat-sub">cortes + productos</div>
+          <div class="stat-label">Total cortes/servicios</div>
+          <div class="stat-value" id="statTotalServicios" style="color:var(--naranja)">$0</div>
+          <div class="stat-sub">servicios realizados</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon">
@@ -163,11 +174,12 @@
                   <th>Detalle</th>
                   <th>Pago</th>
                   <th>Total</th>
+                  <th>Ganancia</th>
                   <th class="no-print"></th>
                 </tr>
               </thead>
               <tbody id="tbodyVentas">
-                <tr><td colspan="7"><div class="skeleton" style="height:14px;width:60%;margin:8px 0"></div></td></tr>
+                <tr><td colspan="8"><div class="skeleton" style="height:14px;width:60%;margin:8px 0"></div></td></tr>
               </tbody>
             </table>
           </div>
@@ -215,6 +227,35 @@
       </div>
 
     </main>
+  </div>
+</div>
+
+<!-- Modal ver recibo -->
+<div class="modal-overlay" id="modalVerRecibo">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3 class="modal-title">Recibo #<span id="verReciboNumero"></span></h3>
+      <button class="modal-close" id="btnCerrarVerRecibo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="recibo" id="verReciboContent"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="btnImprimirVerRecibo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect width="12" height="8" x="6" y="14"/>
+        </svg>
+        Imprimir / Descargar
+      </button>
+    </div>
   </div>
 </div>
 
@@ -391,6 +432,8 @@ function applyFilters() {
 
   // Calculate statistics
   let totalRecaudo = 0;
+  let totalProductos = 0;
+  let totalServicios = 0;
   let totalItems = 0;
   let totalCosto = 0;
 
@@ -398,11 +441,15 @@ function applyFilters() {
     totalRecaudo += v.total;
     v.items.forEach(it => {
       totalItems += it.cantidad || 1;
-      if (it.tipo === "producto" && it.productoRef) {
-        // Map to inventory product's cost price
-        const matchingProd = productos.find(p => p._id === (it.productoRef?._id || it.productoRef));
-        const cost = matchingProd ? (matchingProd.precioCosto || 0) : 0;
-        totalCosto += cost * (it.cantidad || 1);
+      if (it.tipo === "producto") {
+        totalProductos += it.precio * (it.cantidad || 1);
+        if (it.productoRef) {
+          const matchingProd = productos.find(p => p._id === (it.productoRef?._id || it.productoRef));
+          const cost = matchingProd ? (matchingProd.precioCosto || 0) : 0;
+          totalCosto += cost * (it.cantidad || 1);
+        }
+      } else if (it.tipo === "servicio") {
+        totalServicios += it.precio * (it.cantidad || 1);
       }
     });
   });
@@ -412,13 +459,14 @@ function applyFilters() {
   document.getElementById("statVentas").textContent = filtered.length;
   document.getElementById("statVentasSub").textContent = filtered.length === 1 ? "recibo coincide" : "recibos coinciden";
   document.getElementById("statTotal").textContent = formatMoney(totalRecaudo);
-  document.getElementById("statItems").textContent = totalItems;
+  document.getElementById("statTotalProductos").textContent = formatMoney(totalProductos);
+  document.getElementById("statTotalServicios").textContent = formatMoney(totalServicios);
   document.getElementById("statMargen").textContent = formatMoney(margen);
 
   // Render Table
   const tbody = document.getElementById("tbodyVentas");
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7">
+    tbody.innerHTML = `<tr><td colspan="8">
       <div class="empty-state" style="padding: 24px">
         <p>No se encontraron recibos con los filtros seleccionados.</p>
       </div>
@@ -430,6 +478,12 @@ function applyFilters() {
     const barberoNombre = v.barbero?.nombre || barberos.find(b => b._id === (v.barbero?._id || v.barbero))?.nombre || "—";
     const itemsDesc = v.items.map(it => `${it.cantidad > 1 ? `${it.cantidad}× ` : ""}${it.nombre}`).join(", ");
     const pagoLabel = v.metodoPago === "transferencia" ? "Transferencia" : "Efectivo";
+    let gananciaVenta = 0;
+    v.items.forEach(it => {
+      const matchingProd = productos.find(p => p._id === (it.productoRef?._id || it.productoRef));
+      const cost = matchingProd ? (matchingProd.precioCosto || 0) : 0;
+      gananciaVenta += (it.precio - cost) * (it.cantidad || 1);
+    });
     return `
       <tr class="fade-in">
         <td><strong>#${v.numeroRecibo}</strong></td>
@@ -438,13 +492,66 @@ function applyFilters() {
         <td class="muted" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${itemsDesc}">${itemsDesc}</td>
         <td><span class="badge badge-active">${pagoLabel}</span></td>
         <td><strong>${formatMoney(v.total)}</strong></td>
-        <td class="no-print">
-          <button class="anular-btn" onclick="pedirAnular('${v._id}','${v.numeroRecibo}')" title="Anular venta">✕</button>
-        </td>
+        <td><strong style="color:var(--oliva)">${formatMoney(gananciaVenta)}</strong></td>
+<td class="no-print">
+            <button class="anular-btn" onclick="verRecibo('${v._id}')" title="Ver/Imprimir recibo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect width="12" height="8" x="6" y="14"/>
+              </svg>
+            </button>
+            <button class="anular-btn" onclick="pedirAnular('${v._id}','${v.numeroRecibo}')" title="Anular venta">✕</button>
+          </td>
       </tr>
     `;
   }).join("");
 }
+
+// Ver recibo
+window.verRecibo = async (id) => {
+  try {
+    const venta = await api(`/ventas/${id}`);
+    const barberoNombre = venta.barbero?.nombre || barberos.find(b => b._id === (venta.barbero?._id || venta.barbero))?.nombre || "—";
+    const fecha = new Date(venta.fecha).toLocaleString("es-CO", { day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit" });
+    const metodoLabel = venta.metodoPago === "transferencia" ? "Transferencia" : "Efectivo";
+
+    document.getElementById("verReciboNumero").textContent = venta.numeroRecibo;
+    document.getElementById("verReciboContent").innerHTML = `
+      <div class="recibo-header">
+        <h2>Recibo #${venta.numeroRecibo}</h2>
+        <p>${fecha}</p>
+      </div>
+      <div class="recibo-meta">
+        <span>Barbero</span>
+        <strong style="color:var(--carbon)">${barberoNombre}</strong>
+      </div>
+      <div class="recibo-meta">
+        <span>Método de pago</span>
+        <strong style="color:var(--carbon)">${metodoLabel}</strong>
+      </div>
+      <div class="recibo-items">
+        ${venta.items.map(i => `
+          <div class="recibo-item">
+            <span>${i.cantidad > 1 ? `${i.cantidad}× ` : ""}${i.nombre}</span>
+            <span>${formatMoney(i.precio * i.cantidad)}</span>
+          </div>
+        `).join("")}
+      </div>
+      <div class="recibo-total">
+        <span>TOTAL</span>
+        <span>${formatMoney(venta.total)}</span>
+      </div>
+    `;
+    openModal("modalVerRecibo");
+  } catch(e) {
+    toast("Error cargando recibo: " + e.message, "error");
+  }
+};
+
+document.getElementById("btnCerrarVerRecibo").onclick = () => closeModal("modalVerRecibo");
+document.getElementById("btnImprimirVerRecibo").onclick = () => window.print();
 
 // Void receipt handling
 window.pedirAnular = (id, num) => {

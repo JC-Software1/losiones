@@ -220,6 +220,18 @@ router.get("/ventas", auth, soloTipo5, async (req, res) => {
     }
 });
 
+// GET /api/barberia/ventas/:id — obtener una venta por ID
+router.get("/ventas/:id", auth, soloTipo5, async (req, res) => {
+    try {
+        const venta = await VentaBarberia.findOne({ _id: req.params.id, propietario: req.user.id })
+            .populate("barbero", "nombre");
+        if (!venta) return res.status(404).json({ error: "Venta no encontrada" });
+        res.json(venta);
+    } catch (e) {
+        res.status(500).json({ error: "Error al obtener venta" });
+    }
+});
+
 // POST /api/barberia/ventas — crear nueva venta y descontar stock
 router.post("/ventas", auth, soloTipo5, async (req, res) => {
     try {
