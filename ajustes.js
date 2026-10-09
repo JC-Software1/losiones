@@ -1,49 +1,72 @@
 import { showNotification } from './utils/notifications.js';
+import { apiFetch } from './utils/api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if user is admin or superadmin
-    const userType = localStorage.getItem('userType');
-    if (userType !== '2' && userType !== '3') {
-        window.location.href = 'index.html';
-        return;
-    }
-
     loadSettings();
 
     document.getElementById('enableBilling').addEventListener('change', (e) => {
         const configDiv = document.getElementById('billingConfig');
-        configDiv.style.display = e.target.checked ? 'block' : 'none';
+        if (configDiv) {
+            configDiv.style.display = e.target.checked ? 'block' : 'none';
+        }
     });
 });
 
-function loadSettings() {
-    const enabled = localStorage.getItem('facturacionElectronicaActiva') === 'true';
-    document.getElementById('enableBilling').checked = enabled;
-    
-    if (enabled) {
-        document.getElementById('billingConfig').style.display = 'block';
-    }
+async function loadSettings() {
+    try {
+        const token = localStorage.getItem('token');
+        const config = await apiFetch('/auth/config/matias', 'GET', null, token);
+        
+        if (config) {
+            const enabled = config.activo || false;
+            document.getElementById('enableBilling').checked = enabled;
+            
+            const configDiv = document.getElementById('billingConfig');
+            if (configDiv) configDiv.style.display = enabled ? 'block' : 'none';
 
-    document.getElementById('apiToken').value = localStorage.getItem('matiasApiKey') || '';
-    document.getElementById('establecimiento').value = localStorage.getItem('matiasEstablecimiento') || '';
-    document.getElementById('puntoEmision').value = localStorage.getItem('matiasPuntoEmision') || '';
+            if (document.getElementById('apiToken')) document.getElementById('apiToken').value = config.token || '';
+            // Si el html original usa establecimiento y puntoEmision, lo mapeamos
+            if (document.getElementById('establecimiento')) document.getElementById('establecimiento').value = config.prefix || 'FEV';
+            if (document.getElementById('puntoEmision')) document.getElementById('puntoEmision').value = config.resolutionNumber || '18760000001';
+            
+            localStorage.setItem('facturacionElectronicaActiva', enabled);
+        }
+    } catch (error) {
+        console.error('Error al cargar ajustes:', error);
+    }
 }
 
-window.saveSettings = function() {
-    const enabled = document.getElementById('enableBilling').checked;
-    const token = document.getElementById('apiToken').value.trim();
-    const establecimiento = document.getElementById('establecimiento').value.trim();
-    const puntoEmision = document.getElementById('puntoEmision').value.trim();
+window.saveSettings = async function() {
+    const btn = document.querySelector('.btn');
+    if (btn) btn.disabled = true;
 
-    if (enabled && !token) {
-        showNotification('Debe ingresar un token de API para activar la facturación', 'error');
-        return;
+    try {
+        const enabled = document.getElementById('enableBilling').checked;
+        const token = document.getElementById('apiToken') ? document.getElementById('apiToken').value.trim() : '';
+        const prefix = document.getElementById('establecimiento') ? document.getElementById('establecimiento').value.trim() : 'FEV';
+        const resolutionNumber = document.getElementById('puntoEmision') ? document.getElementById('puntoEmision').value.trim() : '18760000001';
+
+        if (enabled && !token) {
+            showNotification('Debe ingresar un token de API para activar la facturación', 'error');
+            return;
+        }
+
+        const payload = {
+            activo: enabled,
+            token: token,
+            prefix: prefix || 'FEV',
+            resolutionNumber: resolutionNumber || '18760000001'
+        };
+
+        const jwtToken = localStorage.getItem('token');
+        await apiFetch('/auth/config/matias', 'PUT', payload, jwtToken);
+
+        localStorage.setItem('facturacionElectronicaActiva', enabled);
+        showNotification('Ajustes guardados correctamente', 'success');
+    } catch (error) {
+        console.error('Error al guardar ajustes:', error);
+        showNotification('Error al guardar los ajustes', 'error');
+    } finally {
+        if (btn) btn.disabled = false;
     }
-
-    localStorage.setItem('facturacionElectronicaActiva', enabled);
-    localStorage.setItem('matiasApiKey', token);
-    localStorage.setItem('matiasEstablecimiento', establecimiento);
-    localStorage.setItem('matiasPuntoEmision', puntoEmision);
-
-    showNotification('Ajustes guardados correctamente', 'success');
 };

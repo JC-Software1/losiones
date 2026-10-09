@@ -984,4 +984,41 @@ router.delete("/link-vendedor", auth, async (req, res) => {
   }
 });
 
+/* ---------- MATIAS API CONFIG ---------- */
+router.get("/config/matias", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+    res.json(user.matiasConfig || {});
+  } catch (e) {
+    res.status(500).json({ error: "Error al obtener configuración" });
+  }
+});
+
+router.put("/config/matias", auth, async (req, res) => {
+  try {
+    const { activo, token, prefix, resolutionNumber, environment, to, email, direccion, municipioId } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+    user.matiasConfig = {
+      ...user.matiasConfig,
+      activo: activo !== undefined ? activo : user.matiasConfig?.activo,
+      token: token !== undefined ? token : user.matiasConfig?.token,
+      prefix: prefix || user.matiasConfig?.prefix || 'FEV',
+      resolutionNumber: resolutionNumber || user.matiasConfig?.resolutionNumber || '18760000001',
+      environment: environment || user.matiasConfig?.environment || 'sandbox',
+      to: to || user.matiasConfig?.to || 500000,
+      email: email || user.matiasConfig?.email || 'jcdev.software@gmail.com',
+      direccion: direccion || user.matiasConfig?.direccion || 'Calle Principal',
+      municipioId: municipioId || user.matiasConfig?.municipioId || '149'
+    };
+    
+    await user.save();
+    res.json({ message: "Configuración actualizada", config: user.matiasConfig });
+  } catch (e) {
+    res.status(500).json({ error: "Error al guardar configuración" });
+  }
+});
+
 module.exports = router;

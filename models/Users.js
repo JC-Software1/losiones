@@ -9,7 +9,7 @@ const PermisosSchema = new mongoose.Schema({
     editarProductos: { type: Boolean, default: true },
     eliminarProductos: { type: Boolean, default: false },
     marcarVendido: { type: Boolean, default: true },
-    
+
     // Permisos de Ventas
     verVentas: { type: Boolean, default: true },
     crearVentas: { type: Boolean, default: true },
@@ -18,17 +18,17 @@ const PermisosSchema = new mongoose.Schema({
     agregarAbonos: { type: Boolean, default: true },
     eliminarAbonos: { type: Boolean, default: false },
     verVentasLiquidadas: { type: Boolean, default: true },
-    
+
     // Permisos de Gastos
     verGastos: { type: Boolean, default: true },
     crearGastos: { type: Boolean, default: true },
     editarGastos: { type: Boolean, default: true },
     eliminarGastos: { type: Boolean, default: false },
-    
+
     // Permisos de Liquidación
     realizarLiquidacion: { type: Boolean, default: false },
     verHistorialLiquidaciones: { type: Boolean, default: true },
-    
+
     // Permisos de Reportes
     verReportes: { type: Boolean, default: true },
     exportarReportes: { type: Boolean, default: false },
@@ -55,7 +55,26 @@ const UserSchema = new mongoose.Schema({
     businessName: { type: String, default: "" },
     businessNit: { type: String, default: "" },
     // ENLACE DE ADMINISTRADOR
-    linkedVendedor: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }
-}, { timestamps: true });
+    linkedVendedor: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    // CONFIGURACIÓN MATIAS API
+    matiasConfig: {
+        activo: { type: Boolean, default: false },
+        environment: { type: String, default: 'sandbox' },
+        token: { type: String, default: '' },
+        prefix: { type: String, default: 'FEV' },
+        resolutionNumber: { type: String, default: '18760000001' },
+        currentNumber: { type: Number, default: 1 },
+        to: { type: Number, default: 500000 },
+        email: { type: String, default: 'jcdev.software@gmail.com' },
+        direccion: { type: String, default: 'Calle Principal' },
+        municipioId: { type: String, default: '149' }
+    }
+});
+
+// Método para obtener el token
+UserSchema.methods.getMatiasToken = function () {
+    return this.matiasConfig ? this.matiasConfig.token : null;
+};
+{ timestamps: true };
 
 module.exports = mongoose.model("User", UserSchema);

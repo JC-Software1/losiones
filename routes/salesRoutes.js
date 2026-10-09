@@ -2,6 +2,7 @@ const express = require("express");
 const auth = require("../middleware/auth");
 const { checkPermission } = require("../middleware/checkPermissions");
 const Sale = require("../models/Sale");
+const matiasApi = require("../services/matiasApi");
 const router = express.Router();
 
 
@@ -92,7 +93,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             paymentType,
             paidAmount,
             remainingBalance,
-            products  // ✅ NUEVO: array de productos con cantidades
+            products,  // ✅ NUEVO: array de productos con cantidades
+            facturacionType // ✅ MODO DE FACTURACION
         } = req.body;
 
         // ✅ REGLA: Nombre obligatorio solo para cuotas
@@ -207,6 +209,21 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
         }
 
         await sale.save();
+
+        if (facturacionType && facturacionType !== 'ninguna') {
+            try {
+                // Background async call (no bloqueamos la respuesta HTTP de la venta)
+                if (facturacionType === 'pos' || facturacionType === 'ambas') {
+                    matiasApi.emitirPos(sale, req.user.id).catch(err => console.error("Error Matias POS:", err.message));
+                }
+                if (facturacionType === 'electronica' || facturacionType === 'ambas') {
+                    matiasApi.emitirFactura(sale, req.user.id).catch(err => console.error("Error Matias FE:", err.message));
+                }
+            } catch (err) {
+                console.error("Error al iniciar facturación:", err);
+            }
+        }
+
         res.status(201).json(sale);
     } catch (error) {
         console.error("Error al crear la venta:", error);
@@ -235,7 +252,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             paymentType,
             paidAmount,
             remainingBalance,
-            products  // ✅ NUEVO: array de productos con cantidades
+            products,  // ✅ NUEVO: array de productos con cantidades
+            facturacionType
         } = req.body;
 
         // ✅ REGLA: Nombre obligatorio solo para cuotas
@@ -340,6 +358,20 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
         }
 
         await sale.save();
+
+        if (facturacionType && facturacionType !== 'ninguna') {
+            try {
+                if (facturacionType === 'pos' || facturacionType === 'ambas') {
+                    matiasApi.emitirPos(sale, vendedorId).catch(err => console.error("Error Matias POS:", err.message));
+                }
+                if (facturacionType === 'electronica' || facturacionType === 'ambas') {
+                    matiasApi.emitirFactura(sale, vendedorId).catch(err => console.error("Error Matias FE:", err.message));
+                }
+            } catch (err) {
+                console.error("Error al iniciar facturación:", err);
+            }
+        }
+
         res.status(201).json(sale);
     } catch (error) {
         console.error("Error al crear la venta para vendedor:", error);

@@ -81,7 +81,8 @@
             { href: 'liquidados.html', icon: 'fas fa-check-double', text: 'Liquidados' },
             { href: 'gastos.html', icon: 'fas fa-wallet', text: 'Gastos' },
             { href: 'liquidacion.html', icon: 'fas fa-cash-register', text: 'Liquidación' },
-            { href: 'historial-liquidaciones.html', icon: 'fas fa-list-alt', text: 'His. Liq.' }
+            { href: 'historial-liquidaciones.html', icon: 'fas fa-list-alt', text: 'His. Liq.' },
+            { href: 'ajustes.html', icon: 'fas fa-cogs', text: 'Ajustes' }
         ];
 
         const adminItems = [
@@ -89,8 +90,7 @@
             { href: 'GestorVendedores.html', icon: 'fas fa-users-cog', text: 'Vendedores' },
             { href: 'inspeccion-liquidacion.html', icon: 'fas fa-search-dollar', text: 'Inspección' },
             { href: 'saleDetails.html', icon: 'fas fa-info-circle', text: 'Detalles' },
-            { href: 'fix-liquidations.html', icon: 'fas fa-tools', text: 'Fix Liq.' },
-            { href: 'ajustes.html', icon: 'fas fa-cogs', text: 'Ajustes' }
+            { href: 'fix-liquidations.html', icon: 'fas fa-tools', text: 'Fix Liq.' }
         ];
 
         let navHtml = '';
