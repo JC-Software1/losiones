@@ -256,7 +256,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             paidAmount,
             remainingBalance,
             products,  // ✅ NUEVO: array de productos con cantidades
-            facturacionType
+            facturacionType,
+            facturacionEmail
         } = req.body;
 
         // ✅ REGLA: Nombre obligatorio solo para cuotas
@@ -330,7 +331,9 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             user: vendedorId,
             settled: isContado || advancePayment >= price,
             products: products,  // ✅ GUARDAR productos con cantidades
-            productIds: productIdsToMarkSold  // ✅ IDs de productos vendidos completamente
+            productIds: productIdsToMarkSold,  // ✅ IDs de productos vendidos completamente
+            facturacionType: facturacionType || 'ninguna',
+            facturacionEmail: facturacionEmail || ''
         });
 
         if (advancePayment > 0) {
@@ -364,11 +367,13 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
 
         if (facturacionType && facturacionType !== 'ninguna') {
             try {
+                // Usar req.user.id (admin) para facturación, ya que el admin tiene la config de Matias
+                const facturacionUserId = req.user.id;
                 if (facturacionType === 'pos' || facturacionType === 'ambas') {
-                    matiasApi.emitirPos(sale, vendedorId).catch(err => console.error("Error Matias POS:", err.message));
+                    matiasApi.emitirPos(sale, facturacionUserId).catch(err => console.error("Error Matias POS:", err.message));
                 }
                 if (facturacionType === 'electronica' || facturacionType === 'ambas') {
-                    matiasApi.emitirFactura(sale, vendedorId).catch(err => console.error("Error Matias FE:", err.message));
+                    matiasApi.emitirFactura(sale, facturacionUserId).catch(err => console.error("Error Matias FE:", err.message));
                 }
             } catch (err) {
                 console.error("Error al iniciar facturación:", err);
