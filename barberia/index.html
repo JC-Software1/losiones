@@ -15,6 +15,84 @@
       transition: all var(--speed); font-size: .85rem;
     }
     .anular-btn:hover { background: rgba(192,57,43,.08); color: #c0392b; }
+
+    /* Print button - larger, in a box */
+    .btn-print {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      background: var(--oliva);
+      border: none;
+      border-radius: var(--radius);
+      color: var(--blanco);
+      cursor: pointer;
+      transition: all var(--speed);
+      box-shadow: 0 2px 8px var(--oliva-20);
+    }
+    .btn-print:hover {
+      background: var(--oliva-soft);
+      transform: scale(1.05);
+      box-shadow: 0 4px 16px var(--oliva-20);
+    }
+    .btn-print:active { transform: scale(0.98); }
+
+    .actions-cell {
+      position: relative;
+      width: 80px;
+    }
+
+    /* Swipe row styles */
+    .swipe-row {
+      position: relative;
+      overflow: hidden;
+    }
+    .swipe-row .swipe-delete {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(90deg, rgba(192,57,43,0) 0%, #c0392b 100%);
+      color: var(--blanco);
+      font-weight: 600;
+      font-size: 0.85rem;
+      overflow: hidden;
+      transition: width 0.3s ease;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      cursor: pointer;
+      pointer-events: none;
+    }
+    .swipe-row.swiping .swipe-delete {
+      width: 100px;
+      pointer-events: auto;
+    }
+    .swipe-delete .swipe-icon { font-size: 1.1rem; }
+    .swipe-delete:active { background: #a02d1f; }
+
+    /* Print button hover tooltip */
+    .btn-print::after {
+      content: attr(title);
+      position: absolute;
+      bottom: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--carbon);
+      color: var(--blanco);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--speed);
+    }
+    .btn-print:hover::after { opacity: 1; }
   </style>
 </head>
 <body>
@@ -485,7 +563,7 @@ function applyFilters() {
       gananciaVenta += (it.precio - cost) * (it.cantidad || 1);
     });
     return `
-      <tr class="fade-in">
+      <tr class="fade-in swipe-row" data-id="${v._id}" data-numero="${v.numeroRecibo}">
         <td><strong>#${v.numeroRecibo}</strong></td>
         <td class="muted">${formatDate(v.fecha)}</td>
         <td><strong>${barberoNombre}</strong></td>
@@ -493,17 +571,20 @@ function applyFilters() {
         <td><span class="badge badge-active">${pagoLabel}</span></td>
         <td><strong>${formatMoney(v.total)}</strong></td>
         <td><strong style="color:var(--oliva)">${formatMoney(gananciaVenta)}</strong></td>
-<td class="no-print">
-            <button class="anular-btn" onclick="verRecibo('${v._id}')" title="Ver/Imprimir recibo">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 6 2 18 2 18 9"/>
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                <rect width="12" height="8" x="6" y="14"/>
-              </svg>
-            </button>
-            <button class="anular-btn" onclick="pedirAnular('${v._id}','${v.numeroRecibo}')" title="Anular venta">✕</button>
-          </td>
+        <td class="no-print actions-cell">
+          <button class="btn-print" onclick="verRecibo('${v._id}')" title="Ver/Imprimir recibo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect width="12" height="8" x="6" y="14"/>
+            </svg>
+          </button>
+          <div class="swipe-delete" data-id="${v._id}" data-numero="${v.numeroRecibo}">
+            <span class="swipe-icon">🗑️</span>
+            <span class="swipe-text">Eliminar</span>
+          </div>
+        </td>
       </tr>
     `;
   }).join("");
@@ -552,6 +633,122 @@ window.verRecibo = async (id) => {
 
 document.getElementById("btnCerrarVerRecibo").onclick = () => closeModal("modalVerRecibo");
 document.getElementById("btnImprimirVerRecibo").onclick = () => window.print();
+
+// Swipe-to-delete functionality
+let swipeRow = null;
+let startX = 0;
+let isSwiping = false;
+
+function setupSwipeDelete() {
+  const rows = document.querySelectorAll('.swipe-row');
+  rows.forEach(row => {
+    const deleteBtn = row.querySelector('.swipe-delete');
+    if (!deleteBtn) return;
+
+    // Touch events
+    row.addEventListener('touchstart', (e) => {
+      if (isSwiping && swipeRow !== row) {
+        closeSwipe(swipeRow);
+      }
+      swipeRow = row;
+      startX = e.touches[0].clientX;
+      isSwiping = true;
+    }, { passive: true });
+
+    row.addEventListener('touchmove', (e) => {
+      if (!isSwiping || swipeRow !== row) return;
+      const deltaX = startX - e.touches[0].clientX;
+      if (deltaX > 10) {
+        row.classList.add('swiping');
+        e.preventDefault();
+      } else if (deltaX < -10) {
+        closeSwipe(row);
+      }
+    }, { passive: false });
+
+    row.addEventListener('touchend', (e) => {
+      if (!isSwiping || swipeRow !== row) return;
+      const deltaX = startX - e.changedTouches[0].clientX;
+      if (deltaX > 60) {
+        // Swiped enough - show confirmation
+        confirmDelete(row.dataset.id, row.dataset.numero);
+      }
+      closeSwipe(row);
+      isSwiping = false;
+      swipeRow = null;
+    });
+
+    // Mouse events for desktop
+    row.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.btn-print') || e.target.closest('.swipe-delete')) return;
+      if (isSwiping && swipeRow !== row) {
+        closeSwipe(swipeRow);
+      }
+      swipeRow = row;
+      startX = e.clientX;
+      isSwiping = true;
+    });
+
+    row.addEventListener('mousemove', (e) => {
+      if (!isSwiping || swipeRow !== row) return;
+      const deltaX = startX - e.clientX;
+      if (deltaX > 10) {
+        row.classList.add('swiping');
+      } else if (deltaX < -10) {
+        closeSwipe(row);
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isSwiping || !swipeRow) return;
+      const deltaX = startX - (window.lastMouseX || startX);
+      if (deltaX > 60) {
+        confirmDelete(swipeRow.dataset.id, swipeRow.dataset.numero);
+      }
+      closeSwipe(swipeRow);
+      isSwiping = false;
+      swipeRow = null;
+    });
+
+    // Click on swipe-delete area
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      confirmDelete(row.dataset.id, row.dataset.numero);
+      closeSwipe(row);
+    });
+  });
+}
+
+function closeSwipe(row) {
+  if (row) row.classList.remove('swiping');
+}
+
+function confirmDelete(id, numero) {
+  if (confirm(`¿Eliminar el recibo #${numero}? Se devolverá el stock de productos al inventario.`)) {
+    eliminarVenta(id);
+  }
+}
+
+async function eliminarVenta(id) {
+  try {
+    await api(`/ventas/${id}`, "DELETE");
+    toast("Venta anulada. Inventario restaurado.");
+    productos = await api("/inventario");
+    await cargarResumen();
+  } catch(e) {
+    toast("Error eliminando venta: " + e.message, "error");
+  }
+}
+
+// Track mouse position for desktop swipe
+document.addEventListener('mousemove', (e) => { window.lastMouseX = e.clientX; });
+
+// Setup swipe after table render
+const originalCargarResumen = cargarResumen;
+cargarResumen = async function() {
+  await originalCargarResumen();
+  setupSwipeDelete();
+};
 
 // Void receipt handling
 window.pedirAnular = (id, num) => {

@@ -2131,6 +2131,16 @@
               </select>
             </div>
 
+            <div class="form-group full-width" id="facturacionContainer" style="display: none;">
+              <label>Facturación Electrónica (Matias API)</label>
+              <select id="facturacionType" class="form-control">
+                <option value="ninguna" selected>Ninguna</option>
+                <option value="pos">Factura POS</option>
+                <option value="electronica">Factura Electrónica</option>
+                <option value="ambas">Ambas</option>
+              </select>
+            </div>
+
             <div class="form-group full-width credit-fields" style="display: none;">
               <label for="installments">Número de Cuotas</label>
               <input type="number" id="installments" placeholder="Ej: 12 o 4.5" min="0.01" step="0.01">

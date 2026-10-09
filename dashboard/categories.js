@@ -533,6 +533,12 @@ async function saveSale() {
     const installments = String(inputInstallments.value.trim() || "Sin cuotas");
     const advance = Number(inputAdvance.value) || 0;
     const address = String(document.getElementById("clientAddress").value.trim() || "Sin dirección");
+    
+    // Facturacion
+    const facturacionContainer = document.getElementById("facturacionContainer");
+    const facturacionType = (facturacionContainer && facturacionContainer.style.display !== 'none') 
+        ? document.getElementById("facturacionType").value 
+        : "ninguna";
 
     // ---------- Validación FINAL ----------
     // ✅ REGLA: Si es a cuotas, el nombre es obligatorio
@@ -628,6 +634,10 @@ async function saveSale() {
 
         await apiFetch(endpoint, 'POST', saleData, token);
         showNotification('Venta guardada correctamente.', 'success');
+
+        if (facturacionType !== "ninguna") {
+            enviarFacturaMatias(receiptData, facturacionType);
+        }
 
         // Limpiar todo
         form.reset();
@@ -953,6 +963,12 @@ btnAddPayment.addEventListener("click", async () => {
 // Al cargar la página
 document.addEventListener("DOMContentLoaded", async () => {
     verificarModoAdmin();
+
+    const facturacionActiva = localStorage.getItem('facturacionElectronicaActiva') === 'true';
+    const facturacionContainer = document.getElementById("facturacionContainer");
+    if (facturacionContainer) {
+        facturacionContainer.style.display = facturacionActiva ? 'block' : 'none';
+    }
 
     // Verificar permisos ANTES de mostrar la interfaz
     await verificarPermisosYOcultarElementos();
@@ -2762,3 +2778,52 @@ setInterval(() => {
         console.log('🔄 Sesión de administrador renovada');
     }
 }, 5 * 60 * 1000); // Cada 5 minutos
+
+/* ---------- MATIAS API (Facturación Electrónica Sandbox) ---------- */
+window.enviarFacturaMatias = async function(saleData, tipo) {
+    try {
+        console.log(`Iniciando emisión de factura (${tipo}) con Matias API...`);
+        const token = localStorage.getItem('matiasApiKey');
+        const establecimiento = localStorage.getItem('matiasEstablecimiento') || '1';
+        const puntoEmision = localStorage.getItem('matiasPuntoEmision') || '1';
+        
+        if (!token) {
+            console.error("No hay token configurado para Matias API en Ajustes.");
+            return;
+        }
+
+        const body = {
+            establecimiento: establecimiento,
+            puntoEmision: puntoEmision,
+            tipoDocumento: tipo === 'pos' ? 'POS' : (tipo === 'electronica' ? 'FE' : 'AMBOS'),
+            cliente: {
+                nombre: saleData.clientName,
+                direccion: saleData.clientAddress || 'N/A'
+            },
+            detalles: saleData.products.map(p => ({
+                descripcion: p.name,
+                cantidad: p.quantity || 1,
+                precioUnitario: p.salePrice
+            })),
+            total: saleData.price,
+            modoPrueba: true // forzando sandbox si aplica
+        };
+
+        const response = await fetch("https://api.sandbox.matias-api.com/api/v1/invoices", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (response.ok) {
+            console.log(`Factura ${tipo.toUpperCase()} emitida con éxito (Sandbox)`);
+        } else {
+            console.warn("Matias API Sandbox respondió con error:", await response.text());
+        }
+    } catch (error) {
+        console.error("Error al emitir factura electrónica:", error);
+    }
+}

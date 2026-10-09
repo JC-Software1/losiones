@@ -89,7 +89,8 @@
             { href: 'GestorVendedores.html', icon: 'fas fa-users-cog', text: 'Vendedores' },
             { href: 'inspeccion-liquidacion.html', icon: 'fas fa-search-dollar', text: 'Inspección' },
             { href: 'saleDetails.html', icon: 'fas fa-info-circle', text: 'Detalles' },
-            { href: 'fix-liquidations.html', icon: 'fas fa-tools', text: 'Fix Liq.' }
+            { href: 'fix-liquidations.html', icon: 'fas fa-tools', text: 'Fix Liq.' },
+            { href: 'ajustes.html', icon: 'fas fa-cogs', text: 'Ajustes' }
         ];
 
         let navHtml = '';
