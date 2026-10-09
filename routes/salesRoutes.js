@@ -94,7 +94,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             paidAmount,
             remainingBalance,
             products,  // ✅ NUEVO: array de productos con cantidades
-            facturacionType // ✅ MODO DE FACTURACION
+            facturacionType, // ✅ MODO DE FACTURACION
+            facturacionEmail
         } = req.body;
 
         // ✅ REGLA: Nombre obligatorio solo para cuotas
@@ -177,7 +178,9 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             user: req.user.id,
             settled: isContado || advancePayment >= price,
             products: products,  // ✅ GUARDAR productos con cantidades
-            productIds: productIdsToMarkSold  // ✅ IDs de productos vendidos completamente
+            productIds: productIdsToMarkSold,  // ✅ IDs de productos vendidos completamente
+            facturacionType: facturacionType || 'ninguna',
+            facturacionEmail: facturacionEmail || ''
         });
 
         if (advancePayment > 0) {

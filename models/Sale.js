@@ -54,7 +54,9 @@ const SaleSchema = new mongoose.Schema({
     liquidatedDay: { type: Boolean, default: false },
     paymentType: { type: String, enum: ['contado', 'cuotas'], default: 'cuotas' },
     paidAmount: { type: Number, default: 0 },
-    remainingBalance: { type: Number, default: 0 }
+    remainingBalance: { type: Number, default: 0 },
+    facturacionType: { type: String, enum: ['ninguna', 'pos', 'electronica', 'ambas'], default: 'ninguna' },
+    facturacionEmail: { type: String, default: '' }
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
