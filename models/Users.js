@@ -64,7 +64,11 @@ const UserSchema = new mongoose.Schema({
         prefix: { type: String, default: 'FEV' },
         resolutionNumber: { type: String, default: '18760000001' },
         currentNumber: { type: Number, default: 1 },
-        to: { type: Number, default: 500000 },
+        from: { type: Number, default: 1 },
+        to: { type: Number, default: 1000 },
+        nit: { type: String, default: '' },
+        dv: { type: String, default: '' },
+        razonSocial: { type: String, default: '' },
         email: { type: String, default: 'jcdev.software@gmail.com' },
         direccion: { type: String, default: 'Calle Principal' },
         municipioId: { type: String, default: '149' }

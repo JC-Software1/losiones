@@ -175,19 +175,56 @@
             </div>
 
             <div id="billingConfig" style="display: none; margin-top: 20px;">
-                <div class="form-group">
-                    <label>Token de API (Sandbox)</label>
-                    <input type="password" id="apiToken" placeholder="Ingresa el token de Matias API">
-                </div>
                 
-                <div class="form-group">
-                    <label>Establecimiento (Opcional)</label>
-                    <input type="text" id="establecimiento" placeholder="Ej: 1">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <div class="form-group">
+                        <label>Entorno</label>
+                        <select id="matiasEnvironment" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px;">
+                            <option value="sandbox">Sandbox (Pruebas)</option>
+                            <option value="production">Producción</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Token (PAT) *</label>
+                        <input type="password" id="apiToken" placeholder="Pegue el token para actualizarlo">
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label>Punto de Emisión (Opcional)</label>
-                    <input type="text" id="puntoEmision" placeholder="Ej: 1">
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <div class="form-group">
+                        <label>NIT Restaurante *</label>
+                        <input type="text" id="matiasNit" placeholder="Ej: 900123456">
+                    </div>
+                    <div class="form-group">
+                        <label>Dígito Verificación</label>
+                        <input type="text" id="matiasDv" placeholder="Ej: 1">
+                    </div>
+                    <div class="form-group">
+                        <label>Razón Social</label>
+                        <input type="text" id="matiasNombreEmpresa" placeholder="Razón social">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <div class="form-group">
+                        <label>Núm. Resolución *</label>
+                        <input type="text" id="matiasResolutionNumber" placeholder="Ej: 18760000001">
+                    </div>
+                    <div class="form-group">
+                        <label>Prefijo Factura</label>
+                        <input type="text" id="matiasPrefix" placeholder="Ej: FEV">
+                    </div>
+                    <div class="form-group">
+                        <label>Rango Desde/Hasta</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" id="matiasFrom" placeholder="Desde" style="width: 50%;">
+                            <input type="number" id="matiasTo" placeholder="Hasta" style="width: 50%;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Consecutivo Actual</label>
+                        <input type="number" id="matiasCurrentNumber" placeholder="Factura actual">
+                    </div>
                 </div>
             </div>
             

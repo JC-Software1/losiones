@@ -25,9 +25,15 @@ async function loadSettings() {
             if (configDiv) configDiv.style.display = enabled ? 'block' : 'none';
 
             if (document.getElementById('apiToken')) document.getElementById('apiToken').value = config.token || '';
-            // Si el html original usa establecimiento y puntoEmision, lo mapeamos
-            if (document.getElementById('establecimiento')) document.getElementById('establecimiento').value = config.prefix || 'FEV';
-            if (document.getElementById('puntoEmision')) document.getElementById('puntoEmision').value = config.resolutionNumber || '18760000001';
+            if (document.getElementById('matiasEnvironment')) document.getElementById('matiasEnvironment').value = config.environment || 'sandbox';
+            if (document.getElementById('matiasNit')) document.getElementById('matiasNit').value = config.nit || '';
+            if (document.getElementById('matiasDv')) document.getElementById('matiasDv').value = config.dv || '';
+            if (document.getElementById('matiasNombreEmpresa')) document.getElementById('matiasNombreEmpresa').value = config.razonSocial || '';
+            if (document.getElementById('matiasResolutionNumber')) document.getElementById('matiasResolutionNumber').value = config.resolutionNumber || '';
+            if (document.getElementById('matiasPrefix')) document.getElementById('matiasPrefix').value = config.prefix || 'FEV';
+            if (document.getElementById('matiasFrom')) document.getElementById('matiasFrom').value = config.from || '';
+            if (document.getElementById('matiasTo')) document.getElementById('matiasTo').value = config.to || '';
+            if (document.getElementById('matiasCurrentNumber')) document.getElementById('matiasCurrentNumber').value = config.currentNumber || '';
             
             localStorage.setItem('facturacionElectronicaActiva', enabled);
         }
@@ -37,14 +43,12 @@ async function loadSettings() {
 }
 
 window.saveSettings = async function() {
-    const btn = document.querySelector('.btn');
+    const btn = document.querySelector('.btn-save');
     if (btn) btn.disabled = true;
 
     try {
         const enabled = document.getElementById('enableBilling').checked;
         const token = document.getElementById('apiToken') ? document.getElementById('apiToken').value.trim() : '';
-        const prefix = document.getElementById('establecimiento') ? document.getElementById('establecimiento').value.trim() : 'FEV';
-        const resolutionNumber = document.getElementById('puntoEmision') ? document.getElementById('puntoEmision').value.trim() : '18760000001';
 
         if (enabled && !token) {
             showNotification('Debe ingresar un token de API para activar la facturación', 'error');
@@ -54,8 +58,15 @@ window.saveSettings = async function() {
         const payload = {
             activo: enabled,
             token: token,
-            prefix: prefix || 'FEV',
-            resolutionNumber: resolutionNumber || '18760000001'
+            environment: document.getElementById('matiasEnvironment') ? document.getElementById('matiasEnvironment').value : 'sandbox',
+            nit: document.getElementById('matiasNit') ? document.getElementById('matiasNit').value.trim() : '',
+            dv: document.getElementById('matiasDv') ? document.getElementById('matiasDv').value.trim() : '',
+            razonSocial: document.getElementById('matiasNombreEmpresa') ? document.getElementById('matiasNombreEmpresa').value.trim() : '',
+            resolutionNumber: document.getElementById('matiasResolutionNumber') ? document.getElementById('matiasResolutionNumber').value.trim() : '',
+            prefix: document.getElementById('matiasPrefix') ? document.getElementById('matiasPrefix').value.trim() : 'FEV',
+            from: document.getElementById('matiasFrom') ? parseInt(document.getElementById('matiasFrom').value) || 1 : 1,
+            to: document.getElementById('matiasTo') ? parseInt(document.getElementById('matiasTo').value) || 1000 : 1000,
+            currentNumber: document.getElementById('matiasCurrentNumber') ? parseInt(document.getElementById('matiasCurrentNumber').value) || 1 : 1
         };
 
         const jwtToken = localStorage.getItem('token');

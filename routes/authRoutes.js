@@ -997,7 +997,7 @@ router.get("/config/matias", auth, async (req, res) => {
 
 router.put("/config/matias", auth, async (req, res) => {
   try {
-    const { activo, token, prefix, resolutionNumber, environment, to, email, direccion, municipioId } = req.body;
+    const { activo, token, prefix, resolutionNumber, environment, from, to, currentNumber, nit, dv, razonSocial, email, direccion, municipioId } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
@@ -1008,7 +1008,12 @@ router.put("/config/matias", auth, async (req, res) => {
       prefix: prefix || user.matiasConfig?.prefix || 'FEV',
       resolutionNumber: resolutionNumber || user.matiasConfig?.resolutionNumber || '18760000001',
       environment: environment || user.matiasConfig?.environment || 'sandbox',
-      to: to || user.matiasConfig?.to || 500000,
+      from: from || user.matiasConfig?.from || 1,
+      to: to || user.matiasConfig?.to || 1000,
+      currentNumber: currentNumber || user.matiasConfig?.currentNumber || 1,
+      nit: nit || user.matiasConfig?.nit || '',
+      dv: dv || user.matiasConfig?.dv || '',
+      razonSocial: razonSocial || user.matiasConfig?.razonSocial || '',
       email: email || user.matiasConfig?.email || 'jcdev.software@gmail.com',
       direccion: direccion || user.matiasConfig?.direccion || 'Calle Principal',
       municipioId: municipioId || user.matiasConfig?.municipioId || '149'
