@@ -537,8 +537,19 @@ async function saveSale() {
     const facturacionType = (facturacionContainer && facturacionContainer.style.display !== 'none') 
         ? document.getElementById("facturacionType").value 
         : "ninguna";
+    
+    const facturacionEmailContainer = document.getElementById("facturacionEmailContainer");
+    const facturacionEmail = (facturacionEmailContainer && facturacionEmailContainer.style.display !== 'none')
+        ? document.getElementById("facturacionEmail").value.trim()
+        : "";
 
     // ---------- Validación FINAL ----------
+    // ✅ REGLA: Si es factura electrónica, el correo es obligatorio
+    if ((facturacionType === 'electronica' || facturacionType === 'ambas') && !facturacionEmail) {
+        showNotification("⚠ El correo electrónico es obligatorio para la factura electrónica.", "warning");
+        document.getElementById("facturacionEmail").focus();
+        return;
+    }
     // ✅ REGLA: Si es a cuotas, el nombre es obligatorio
     if (paymentType === 'cuotas' && !clientName) {
         showNotification("⚠ El nombre del cliente es obligatorio para ventas a cuotas.", "warning");
@@ -611,7 +622,8 @@ async function saveSale() {
         remainingBalance: isContado ? 0 : (price - advance),
         // ✅ Productos con cantidades
         products: productsWithQty,
-        facturacionType: facturacionType
+        facturacionType: facturacionType,
+        facturacionEmail: facturacionEmail
     };
 
     // ---------- Log para depurar ----------
@@ -895,6 +907,18 @@ document.getElementById('advancePayment').addEventListener('input', () => {
         updateTotalPrice();
     }
 });
+
+window.toggleFacturacionFields = function () {
+    const factType = document.getElementById('facturacionType').value;
+    const emailContainer = document.getElementById('facturacionEmailContainer');
+    
+    if (factType === 'electronica' || factType === 'ambas') {
+        emailContainer.style.display = 'block';
+    } else {
+        emailContainer.style.display = 'none';
+        document.getElementById('facturacionEmail').value = '';
+    }
+};
 
 // ✅ Función para mostrar/ocultar campos de crédito según tipo de pago
 window.togglePaymentFields = function () {

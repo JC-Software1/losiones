@@ -11,7 +11,7 @@ const getBaseUrl = (environment) => {
  * Format the invoice JSON structure for MATIAS API
  */
 const formatInvoicePayload = (order, userConfig) => {
-    const clienteEmail = (order.clienteEmail && order.clienteEmail.trim()) ? order.clienteEmail.trim() : null;
+    const clienteEmail = (order.facturacionEmail && order.facturacionEmail.trim()) ? order.facturacionEmail.trim() : null;
     const destinatarioEmail = clienteEmail || userConfig.email || "jcdev.software@gmail.com";
 
     // 1. Customer Data
