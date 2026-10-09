@@ -1,5 +1,6 @@
 import { getToken } from "./auth.js";
 
+// Cambiado temporalmente a localhost para que puedas probar los cambios del backend localmente
 const API_URL = "https://losiones-fjt0.onrender.com/api";
 
 export async function apiFetch(endpoint, method = "GET", body = null, token = null) {
