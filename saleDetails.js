@@ -1,3 +1,6 @@
+import "./authCheck.js";
+
+
 document.addEventListener("DOMContentLoaded", () => {
     const saleDetailsContainer = document.getElementById("saleDetails");
     const paymentsContainer = document.getElementById("paymentsDetails");
@@ -129,6 +132,9 @@ document.addEventListener("DOMContentLoaded", () => {
             minute: '2-digit'
         });
     }
+
+
+    
 
     function renderDaysRibbon(paymentDaysStr, payments) {
         const container = document.getElementById('daysRibbon');

@@ -1,11 +1,14 @@
-/* ---------- módulos (sin cambios) ---------- */
+/* ---------- módulos ---------- */
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import { generatePOS } from "./utils/invoiceGenerator.js";
+import "./authCheck.js";
 
 /* ---------- referencias DOM ---------- */
-const salesHistory   = document.getElementById("salesHistory");
-const searchInput    = document.getElementById("searchInput");
-const dateInput      = document.getElementById("dateFilter");
+const salesHistory = document.getElementById("salesHistory");
+const searchInput = document.getElementById("searchInput");
+const dateInput = document.getElementById("dateFilter");
+const dayFilter = document.getElementById("dayFilter");
 const totalDebtElement = document.getElementById("totalDebt");
 
 let sales = [];
@@ -14,59 +17,85 @@ let sales = [];
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         const token = getToken();
-        sales = await apiFetch("/sales", "GET", null, token);
 
-        // Mostrar solo no liquidadas
+        /* === MODO ADMIN: ¿estoy inspeccionando un vendedor? === */
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorId = sessionStorage.getItem('vendedorId');
+
+        let endpoint = '/sales/all';          // default
+        if (adminMode && vendedorId) {
+            endpoint = `/sales/vendedor/${vendedorId}`; // solo ventas de ese vendedor
+        }
+
+        sales = await apiFetch(endpoint, 'GET', null, token);
+
+        // resto igual …
         const unsettled = sales.filter(s => !s.settled);
         renderSales(unsettled);
         updateTotalDebt(unsettled);
 
-        // Filtros
+        // ✅ AGREGAR: Event listeners para filtros
         searchInput.addEventListener("input", applyFilters);
         dateInput.addEventListener("change", applyFilters);
+        dayFilter.addEventListener("change", applyFilters);
 
     } catch (error) {
         console.error("Error al cargar el historial:", error);
         salesHistory.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar ventas</h3></div>`;
     }
 
-    // Menú (igual que categories)
-    const menuToggle = document.getElementById("menuToggle");
-    const menuItems  = document.getElementById("menuItems");
-    const backdrop   = document.getElementById("backdrop");
-    if (menuToggle && menuItems && backdrop) {
-        menuToggle.addEventListener("click", () => {
-            menuItems.classList.toggle("show");
-            backdrop.classList.toggle("show");
-        });
-        backdrop.addEventListener("click", () => {
-            menuItems.classList.remove("show");
-            backdrop.classList.remove("show");
-        });
-    }
 });
 
-/* ---------- filtros ---------- */
+/* ---------- filtros mejorados ---------- */
 function applyFilters() {
     const text = searchInput.value.toLowerCase().trim();
     const date = dateInput.value;
+    const day = dayFilter.value;
 
     const filtered = sales.filter(sale => {
-        const matchesText = sale.clientName.toLowerCase().includes(text) || sale.productName.toLowerCase().includes(text);
+        // Filtro por texto
+        const matchesText = sale.clientName.toLowerCase().includes(text) ||
+            sale.productName.toLowerCase().includes(text);
+
+        // Filtro por fecha de venta
         const matchesDate = date ? new Date(sale.saleDate).toISOString().split("T")[0] === date : true;
-        return !sale.settled && matchesText && matchesDate;
+
+        // Filtro por día de pago
+        let matchesDay = true;
+        if (day) {
+            const dayNum = parseInt(day);
+            if (sale.paymentDays) {
+                const paymentDaysArray = sale.paymentDays.split(',').map(d => parseInt(d.trim()));
+                matchesDay = paymentDaysArray.includes(dayNum);
+            } else {
+                matchesDay = false;
+            }
+        }
+
+        return !sale.settled && matchesText && matchesDate && matchesDay;
     });
 
     renderSales(filtered);
     updateTotalDebt(filtered);
 }
 
-/* ---------- pintar tarjetas (nuevo estilo) ---------- */
+/* ---------- pintar tarjetas ---------- */
 function renderSales(list) {
     salesHistory.innerHTML = "";
 
     if (!list.length) {
-        salesHistory.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><h3>No se encontraron ventas</h3></div>`;
+        const day = dayFilter.value;
+        const message = day
+            ? `<div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <h3>No hay préstamos para el día ${day}</h3>
+                <p>No se encontraron ventas con pagos programados para este día</p>
+               </div>`
+            : `<div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h3>No se encontraron ventas</h3>
+               </div>`;
+        salesHistory.innerHTML = message;
         return;
     }
 
@@ -79,12 +108,18 @@ function renderSales(list) {
         card.className = "sale-card";
         card.setAttribute("data-sale-id", sale._id);
 
+        // Mostrar días de pago si existen
+        const paymentDaysInfo = sale.paymentDays
+            ? `<p><i class="fas fa-calendar-check"></i> Días de pago: ${sale.paymentDays}</p>`
+            : '';
+
         card.innerHTML = `
             <div class="sale-header">
                 <div class="sale-info">
                     <h3>${sale.clientName}</h3>
                     <p>${sale.productName}</p>
                     <p><i class="fas fa-map-marker-alt"></i> ${sale.clientAddress || 'Sin dirección'}</p>
+                    ${paymentDaysInfo}
                 </div>
                 <div class="sale-amount">
                     <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
@@ -97,13 +132,15 @@ function renderSales(list) {
             </div>
 
             <div class="sale-actions">
-                <button class="btn btn-primary btn-sm"><i class="fas fa-eye"></i> Info</button>
+                <button class="btn btn-info btn-sm"><i class="fas fa-eye"></i> Info</button>
+                <button class="btn btn-success btn-sm btn-print"><i class="fas fa-print"></i> Factura POS</button>
                 <button class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Eliminar</button>
             </div>
         `;
 
-        card.querySelector(".btn-primary").onclick = () => viewSaleDetails(sale);
-        card.querySelector(".btn-danger").onclick  = () => deleteSale(sale._id, card);
+        card.querySelector(".btn-info").onclick = () => viewSaleDetails(sale);
+        card.querySelector(".btn-print").onclick = () => window.generateInvoice(sale._id);
+        card.querySelector(".btn-danger").onclick = () => deleteSale(sale._id, card);
 
         salesHistory.appendChild(card);
     });
@@ -126,15 +163,47 @@ function viewSaleDetails(sale) {
 
 /* ---------- eliminar ---------- */
 async function deleteSale(id, card) {
-    if (!confirm("¿Eliminar esta venta?")) return;
+    if (!await showConfirm("¿Eliminar esta venta?")) return;
     try {
         const token = getToken();
         await apiFetch(`/sales/${id}`, "DELETE", null, token);
         card.remove();
-        alert("Venta eliminada correctamente.");
-        applyFilters(); // recalcula deuda
+        showNotification("Venta eliminada correctamente.", "error");
+
+        // Actualizar el array local
+        sales = sales.filter(s => s._id !== id);
+        applyFilters(); // recalcula deuda y reaplica filtros
     } catch (error) {
         console.error("Error al eliminar la venta:", error);
-        alert("No se pudo eliminar la venta.");
+        showNotification("No se pudo eliminar la venta.", "error");
     }
 }
+
+/* ---------- limpiar todos los filtros ---------- */
+window.clearAllFilters = function () {
+    searchInput.value = "";
+    dateInput.value = "";
+    dayFilter.value = "";
+    applyFilters();
+};
+/**
+ * Genera la factura POS para una venta pendiente/historial
+ */
+window.generateInvoice = function (saleId) {
+    const sale = sales.find(s => s._id === saleId);
+    if (!sale) {
+        showNotification("No se encontró la información de la venta.", "error");
+        return;
+    }
+
+    const totalPaid = sale.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+    
+    // Preparar datos para generatePOS
+    const saleDataForInvoice = {
+        ...sale,
+        remainingBalance: sale.price - totalPaid,
+        advancePayment: sale.advancePayment || 0
+    };
+
+    generatePOS(saleDataForInvoice);
+};

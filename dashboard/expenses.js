@@ -21,10 +21,10 @@ async function loadCategories() {
     try {
         const token = getToken();
         const categories = await apiFetch("/categories", "GET", null, token);
-        
+
         // Limpiar el select, manteniendo solo la opción por defecto
         selectCategory.innerHTML = '<option value="">Selecciona una categoría</option>';
-        
+
         // Agregar cada categoría como una opción
         categories.forEach(category => {
             const option = document.createElement("option");
@@ -34,7 +34,7 @@ async function loadCategories() {
         });
     } catch (error) {
         console.error("Error al cargar categorías:", error);
-        alert("No se pudieron cargar las categorías");
+        showNotification("No se pudieron cargar las categorías", "error");
     }
 }
 
@@ -44,13 +44,13 @@ async function loadExpenses() {
         const token = getToken();
         const expenses = await apiFetch("/expenses", "GET", null, token);
         list.innerHTML = "";
-        
+
         expenses.forEach(expense => {
             // Verificar si expense.category existe y tiene propiedad name
-            const categoryName = expense.category && expense.category.name 
-                              ? expense.category.name 
-                              : "Sin categoría";
-            
+            const categoryName = expense.category && expense.category.name
+                ? expense.category.name
+                : "Sin categoría";
+
             const li = document.createElement("li");
             li.innerHTML = `
                 <div class="expense-info">
@@ -64,16 +64,16 @@ async function loadExpenses() {
                     <button class="delete">Eliminar</button>
                 </div>
             `;
-            
+
             // Asignar eventos a los botones
             li.querySelector(".edit").addEventListener("click", () => editExpense(expense));
             li.querySelector(".delete").addEventListener("click", () => deleteExpense(expense._id));
-            
+
             list.appendChild(li);
         });
     } catch (error) {
         console.error("Error al cargar gastos:", error);
-        alert("No se pudieron cargar los gastos");
+        showNotification("No se pudieron cargar los gastos", "error");
     }
 }
 
@@ -84,7 +84,7 @@ function editExpense(expense) {
     inputAmount.value = expense.amount;
     selectCategory.value = expense.category._id;
     inputDate.value = new Date(expense.date).toISOString().split('T')[0];
-    
+
     btnSave.style.display = "none";
     btnUpdate.style.display = "inline-block";
     btnCancel.style.display = "inline-block";
@@ -92,18 +92,18 @@ function editExpense(expense) {
 
 // Función para eliminar gasto
 async function deleteExpense(id) {
-    if (!confirm("¿Estás seguro de que deseas eliminar este gasto?")) {
+    if (!await showConfirm("¿Estás seguro de que deseas eliminar este gasto?")) {
         return;
     }
-    
+
     try {
         const token = getToken();
         await apiFetch(`/expenses/${id}`, "DELETE", null, token);
-        alert("Gasto eliminado correctamente");
+        showNotification("Gasto eliminado correctamente", "success");
         loadExpenses();
     } catch (error) {
         console.error("Error al eliminar gasto:", error);
-        alert("No se pudo eliminar el gasto");
+        showNotification("No se pudo eliminar el gasto", "error");
     }
 }
 
@@ -113,24 +113,24 @@ async function saveExpense() {
     const amount = parseFloat(inputAmount.value);
     const category = selectCategory.value;
     const date = inputDate.value;
-    
+
     if (!title || isNaN(amount) || amount <= 0 || !category) {
-        alert("Por favor completa todos los campos correctamente");
+        showNotification("Por favor completa todos los campos correctamente", "warning");
         return;
     }
-    
+
     try {
         const token = getToken();
         const data = { title, amount, category, date };
         await apiFetch("/expenses/new", "POST", data, token);
-        
-        alert("Gasto guardado correctamente");
+
+        showNotification("Gasto guardado correctamente", "success");
         form.reset();
         inputDate.valueAsDate = new Date(); // Restaurar fecha actual
         loadExpenses();
     } catch (error) {
         console.error("Error al guardar gasto:", error);
-        alert("No se pudo guardar el gasto");
+        showNotification("No se pudo guardar el gasto", "error");
     }
 }
 
@@ -141,18 +141,18 @@ async function updateExpense() {
     const amount = parseFloat(inputAmount.value);
     const category = selectCategory.value;
     const date = inputDate.value;
-    
+
     if (!id || !title || isNaN(amount) || amount <= 0 || !category) {
-        alert("Por favor completa todos los campos correctamente");
+        showNotification("Por favor completa todos los campos correctamente", "warning");
         return;
     }
-    
+
     try {
         const token = getToken();
         const data = { title, amount, category, date };
         await apiFetch(`/expenses/${id}`, "PUT", data, token);
-        
-        alert("Gasto actualizado correctamente");
+
+        showNotification("Gasto actualizado correctamente", "success");
         form.reset();
         inputDate.valueAsDate = new Date(); // Restaurar fecha actual
         btnSave.style.display = "inline-block";
@@ -161,7 +161,7 @@ async function updateExpense() {
         loadExpenses();
     } catch (error) {
         console.error("Error al actualizar gasto:", error);
-        alert("No se pudo actualizar el gasto");
+        showNotification("No se pudo actualizar el gasto", "error");
     }
 }
 

@@ -1,5 +1,33 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import "./authCheck.js";
+
+// Función para verificar permiso y ocultar/mostrar costos
+async function verificarPermisoCostos() {
+    try {
+        const token = getToken();
+        const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
+        const { permisosDetallados, tipo } = response;
+
+        // Admins y jefes siempre ven costos
+        if (tipo === 2 || tipo === 3) {
+            return true;
+        }
+
+        // Vendedores: verificar permiso específico
+        return permisosDetallados?.verCostosYGanancias !== false;
+
+    } catch (error) {
+        console.error('Error al verificar permisos de costos:', error);
+        // Por defecto, ocultar en caso de error para mayor seguridad
+        return false;
+    }
+}
+
+// Función auxiliar para formatear texto oculto
+function ocultarTexto(texto) {
+    return '<span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>';
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
     const productsList = document.getElementById("productsList");
@@ -7,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const totalSoldElement = document.getElementById("totalSold");
     const totalProductsElement = document.getElementById("totalProducts");
     const totalProfitElement = document.getElementById("totalProfit");
-    
+
     let soldProducts = [];
 
     try {
@@ -19,8 +47,55 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const products = await apiFetch("/products", "GET", null, token);
 
-        // Filtrar solo productos vendidos
-        soldProducts = products.filter(product => product.sold);
+        // Obtener ventas realizadas
+        const sales = await apiFetch("/sales", "GET", null, token);
+
+        // Filtrar ventas que no están canceladas (todas las ventas cuentan)
+        const validSales = sales.filter(sale => !sale.cancelled);
+
+        // Crear lista de productos vendidos a partir de las ventas
+        const soldFromSales = [];
+
+        for (const sale of validSales) {
+            if (sale.products && Array.isArray(sale.products)) {
+                for (const prod of sale.products) {
+                    soldFromSales.push({
+                        _id: prod.productId || prod._id || sale._id,
+                        name: prod.name,
+                        brand: prod.brand,
+                        category: prod.category,
+                        size: prod.size,
+                        salePrice: prod.salePrice,
+                        quantity: prod.quantity || 1,
+                        soldDate: sale.saleDate,
+                        soldTo: sale.clientName,
+                        saleId: sale._id,
+                        totalPrice: sale.price,
+                        paymentType: sale.paymentType,
+                        settled: sale.settled
+                    });
+                }
+            } else {
+                // Productos antigos sin formato de array
+                soldFromSales.push({
+                    _id: sale._id,
+                    name: sale.productName,
+                    brand: '',
+                    category: '',
+                    size: '',
+                    salePrice: sale.price,
+                    quantity: 1,
+                    soldDate: sale.saleDate,
+                    soldTo: sale.clientName,
+                    saleId: sale._id,
+                    totalPrice: sale.price,
+                    paymentType: sale.paymentType,
+                    settled: sale.settled
+                });
+            }
+        }
+
+        soldProducts = soldFromSales;
 
         displayProducts(soldProducts);
         updateTotals(soldProducts);
@@ -33,7 +108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 displayProducts(soldProducts);
                 updateTotals(soldProducts);
             } else {
-                const filteredProducts = soldProducts.filter(product => 
+                const filteredProducts = soldProducts.filter(product =>
                     product.name.toLowerCase().includes(searchText)
                 );
 
@@ -64,7 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 function displayProducts(products) {
     const productsList = document.getElementById("productsList");
     productsList.innerHTML = "";
-    
+
     if (products.length === 0) {
         const emptyMessage = document.createElement("li");
         emptyMessage.innerHTML = `
@@ -77,65 +152,83 @@ function displayProducts(products) {
 
     products.forEach(product => {
         const li = document.createElement("li");
-        const profit = product.salePrice - product.costPrice;
-        const profitPercentage = Math.round((profit / product.costPrice) * 100);
+        li.classList.add("product-card", "sold");
         
-        // Determinar clase de rentabilidad para estilizado visual
-        let profitClass = "neutral";
-        if (profitPercentage >= 30) profitClass = "high";
-        else if (profitPercentage >= 15) profitClass = "medium";
-        else if (profitPercentage < 10) profitClass = "low";
+        const qty = product.quantity || 1;
+        const totalProductPrice = (product.salePrice || 0) * qty;
         
+        // Determinar icono según tipo de pago
+        const paymentIcon = product.paymentType === 'contado' ? 'fa-check-circle' : 'fa-calendar-alt';
+        const paymentClass = product.paymentType === 'contado' ? 'success' : 'warning';
+
         li.innerHTML = `
             <div class="product-header">
-                <h3>${product.name}</h3>
-                <span class="product-badge">Vendido</span>
-            </div>
-            
-            <div class="product-details">
-                <div class="price-row">
-                    <span class="detail-label">Precio de costo:</span>
-                    <span class="detail-value">${product.costPrice.toLocaleString()} COP</span>
+                <div class="product-info">
+                    <h3>${product.name} <span class="quantity-badge">x${qty}</span></h3>
+                    <p><i class="fas fa-user-tag"></i> Vendido a: <strong>${product.soldTo || 'Cliente'}</strong></p>
                 </div>
-                
-                <div class="price-row">
-                    <span class="detail-label">Precio de venta:</span>
-                    <span class="detail-value sale">${product.salePrice.toLocaleString()} COP</span>
-                </div>
-                
-                <div class="price-row profit ${profitClass}">
-                    <span class="detail-label">Ganancia:</span>
-                    <span class="detail-value">
-                        ${profit.toLocaleString()} COP 
-                        <span class="percentage">(${profitPercentage}%)</span>
-                    </span>
+                <div class="sold-badge">
+                    <i class="fas ${paymentIcon}"></i> ${product.paymentType === 'contado' ? 'Contado' : 'Cuotas'}
                 </div>
             </div>
             
-            <div class="card-actions">
-                <button class="delete-btn" data-id="${product._id}">
-                    <span class="btn-icon">🗑️</span> Eliminar
+            <div class="product-meta">
+                <div class="meta-item">
+                    <i class="fas fa-boxes"></i>
+                    <span>Cantidad: <span class="meta-value">${qty} unidades</span></span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-tag"></i>
+                    <span>Precio unitario: <span class="meta-value">$${(product.salePrice || 0).toLocaleString()}</span></span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>Fecha: <span class="meta-value">${new Date(product.soldDate).toLocaleDateString()}</span></span>
+                </div>
+            </div>
+
+            <div class="profit-section">
+                <div class="total-row">
+                    <span class="total-label">Total Venta</span>
+                    <span class="total-value">$${totalProductPrice.toLocaleString()} COP</span>
+                </div>
+            </div>
+            
+            <div class="product-actions" style="margin-top: 15px; display: flex; gap: 10px;">
+                <button class="view-sale-btn btn btn-accent btn-sm" data-sale-id="${product.saleId}" style="flex: 1; justify-content: center;">
+                    <i class="fas fa-eye"></i> Ver venta
                 </button>
             </div>
         `;
-        
+
         productsList.appendChild(li);
+    });
+
+    // Agregar event listeners para los botones de ver venta
+    const viewButtons = document.querySelectorAll(".view-sale-btn");
+    viewButtons.forEach(button => {
+        button.addEventListener("click", (e) => {
+            const saleId = e.currentTarget.dataset.saleId;
+            if (saleId) {
+                window.location.href = `saleDetails.html?id=${saleId}`;
+            }
+        });
     });
 
     // Agregar event listeners para los botones de eliminar
     const deleteButtons = document.querySelectorAll(".delete-btn");
     deleteButtons.forEach(button => {
         button.addEventListener("click", async (e) => {
-            if (confirm("¿Estás seguro de que deseas eliminar este producto vendido?")) {
+            if (await showConfirm("¿Estás seguro de que deseas eliminar este producto vendido?")) {
                 const productId = e.target.closest(".delete-btn").dataset.id;
                 try {
                     const token = getToken();
                     await apiFetch(`/products/${productId}`, "DELETE", null, token);
-                    
+
                     // Animación de eliminación
                     const card = e.target.closest("li");
                     card.classList.add("deleting");
-                    
+
                     setTimeout(() => {
                         card.remove();
                         const remainingProducts = document.querySelectorAll("#productsList li").length;
@@ -146,7 +239,7 @@ function displayProducts(products) {
                                     <p>No hay productos vendidos para mostrar</p>
                                 </li>`;
                         }
-                        
+
                         // Actualizar totales sin tener que recargar la página
                         const products = Array.from(document.querySelectorAll("#productsList li:not(.empty-message)")).map(li => {
                             const costText = li.querySelector(".price-row:nth-child(1) .detail-value").textContent;
@@ -155,13 +248,13 @@ function displayProducts(products) {
                             const salePrice = parseInt(saleText.replace(/[^\d]/g, ""));
                             return { costPrice, salePrice };
                         });
-                        
+
                         updateTotals(products);
                     }, 300);
-                    
+
                 } catch (error) {
                     console.error("Error al eliminar el producto:", error);
-                    alert("No se pudo eliminar el producto.");
+                    showNotification("No se pudo eliminar el producto.", "error");
                 }
             }
         });
@@ -172,25 +265,23 @@ function updateTotals(products) {
     const totalSoldElement = document.getElementById("totalSold");
     const totalProductsElement = document.getElementById("totalProducts");
     const totalProfitElement = document.getElementById("totalProfit");
-    
-    const totalSold = products.reduce((sum, product) => sum + product.salePrice, 0);
-    const totalProfit = products.reduce((sum, product) => sum + (product.salePrice - product.costPrice), 0);
-    
-    totalProductsElement.textContent = products.length;
+
+    // Calcular considerando cantidades
+    const totalSold = products.reduce((sum, product) => {
+        const qty = product.quantity || 1;
+        return sum + ((product.salePrice || 0) * qty);
+    }, 0);
+
+    const totalProfit = products.reduce((sum, product) => {
+        const qty = product.quantity || 1;
+        const profit = ((product.salePrice || 0) - (product.costPrice || 0)) * qty;
+        return sum + profit;
+    }, 0);
+
+    const totalQty = products.reduce((sum, product) => sum + (product.quantity || 1), 0);
+
+    totalProductsElement.textContent = totalQty;
     totalSoldElement.textContent = `${totalSold.toLocaleString()} COP`;
     totalProfitElement.textContent = `${totalProfit.toLocaleString()} COP`;
 }
 
-const menuToggle = document.getElementById('menuToggle');
-const menuItems = document.getElementById('menuItems');
-const backdrop = document.getElementById('backdrop');
-
-menuToggle.addEventListener('click', () => {
-  menuItems.classList.toggle('show');
-  backdrop.classList.toggle('show');
-});
-
-backdrop.addEventListener('click', () => {
-  menuItems.classList.remove('show');
-  backdrop.classList.remove('show');
-});

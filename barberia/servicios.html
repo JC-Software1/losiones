@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Servicios — Barbería</title>
+  <link rel="stylesheet" href="css/barberia.css"/>
+</head>
+<body>
+<div id="sidebarMount"></div>
+
+<div class="app-shell">
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn-hamburger" id="btnHamburger" aria-label="Menú">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/>
+            <line x1="4" x2="20" y1="18" y2="18"/>
+          </svg>
+        </button>
+        <span class="topbar-title">Catálogo de servicios</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-date" id="liveClock"></span>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px" class="fade-in">
+        <div>
+          <h1>Servicios</h1>
+          <p style="margin-top:4px;font-size:.9rem">Define los servicios disponibles en tu barbería y sus precios</p>
+        </div>
+        <button class="btn btn-primary" id="btnAgregar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>
+          </svg>
+          Agregar servicio
+        </button>
+      </div>
+
+      <div class="card fade-in" style="animation-delay:.06s">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Servicio</th>
+                <th>Precio</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyServicios">
+              <tr><td colspan="4"><div class="skeleton" style="height:14px;width:50%;margin:8px 0"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalServicio">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Nuevo servicio</h3>
+      <button class="modal-close" id="btnCerrarModal">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" for="inputNombre">Nombre del servicio</label>
+        <input class="form-input" id="inputNombre" type="text" placeholder="Ej: Corte de cabello" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inputPrecio">Precio (COP)</label>
+        <input class="form-input" id="inputPrecio" type="number" placeholder="Ej: 15000" min="0"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelar">Cancelar</button>
+      <button class="btn btn-primary" id="btnGuardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal eliminar -->
+<div class="modal-overlay" id="modalEliminar">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h3 class="modal-title">Eliminar servicio</h3>
+      <button class="modal-close" id="btnCerrarEliminar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>¿Eliminar el servicio <strong id="nombreEliminar"></strong>?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btnCancelarEliminar">Cancelar</button>
+      <button class="btn btn-danger" id="btnConfirmarEliminar">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { requireAuth, initSidebar, startClock, api, formatMoney, renderSidebarHTML, toast, openModal, closeModal } from "./js/barberia-core.js";
+
+requireAuth();
+document.getElementById("sidebarMount").innerHTML = renderSidebarHTML();
+initSidebar("servicios.html");
+startClock(document.getElementById("liveClock"));
+
+let editingId = null;
+let deletingId = null;
+let servicios = [];
+
+async function loadServicios() {
+  try {
+    servicios = await api("/servicios");
+    renderTable();
+  } catch(e) { toast("Error: " + e.message, "error"); }
+}
+
+function renderTable() {
+  const tbody = document.getElementById("tbodyServicios");
+  if (servicios.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4">
+      <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/>
+          <circle cx="12" cy="13" r="3"/>
+        </svg>
+        <h3>Sin servicios</h3>
+        <p>Agrega los servicios de tu barbería (corte, barba, pintura, etc.)</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = servicios.map(s => `
+    <tr class="fade-in">
+      <td><strong>${s.nombre}</strong></td>
+      <td><strong style="color:var(--oliva)">${formatMoney(s.precio)}</strong></td>
+      <td><span class="badge ${s.activo ? "badge-active" : "badge-inactive"}">${s.activo ? "Activo" : "Inactivo"}</span></td>
+      <td>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="editarServicio('${s._id}')" title="Editar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleActivo('${s._id}',${s.activo})" title="${s.activo ? 'Desactivar' : 'Activar'}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              ${s.activo
+                ? '<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" x2="12" y1="2" y2="12"/>'
+                : '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>'}
+            </svg>
+          </button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="pedirEliminar('${s._id}','${s.nombre}')" title="Eliminar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+document.getElementById("btnAgregar").onclick = () => {
+  editingId = null;
+  document.getElementById("modalTitle").textContent = "Nuevo servicio";
+  document.getElementById("inputNombre").value = "";
+  document.getElementById("inputPrecio").value = "";
+  openModal("modalServicio");
+  document.getElementById("inputNombre").focus();
+};
+
+["btnCerrarModal","btnCancelar"].forEach(id => document.getElementById(id).onclick = () => closeModal("modalServicio"));
+["btnCerrarEliminar","btnCancelarEliminar"].forEach(id => document.getElementById(id).onclick = () => closeModal("modalEliminar"));
+
+document.getElementById("btnGuardar").onclick = async () => {
+  const nombre = document.getElementById("inputNombre").value.trim();
+  const precio = parseFloat(document.getElementById("inputPrecio").value);
+  if (!nombre) { toast("El nombre es obligatorio", "error"); return; }
+  if (isNaN(precio) || precio < 0) { toast("Precio inválido", "error"); return; }
+  const btn = document.getElementById("btnGuardar");
+  btn.disabled = true; btn.textContent = "Guardando...";
+  try {
+    if (editingId) {
+      await api(`/servicios/${editingId}`, "PATCH", { nombre, precio });
+      toast("Servicio actualizado");
+    } else {
+      await api("/servicios", "POST", { nombre, precio });
+      toast("Servicio agregado");
+    }
+    closeModal("modalServicio");
+    await loadServicios();
+  } catch(e) { toast(e.message, "error"); }
+  finally { btn.disabled = false; btn.textContent = "Guardar"; }
+};
+
+window.editarServicio = (id) => {
+  const s = servicios.find(x => x._id === id);
+  if (!s) return;
+  editingId = id;
+  document.getElementById("modalTitle").textContent = "Editar servicio";
+  document.getElementById("inputNombre").value = s.nombre;
+  document.getElementById("inputPrecio").value = s.precio;
+  openModal("modalServicio");
+};
+
+window.toggleActivo = async (id, activo) => {
+  try {
+    await api(`/servicios/${id}`, "PATCH", { activo: !activo });
+    toast(!activo ? "Servicio activado" : "Servicio desactivado");
+    await loadServicios();
+  } catch(e) { toast(e.message, "error"); }
+};
+
+window.pedirEliminar = (id, nombre) => {
+  deletingId = id;
+  document.getElementById("nombreEliminar").textContent = nombre;
+  openModal("modalEliminar");
+};
+document.getElementById("btnConfirmarEliminar").onclick = async () => {
+  const btn = document.getElementById("btnConfirmarEliminar");
+  btn.disabled = true; btn.textContent = "Eliminando...";
+  try {
+    await api(`/servicios/${deletingId}`, "DELETE");
+    toast("Servicio eliminado");
+    closeModal("modalEliminar");
+    await loadServicios();
+  } catch(e) { toast(e.message, "error"); }
+  finally { btn.disabled = false; btn.textContent = "Eliminar"; }
+};
+
+document.querySelectorAll(".modal-overlay").forEach(o =>
+  o.addEventListener("click", e => { if(e.target === o) o.classList.remove("open"); })
+);
+
+loadServicios();
+</script>
+</body>
+</html>

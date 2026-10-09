@@ -1,20 +1,454 @@
 const express = require("express");
 const auth = require("../middleware/auth");
+const { checkPermission } = require("../middleware/checkPermissions");
 const Sale = require("../models/Sale");
-const salesController = require('../controllers/salesController');
+const matiasApi = require("../services/matiasApi");
 const router = express.Router();
 
-// Eliminar un abono específico de una venta
-router.delete("/:saleId/payment/:paymentId", auth, async (req, res) => {
+
+
+// ✅ FUNCIÓN AUXILIAR: Buscar venta con permisos admin
+async function findSaleWithAdminPermission(saleId, userId, userTipo) {
+    if (userTipo === 2 || userTipo === 3) {
+        return await Sale.findById(saleId);
+    } else {
+        return await Sale.findOne({ _id: saleId, user: userId });
+    }
+}
+
+// ========================================
+// RUTAS ESPECÍFICAS (DEBEN IR PRIMERO)
+// ========================================
+
+// Obtener ventas por fecha
+router.get("/by-date/:date", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const dateParam = new Date(req.params.date);
+
+        const startOfDay = new Date(dateParam.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(dateParam.setHours(23, 59, 59, 999));
+
+        const query = {
+            saleDate: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        };
+
+        // Filtrar por usuario si es vendedor O si tiene un vendedor enlazado
+        if (req.user.tipo === 1 || req.user.linkedVendedor) {
+            query.user = req.user.linkedVendedor || req.user.id;
+        }
+
+        const sales = await Sale.find(query).sort({ saleDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error("Error al filtrar por fecha:", error);
+        res.status(500).json({ error: "Error al obtener ventas por fecha" });
+    }
+});
+
+// Obtener todas las ventas
+router.get("/all", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        const query = (req.user.tipo === 1 || req.user.linkedVendedor) 
+            ? { user: req.user.linkedVendedor || req.user.id } 
+            : {};
+        const sales = await Sale.find(query).sort({ saleDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        res.status(500).json({ error: "Error al obtener todas las ventas" });
+    }
+});
+
+// Obtener ventas liquidadas
+router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        const query = (req.user.tipo === 1 || req.user.linkedVendedor) 
+            ? { user: req.user.linkedVendedor || req.user.id, settled: true }
+            : { settled: true };
+
+        const sales = await Sale.find(query).sort({ settledDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error("Error al obtener ventas liquidadas:", error);
+        res.status(500).json({ error: "Error al obtener ventas liquidadas" });
+    }
+});
+
+// Crear nueva venta
+// Crear nueva venta
+router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
+    try {
+        const {
+            clientName,
+            productName,
+            saleDate,
+            price,
+            installments,
+            advancePayment,
+            clientAddress,
+            paymentPerInstallment,  // ✅ RECIBIR DESDE EL FRONTEND
+            paymentType,
+            paidAmount,
+            remainingBalance,
+            products,  // ✅ NUEVO: array de productos con cantidades
+            facturacionType // ✅ MODO DE FACTURACION
+        } = req.body;
+
+        // ✅ REGLA: Nombre obligatorio solo para cuotas
+        if (paymentType === 'cuotas' && !clientName) {
+            return res.status(400).json({ error: "El nombre del cliente es obligatorio para ventas a cuotas" });
+        }
+
+        const finalClientName = clientName || `venta de ${productName}`;
+
+        if (!productName || !price || !saleDate) {
+            return res.status(400).json({ error: "Todos los campos son obligatorios" });
+        }
+
+        const isContado = paymentType === 'contado';
+
+        // ✅ NUEVO: Descontar stock de los productos
+        const Product = require("../models/Product");
+        const productIdsToMarkSold = [];
+
+        if (products && Array.isArray(products)) {
+            for (const prod of products) {
+                const productId = prod.productId;
+                const quantityToSell = prod.quantity || 1;
+
+                // Buscar el producto
+                const product = await Product.findById(productId);
+                if (!product) {
+                    return res.status(400).json({ error: `Producto no encontrado: ${prod.name}` });
+                }
+
+                console.log(`📦 Procesando producto: ${product.name}, Stock actual: ${product.stock}, Cantidad a vender: ${quantityToSell}`);
+
+                // Verificar stock (manejar productos sin campo stock)
+                const currentStock = product.stock !== undefined ? product.stock : 1;
+                console.log(`   Stock calculado: ${currentStock}`);
+
+                if (currentStock < quantityToSell) {
+                    return res.status(400).json({ error: `Stock insuficiente para "${product.name}". Disponible: ${currentStock}` });
+                }
+
+                // Descontar stock
+                const newStock = currentStock - quantityToSell;
+                console.log(`   Nuevo stock: ${newStock}`);
+
+                // Actualizar stock en el producto
+                product.stock = newStock;
+
+                // NO marcar como vendido si queda stock (solo descuenta)
+                // La venta se registra en cualquier caso
+                if (newStock <= 0) {
+                    product.sold = true;
+                    product.soldDate = new Date();
+                    product.soldTo = clientName;
+                    productIdsToMarkSold.push(product._id);
+                    console.log(`   ⚠️ Producto agotado (stock = 0), marcado como vendido`);
+                } else {
+                    console.log(`   ✓ Producto con stock remaining: ${newStock}`);
+                }
+
+                await product.save();
+            }
+        }
+
+        const sale = new Sale({
+            clientName: finalClientName,
+            productName,
+            saleDate: new Date(saleDate),
+            price,
+            installments,
+            advancePayment: advancePayment || 0,
+            clientAddress,
+            paymentFrequency: req.body.paymentFrequency || 'mensual',
+            paymentDays: req.body.paymentDays || [],
+            paymentDaysText: req.body.paymentDaysText || '',
+            paymentPerInstallment: paymentPerInstallment || 0, // ✅ USAR VALOR DEL FRONTEND
+            numberOfInstallments: req.body.numberOfInstallments || 1,
+            paymentType: paymentType || 'cuotas',
+            paidAmount: paidAmount || (isContado ? price : advancePayment || 0),
+            remainingBalance: remainingBalance !== undefined ? remainingBalance : (isContado ? 0 : price - (advancePayment || 0)),
+            user: req.user.id,
+            settled: isContado || advancePayment >= price,
+            products: products,  // ✅ GUARDAR productos con cantidades
+            productIds: productIdsToMarkSold  // ✅ IDs de productos vendidos completamente
+        });
+
+        if (advancePayment > 0) {
+            if (!sale.payments) {
+                sale.payments = [];
+            }
+            sale.payments.push({
+                amount: advancePayment,
+                date: new Date(saleDate),
+                liquidatedDay: false
+            });
+
+            if (advancePayment >= price) {
+                sale.settled = true;
+                sale.settledDate = new Date();
+            }
+        } else if (isContado) {
+            // Para ventas de contado, agregar pago completo
+            if (!sale.payments) {
+                sale.payments = [];
+            }
+            sale.payments.push({
+                amount: price,
+                date: new Date(saleDate),
+                liquidatedDay: false
+            });
+            sale.settled = true;
+            sale.settledDate = new Date();
+        }
+
+        await sale.save();
+
+        if (facturacionType && facturacionType !== 'ninguna') {
+            try {
+                // Background async call (no bloqueamos la respuesta HTTP de la venta)
+                if (facturacionType === 'pos' || facturacionType === 'ambas') {
+                    matiasApi.emitirPos(sale, req.user.id).catch(err => console.error("Error Matias POS:", err.message));
+                }
+                if (facturacionType === 'electronica' || facturacionType === 'ambas') {
+                    matiasApi.emitirFactura(sale, req.user.id).catch(err => console.error("Error Matias FE:", err.message));
+                }
+            } catch (err) {
+                console.error("Error al iniciar facturación:", err);
+            }
+        }
+
+        res.status(201).json(sale);
+    } catch (error) {
+        console.error("Error al crear la venta:", error);
+        res.status(500).json({ error: "Error al crear la venta" });
+    }
+});
+
+// Crear nueva venta para vendedor específico
+router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
+    try {
+        const { vendedorId } = req.params;
+
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos para crear ventas para otros usuarios' });
+        }
+
+        const {
+            clientName,
+            productName,
+            saleDate,
+            price,
+            installments,
+            advancePayment,
+            clientAddress,
+            paymentPerInstallment,
+            paymentType,
+            paidAmount,
+            remainingBalance,
+            products,  // ✅ NUEVO: array de productos con cantidades
+            facturacionType
+        } = req.body;
+
+        // ✅ REGLA: Nombre obligatorio solo para cuotas
+        if (paymentType === 'cuotas' && !clientName) {
+            return res.status(400).json({ error: "El nombre del cliente es obligatorio para ventas a cuotas" });
+        }
+
+        const finalClientName = clientName || `venta de ${productName}`;
+
+        if (!productName || !price || !saleDate) {
+            return res.status(400).json({ error: "Todos los campos son obligatorios" });
+        }
+
+        const isContado = paymentType === 'contado';
+
+        // ✅ NUEVO: Descontar stock de los productos
+        const Product = require("../models/Product");
+        const productIdsToMarkSold = [];
+
+        if (products && Array.isArray(products)) {
+            for (const prod of products) {
+                const productId = prod.productId;
+                const quantityToSell = prod.quantity || 1;
+
+                // Buscar el producto
+                const product = await Product.findById(productId);
+                if (!product) {
+                    return res.status(400).json({ error: `Producto no encontrado: ${prod.name}` });
+                }
+
+                // Verificar stock
+                const currentStock = product.stock || 1;
+                if (currentStock < quantityToSell) {
+                    return res.status(400).json({ error: `Stock insuficiente para "${product.name}". Disponible: ${currentStock}` });
+                }
+
+                // Descontar stock
+                const newStock = currentStock - quantityToSell;
+
+                // Si el stock llega a 0, marcar como vendido
+                if (newStock <= 0) {
+                    product.stock = 0;
+                    product.sold = true;
+                    product.soldDate = new Date();
+                    product.soldTo = clientName;
+                    productIdsToMarkSold.push(product._id);
+                } else {
+                    product.stock = newStock;
+                }
+
+                await product.save();
+            }
+        }
+
+        const sale = new Sale({
+            clientName: finalClientName,
+            productName,
+            saleDate: new Date(saleDate),
+            price,
+            installments,
+            advancePayment: advancePayment || 0,
+            clientAddress,
+            paymentFrequency: req.body.paymentFrequency || 'mensual',
+            paymentDays: req.body.paymentDays || [],
+            paymentDaysText: req.body.paymentDaysText || '',
+            paymentPerInstallment: paymentPerInstallment || 0, // ✅ USAR VALOR DEL FRONTEND
+            numberOfInstallments: req.body.numberOfInstallments || 1,
+            paymentType: paymentType || 'cuotas',
+            paidAmount: paidAmount || (isContado ? price : advancePayment || 0),
+            remainingBalance: remainingBalance !== undefined ? remainingBalance : (isContado ? 0 : price - (advancePayment || 0)),
+            user: vendedorId,
+            settled: isContado || advancePayment >= price,
+            products: products,  // ✅ GUARDAR productos con cantidades
+            productIds: productIdsToMarkSold  // ✅ IDs de productos vendidos completamente
+        });
+
+        if (advancePayment > 0) {
+            if (!sale.payments) {
+                sale.payments = [];
+            }
+            sale.payments.push({
+                amount: advancePayment,
+                date: new Date(saleDate),
+                liquidatedDay: false
+            });
+
+            if (advancePayment >= price) {
+                sale.settled = true;
+                sale.settledDate = new Date();
+            }
+        } else if (isContado) {
+            if (!sale.payments) {
+                sale.payments = [];
+            }
+            sale.payments.push({
+                amount: price,
+                date: new Date(saleDate),
+                liquidatedDay: false
+            });
+            sale.settled = true;
+            sale.settledDate = new Date();
+        }
+
+        await sale.save();
+
+        if (facturacionType && facturacionType !== 'ninguna') {
+            try {
+                if (facturacionType === 'pos' || facturacionType === 'ambas') {
+                    matiasApi.emitirPos(sale, vendedorId).catch(err => console.error("Error Matias POS:", err.message));
+                }
+                if (facturacionType === 'electronica' || facturacionType === 'ambas') {
+                    matiasApi.emitirFactura(sale, vendedorId).catch(err => console.error("Error Matias FE:", err.message));
+                }
+            } catch (err) {
+                console.error("Error al iniciar facturación:", err);
+            }
+        }
+
+        res.status(201).json(sale);
+    } catch (error) {
+        console.error("Error al crear la venta para vendedor:", error);
+        res.status(500).json({ error: "Error al crear la venta" });
+    }
+});
+
+// Obtener ventas de un vendedor específico
+router.get('/vendedor/:vendedorId', auth, async (req, res) => {
+    try {
+        const { vendedorId } = req.params;
+
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
+        }
+
+        const sales = await Sale.find({ user: vendedorId }).sort({ saleDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error('Error al obtener ventas del vendedor:', error);
+        res.status(500).json({ error: 'Error al obtener ventas del vendedor' });
+    }
+});
+
+// Obtener ventas liquidadas de un vendedor específico
+router.get('/vendedor/:vendedorId/settled', auth, async (req, res) => {
+    try {
+        const { vendedorId } = req.params;
+
+        if (req.user.tipo !== 2 && req.user.tipo !== 3) {
+            return res.status(403).json({ error: 'No tienes permisos para ver ventas de otros usuarios' });
+        }
+
+        const sales = await Sale.find({ user: vendedorId, settled: true }).sort({ settledDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error('Error al obtener ventas liquidadas del vendedor:', error);
+        res.status(500).json({ error: 'Error al obtener ventas liquidadas' });
+    }
+});
+
+
+router.get("/", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        // Filtrar por usuario si es vendedor, todo si es admin (a menos que esté inspeccionando uno)
+        const query = (req.user.tipo === 1 || req.user.linkedVendedor)
+            ? { user: req.user.linkedVendedor || req.user.id }  
+            : {};                     
+
+        const sales = await Sale.find(query).sort({ saleDate: -1 });
+        res.json(sales);
+    } catch (error) {
+        console.error("Error al obtener ventas:", error);
+        res.status(500).json({ error: "Error al obtener ventas" });
+    }
+});
+
+
+// ========================================
+// RUTAS CON PARÁMETROS DINÁMICOS
+// ========================================
+
+// Eliminar un abono específico
+router.delete("/:saleId/payment/:paymentId", auth, checkPermission('eliminarAbonos'), async (req, res) => {
     try {
         const { saleId, paymentId } = req.params;
 
-        const sale = await Sale.findOne({ _id: saleId, user: req.user.id });
+        const sale = await findSaleWithAdminPermission(saleId, req.user.id, req.user.tipo);
+
         if (!sale) {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
-        // Filtrar el abono que se desea eliminar
+        if (!sale.payments) {
+            sale.payments = [];
+        }
+
         const initialLength = sale.payments.length;
         sale.payments = sale.payments.filter(p => p._id.toString() !== paymentId);
 
@@ -22,7 +456,6 @@ router.delete("/:saleId/payment/:paymentId", auth, async (req, res) => {
             return res.status(404).json({ error: "Abono no encontrado" });
         }
 
-        // Si estaba liquidada, verificar si aún debería estarlo
         if (sale.settled) {
             const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
             if (totalPaid < sale.price) {
@@ -39,163 +472,130 @@ router.delete("/:saleId/payment/:paymentId", auth, async (req, res) => {
     }
 });
 
-
-// Obtener ventas por fecha (exacta)
-router.get("/by-date/:date", auth, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const dateParam = new Date(req.params.date);
-
-        // Obtener inicio y fin del día
-        const startOfDay = new Date(dateParam.setHours(0, 0, 0, 0));
-        const endOfDay = new Date(dateParam.setHours(23, 59, 59, 999));
-
-        const sales = await Sale.find({
-            user: userId,
-            saleDate: {
-                $gte: startOfDay,
-                $lte: endOfDay
-            }
-        });
-
-        res.json(sales);
-    } catch (error) {
-        console.error("Error al filtrar por fecha:", error);
-        res.status(500).json({ error: "Error al obtener ventas por fecha" });
-    }
-});
-
-
-// Obtener todas las ventas (liquidadas y no liquidadas)
-router.get("/all", auth, async (req, res) => {
-    try {
-        const sales = await Sale.find({ user: req.user.id });
-        res.json(sales);
-    } catch (error) {
-        res.status(500).json({ error: "Error al obtener todas las ventas" });
-    }
-});
-
 // Eliminar una venta liquidada
-router.delete("/:id/settled", auth, async (req, res) => {
+router.delete("/:id/settled", auth, checkPermission('eliminarVentas'), async (req, res) => {
     try {
-        const sale = await Sale.findOneAndDelete({ _id: req.params.id, user: req.user.id, settled: true });
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
-        if (!sale) {
+        if (!sale || !sale.settled) {
             return res.status(404).json({ error: "Venta liquidada no encontrada" });
         }
 
+        await Sale.findByIdAndDelete(req.params.id);
         res.json({ message: "Venta liquidada eliminada correctamente" });
     } catch (error) {
         res.status(500).json({ error: "Error al eliminar la venta liquidada" });
     }
 });
 
-
-
-// Obtener todas las ventas, excluyendo las liquidadas
-router.get("/", auth, async (req, res) => {
+// Obtener una venta específica
+router.get("/:id", auth, checkPermission('verVentas'), async (req, res) => {
     try {
-        const sales = await Sale.find({ 
-            user: req.user.id, 
-            settled: { $ne: true }  // Excluir ventas donde settled es true
-        });
-        res.json(sales);
-    } catch (error) {
-        res.status(500).json({ error: "Error al obtener las ventas" });
-    }
-});
-
-
-
-// Obtener todas las ventas liquidadas del usuario
-router.get("/settled", auth, async (req, res) => {
-    try {
-        const sales = await Sale.find({ user: req.user.id, settled: true });
-        res.json(sales);
-    } catch (error) {
-        res.status(500).json({ error: "Error al obtener las ventas liquidadas" });
-    }
-});
-
-
-
-// Crear nueva venta
-router.post("/new", auth, async (req, res) => {
-    try {
-        const {
-            clientName,
-            products,
-            saleDate,
-            price,
-            installments,
-            advancePayment,
-            clientAddress,
-            paymentDays   // ⬅️ nuevo campo
-        } = req.body;
-
-        // Unir nombres de productos para productName
-        const productName = products.map(p => p.name).join(', ');
-
-        const initiallySettled = advancePayment >= price;
-
-        const sale = new Sale({
-            clientName,
-            productName,
-            products,
-            saleDate,
-            price,
-            installments,
-            advancePayment,
-            clientAddress,
-            paymentDays,        // ⬅️ se guarda
-            user: req.user.id,
-            settled: initiallySettled,
-            settledDate: initiallySettled ? new Date() : null,
-            payments: advancePayment > 0 ? [{ amount: advancePayment, date: new Date() }] : []
-        });
-
-        await sale.save();
-        res.status(201).json(sale);
-    } catch (error) {
-        console.error("Error en el servidor:", error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Actualizar una venta
-router.put("/:id", auth, async (req, res) => {
-    const { clientName, productName, saleDate, price, installments, clientAddress, paymentDays } = req.body;
-
-    try {
-        const sale = await Sale.findOne({ _id: req.params.id, user: req.user.id });
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
         if (!sale) {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
-        // Actualizamos los datos básicos
+        res.json(sale);
+    } catch (error) {
+        res.status(500).json({ error: "Error al obtener la venta" });
+    }
+});
+
+router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
+    const {
+        clientName,
+        productName,
+        saleDate,
+        price,
+        installments,
+        clientAddress,
+        advancePayment, // ✅ NUEVO
+        paymentPerInstallment,
+        updateProductPrices,
+        paymentType,
+        paidAmount,
+        remainingBalance
+    } = req.body;
+
+    try {
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
+
+        if (!sale) {
+            return res.status(404).json({ error: "Venta no encontrada" });
+        }
+
+        // ✅ NUEVO: Actualizar precio de productos vendidos
+        if (updateProductPrices && productName) {
+            const Product = require("../models/Product");
+            const productNames = productName.split(',').map(p => p.trim());
+
+            for (const name of productNames) {
+                await Product.updateMany(
+                    {
+                        name: name,
+                        sold: true,
+                        user: sale.user
+                    },
+                    {
+                        $set: { salePrice: Math.round(price / productNames.length) }
+                    }
+                );
+            }
+        }
+
+        if (advancePayment !== undefined) {
+            if (!sale.payments) {
+                sale.payments = [];
+            }
+            const saleDateOnly = new Date(sale.saleDate).toISOString().split('T')[0];
+
+            let initialPaymentIndex = sale.payments.findIndex(p => {
+                const paymentDateOnly = new Date(p.date).toISOString().split('T')[0];
+                return paymentDateOnly === saleDateOnly;
+            });
+
+            if (advancePayment > 0) {
+                if (initialPaymentIndex !== -1) {
+                    sale.payments[initialPaymentIndex].amount = advancePayment;
+                } else {
+                    sale.payments.unshift({
+                        amount: advancePayment,
+                        date: new Date(sale.saleDate),
+                        liquidatedDay: false
+                    });
+                }
+            } else if (initialPaymentIndex !== -1) {
+                sale.payments.splice(initialPaymentIndex, 1);
+            }
+        }
+
         sale.clientName = clientName;
         sale.productName = productName;
-        sale.saleDate = saleDate;
+        sale.saleDate = new Date(saleDate);
         sale.price = price;
         sale.installments = installments;
         sale.clientAddress = clientAddress;
-        
-        // ✅ Actualizar los días de pago
-        if (paymentDays !== undefined) {
-            sale.paymentDays = paymentDays;
+        sale.advancePayment = advancePayment || 0; // ✅ NUEVO
+        sale.paymentFrequency = req.body.paymentFrequency || sale.paymentFrequency;
+        sale.paymentDays = req.body.paymentDays || sale.paymentDays;
+        sale.paymentDaysText = req.body.paymentDaysText || sale.paymentDaysText;
+        sale.numberOfInstallments = req.body.numberOfInstallments || sale.numberOfInstallments;
+        sale.paymentType = paymentType || sale.paymentType || 'cuotas';
+        sale.paidAmount = paidAmount !== undefined ? paidAmount : sale.paidAmount;
+        sale.remainingBalance = remainingBalance !== undefined ? remainingBalance : sale.remainingBalance;
+
+        if (paymentPerInstallment !== undefined) {
+            sale.paymentPerInstallment = paymentPerInstallment;
         }
 
-        // Verificar si con el nuevo precio, la venta debería actualizarse a liquidada o no
-        const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
-        
-        // Si bajamos el precio y los pagos ya cubren el nuevo precio
+        const totalPaid = (sale.payments || []).reduce((sum, payment) => sum + payment.amount, 0);
+
         if (totalPaid >= price && !sale.settled) {
             sale.settled = true;
             sale.settledDate = new Date();
-        } 
-        // Si subimos el precio y los pagos ya no cubren el nuevo precio
+        }
         else if (totalPaid < price && sale.settled) {
             sale.settled = false;
             sale.settledDate = null;
@@ -204,42 +604,57 @@ router.put("/:id", auth, async (req, res) => {
         await sale.save();
         res.json(sale);
     } catch (error) {
+        console.error("Error al actualizar la venta:", error);
         res.status(500).json({ error: "Error al actualizar la venta" });
     }
 });
 
-
-router.post("/:id/payment", auth, async (req, res) => {
-    const { amount, date } = req.body;
+// Agregar abono
+router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, res) => {
+    const { amount, date, force } = req.body;
 
     if (!amount || amount <= 0) {
         return res.status(400).json({ error: "El monto del abono debe ser mayor a cero" });
     }
 
     try {
-        const sale = await Sale.findOne({ _id: req.params.id, user: req.user.id });
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
         if (!sale) {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
-        // Si ya está liquidada no permitir más pagos
         if (sale.settled) {
             return res.status(400).json({ error: "La venta ya está liquidada, no puedes agregar más pagos" });
         }
 
-        // Agregar el nuevo abono
-        sale.payments.push({
-            amount,
-            date: date || new Date()
+        const paymentDate = date ? new Date(date) : new Date();
+        const paymentDateOnly = paymentDate.toISOString().split('T')[0];
+
+        const isDuplicate = (sale.payments || []).some(p => {
+            const existingDateOnly = new Date(p.date).toISOString().split('T')[0];
+            const timeDiff = Math.abs(new Date(p.date) - paymentDate);
+            const withinWindow = timeDiff < 5000;
+            return p.amount === amount && (existingDateOnly === paymentDateOnly || withinWindow);
         });
 
-        // 💥 Aquí recalculamos bien el total pagado
-        const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
+        if (isDuplicate && !force) {
+            return res.status(400).json({ error: "Este abono ya fue registrado anteriormente" });
+        }
 
+        if (!sale.payments) {
+            sale.payments = [];
+        }
+
+        sale.payments.push({
+            amount,
+            date: paymentDate,
+            liquidatedDay: false
+        });
+
+        const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);
         let justSettled = false;
 
-        // 💥 Aquí marcamos como liquidada si pagó todo
         if (totalPaid >= sale.price) {
             sale.settled = true;
             sale.settledDate = new Date();
@@ -248,7 +663,6 @@ router.post("/:id/payment", auth, async (req, res) => {
 
         await sale.save();
 
-        // Devolver respuesta correcta
         res.json({
             settled: sale.settled,
             justSettled,
@@ -262,19 +676,77 @@ router.post("/:id/payment", auth, async (req, res) => {
     }
 });
 
-
-
 // Eliminar una venta
-router.delete("/:id", auth, async (req, res) => {
+router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) => {
     try {
-        const sale = await Sale.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
         if (!sale) {
             return res.status(404).json({ error: "Venta no encontrada" });
         }
 
-        res.json({ message: "Venta eliminada correctamente" });
+        const Product = require("../models/Product");
+        let productsReactivated = 0;
+
+        // ✅ MÉTODO 1: Si la venta tiene productIds guardados (nuevo sistema)
+        if (sale.productIds && sale.productIds.length > 0) {
+            for (const productId of sale.productIds) {
+                const result = await Product.updateOne(
+                    { _id: productId },
+                    {
+                        $set: {
+                            sold: false,
+                            soldDate: null,
+                            soldTo: null
+                        }
+                    }
+                );
+                if (result.modifiedCount > 0) productsReactivated++;
+            }
+        }
+        // ✅ MÉTODO 2: Fallback para ventas antiguas sin productIds
+        else if (sale.productName) {
+            const productNames = sale.productName.split(',').map(p => p.trim());
+            const saleDate = new Date(sale.saleDate);
+            const saleDateStart = new Date(saleDate.setHours(0, 0, 0, 0));
+            const saleDateEnd = new Date(saleDate.setHours(23, 59, 59, 999));
+
+            for (const productName of productNames) {
+                // Solo reactiva productos vendidos en la MISMA FECHA y al MISMO CLIENTE
+                const result = await Product.updateOne(
+                    {
+                        name: productName,
+                        sold: true,
+                        soldTo: sale.clientName,
+                        soldDate: {
+                            $gte: saleDateStart,
+                            $lte: saleDateEnd
+                        },
+                        user: sale.user
+                    },
+                    {
+                        $set: {
+                            sold: false,
+                            soldDate: null,
+                            soldTo: null
+                        }
+                    }
+                );
+                if (result.modifiedCount > 0) productsReactivated++;
+            }
+        }
+
+        await Sale.findByIdAndDelete(req.params.id);
+
+        res.json({
+            message: "Venta eliminada correctamente",
+            productsReactivated,
+            details: productsReactivated > 0
+                ? `${productsReactivated} producto(s) reactivado(s)`
+                : "Sin productos para reactivar"
+        });
     } catch (error) {
+        console.error("Error al eliminar la venta:", error);
         res.status(500).json({ error: "Error al eliminar la venta" });
     }
 });

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalles de la Venta</title>
+    <script src="adminMode.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -11,6 +12,7 @@
             --success: #059669;
             --warning: #d97706;
             --danger: #dc2626;
+            --purple: #9333ea;
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
@@ -45,7 +47,6 @@
             gap: 2rem;
         }
 
-        /* Header con botón volver */
         .header {
             display: flex;
             align-items: center;
@@ -81,7 +82,6 @@
             margin: 0;
         }
 
-        /* Tarjeta principal del cliente */
         .customer-card {
             background: white;
             border-radius: 1rem;
@@ -99,12 +99,19 @@
             gap: 1.5rem;
         }
 
-        .avatar {
+        .initials-avatar {
             width: 80px;
             height: 80px;
             border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
             border: 4px solid rgba(255, 255, 255, 0.2);
-            object-fit: cover;
+            user-select: none;
         }
 
         .customer-info h2 {
@@ -175,7 +182,6 @@
             margin-top: 0.25rem;
         }
 
-        /* Estado de pago */
         .payment-status {
             background: white;
             border-radius: 1rem;
@@ -224,7 +230,9 @@
             color: var(--gray-600);
         }
 
-        /* Calendario de pagos */
+        /* ========================================
+           CALENDARIO COMPLETO - ESTILO MEJORADO
+           ======================================== */
         .payment-calendar {
             background: white;
             border-radius: 1rem;
@@ -236,20 +244,25 @@
         .calendar-header {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            justify-content: space-between;
             margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .calendar-header h3 {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .calendar-legend {
             display: flex;
             gap: 1rem;
-            margin-left: auto;
+            flex-wrap: wrap;
         }
 
         .legend-item {
@@ -269,12 +282,61 @@
         .legend-paid { background: var(--success); }
         .legend-pending { background: var(--danger); }
         .legend-today { background: var(--primary); }
+        .legend-scheduled { background: var(--purple); }
 
-        .days-grid {
+        /* Navegación del calendario */
+        .calendar-navigation {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--gray-50);
+            border-radius: 0.5rem;
+        }
+
+        .nav-btn {
+            background: white;
+            border: 1px solid var(--gray-300);
+            color: var(--gray-700);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+        }
+
+        .nav-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .current-month {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        /* Grid del calendario */
+        .calendar-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
             margin-bottom: 2rem;
+        }
+
+        .day-header {
+            text-align: center;
+            font-weight: 700;
+            color: var(--gray-600);
+            padding: 0.75rem;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .day-cell {
@@ -284,42 +346,50 @@
             justify-content: center;
             border-radius: 0.5rem;
             font-weight: 700;
-            font-size: 1.125rem;
+            font-size: 1rem;
             cursor: pointer;
             transition: all 0.3s ease;
             border: 2px solid transparent;
             position: relative;
-            overflow: hidden;
+            background: var(--gray-50);
+            color: var(--gray-500);
         }
 
-        .day-cell::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
+        .day-cell.current-month {
+            background: white;
+            color: var(--gray-800);
+            border: 1px solid var(--gray-200);
         }
 
-        .day-cell:hover::before {
-            opacity: 1;
-        }
-
-        .day-pending {
-            background: linear-gradient(135deg, var(--danger) 0%, #ef4444 100%);
+        .day-cell.scheduled {
+            background: linear-gradient(135deg, var(--purple) 0%, #7c3aed 100%);
             color: white;
-            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+            box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
+            font-weight: 700;
         }
 
-        .day-paid {
+        .day-cell.today {
+            border: 3px solid var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .day-cell.paid {
             background: linear-gradient(135deg, var(--success) 0%, #10b981 100%);
             color: white;
             box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
         }
 
-        .day-today {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        .day-cell.overdue {
+            background: linear-gradient(135deg, var(--danger) 0%, #ef4444 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .day-cell:hover {
@@ -327,21 +397,23 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
 
-        /* Animaciones de entrada */
-        .day-cell {
-            animation: fadeInUp 0.5s ease forwards;
+        .day-cell::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
             opacity: 0;
-            transform: translateY(20px);
         }
 
-        @keyframes fadeInUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .day-cell.has-payment::after {
+            opacity: 1;
+            background: white;
         }
 
-        /* Cuotas breakdown */
         .installments-breakdown {
             background: var(--gray-50);
             border-radius: 0.75rem;
@@ -387,7 +459,6 @@
             text-transform: uppercase;
         }
 
-        /* Historial de pagos */
         .payments-history {
             background: white;
             border-radius: 1rem;
@@ -435,7 +506,6 @@
             opacity: 0.5;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .container {
                 gap: 1rem;
@@ -461,35 +531,18 @@
                 align-items: flex-start;
             }
 
-            .calendar-legend {
-                margin: 0;
+            .calendar-grid {
+                gap: 0.25rem;
             }
 
-            .days-grid {
-                grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
-                gap: 0.75rem;
+            .day-cell {
+                font-size: 0.875rem;
             }
 
             .page-title {
                 font-size: 1.5rem;
             }
         }
-
-        .initials-avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
-    border: 4px solid rgba(255, 255, 255, 0.2);
-    user-select: none;
-}
-
     </style>
 </head>
 <body>
@@ -504,16 +557,14 @@
 
         <div class="customer-card">
             <div class="customer-header">
-                <div id="customerAvatar" class="avatar initials-avatar"></div>
+                <div id="customerAvatar" class="initials-avatar"></div>
                 <div class="customer-info">
                     <h2 id="customerName">Cargando...</h2>
                     <p class="customer-id" id="customerId">#000000</p>
                 </div>
                 <div class="customer-badge" id="customerBadge">Cargando</div>
             </div>
-            <div class="customer-body" id="customerDetails">
-                <!-- Información detallada se carga aquí -->
-            </div>
+            <div class="customer-body" id="customerDetails"></div>
         </div>
 
         <div class="payment-status">
@@ -534,12 +585,16 @@
                 <h3><i class="fas fa-calendar-alt"></i> Calendario de Pagos</h3>
                 <div class="calendar-legend">
                     <div class="legend-item">
+                        <div class="legend-dot legend-scheduled"></div>
+                        Programado
+                    </div>
+                    <div class="legend-item">
                         <div class="legend-dot legend-paid"></div>
                         Pagado
                     </div>
                     <div class="legend-item">
                         <div class="legend-dot legend-pending"></div>
-                        Pendiente
+                        Atrasado
                     </div>
                     <div class="legend-item">
                         <div class="legend-dot legend-today"></div>
@@ -547,23 +602,34 @@
                     </div>
                 </div>
             </div>
-            <div class="days-grid" id="daysGrid">
-                <!-- Los días se cargan aquí -->
+            
+            <div class="calendar-navigation">
+                <button class="nav-btn" id="prevMonth">
+                    <i class="fas fa-chevron-left"></i>
+                    Anterior
+                </button>
+                <div class="current-month" id="currentMonthDisplay">Octubre 2025</div>
+                <button class="nav-btn" id="nextMonth">
+                    Siguiente
+                    <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
-            <div class="installments-breakdown" id="installmentsBreakdown">
-                <!-- Breakdown de cuotas -->
-            </div>
+
+            <div class="calendar-grid" id="calendarGrid"></div>
+            
+            <div class="installments-breakdown" id="installmentsBreakdown"></div>
         </div>
 
         <div class="payments-history">
             <h3><i class="fas fa-history"></i> Historial de Abonos</h3>
-            <div id="paymentsTableContainer">
-                <!-- Tabla de pagos se carga aquí -->
-            </div>
+            <div id="paymentsTableContainer"></div>
         </div>
     </div>
 
     <script>
+        let currentCalendarDate = new Date();
+        let saleData = null;
+
         document.addEventListener("DOMContentLoaded", () => {
             const sale = JSON.parse(localStorage.getItem("saleDetails"));
             
@@ -584,16 +650,53 @@
                 return;
             }
 
+            saleData = sale;
             loadSaleDetails(sale);
+            setupCalendarNavigation();
         });
 
+        // --- Añadir esta función (pegala antes de renderFullCalendar) ---
+function parsePaymentDays(sale) {
+    if (!sale) return [];
+
+    // Priorizar campo explícito paymentDays / paymentDay
+    const raw = sale.paymentDays ?? sale.paymentDay ?? sale.payment_days ?? sale.days;
+
+    let arr = [];
+
+    if (Array.isArray(raw)) {
+        arr = raw.map(Number);
+    } else if (typeof raw === 'string') {
+        // "1,15" o " 1 , 15 "
+        arr = raw.split(',').map(s => s.trim()).filter(s => s !== '').map(Number);
+    } else if (typeof raw === 'number') {
+        arr = [raw];
+    } else {
+        // Si no hay campo explícito, intentar derivarlo de una fecha (firstPaymentDate o saleDate)
+        const fallbackDate = sale.firstPaymentDate ?? sale.first_payment_date ?? sale.saleDate ?? sale.createdAt;
+        if (fallbackDate) {
+            const d = parseDateLocal(fallbackDate);
+            if (!isNaN(d)) arr = [d.getDate()];
+        }
+    }
+
+    // Normalizar: números válidos 1..31, únicos y ordenados
+    const normalized = Array.from(new Set(
+        arr
+        .map(Number)
+        .filter(n => !isNaN(n) && n >= 1 && n <= 31)
+    )).sort((a,b) => a - b);
+
+    // Si quedó vacío, devolver día 1 como último recurso
+    return normalized.length ? normalized : [1];
+}
+
+
         function loadSaleDetails(sale) {
-            // Calcular totales
             const totalPaid = sale.totalPaid || (sale.payments ? sale.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0) : 0) || 0;
             const remainingDebt = Number(sale.price || 0) - totalPaid;
             const paymentPercentage = Number(sale.price) ? (totalPaid / Number(sale.price)) * 100 : 0;
 
-            // Formato moneda
             const formatCurrency = (value) => {
                 return new Intl.NumberFormat('es-CO', {
                     style: 'currency',
@@ -602,14 +705,12 @@
                 }).format(value);
             };
 
-            // Header del cliente
             const avatar = document.getElementById('customerAvatar');
-const initial = sale.clientName ? sale.clientName.charAt(0).toUpperCase() : '?';
-avatar.textContent = initial;
+            const initial = sale.clientName ? sale.clientName.charAt(0).toUpperCase() : '?';
+            avatar.textContent = initial;
             document.getElementById('customerName').textContent = sale.clientName;
             document.getElementById('customerId').textContent = `#${sale._id.slice(-6)}`;
 
-            // Badge de estado
             const badge = document.getElementById('customerBadge');
             if (remainingDebt <= 0) {
                 badge.className = 'customer-badge badge-paid';
@@ -622,7 +723,6 @@ avatar.textContent = initial;
                 badge.textContent = 'Parcial';
             }
 
-            // Detalles del cliente
             const customerDetails = document.getElementById('customerDetails');
             customerDetails.innerHTML = `
                 <div class="info-group">
@@ -637,13 +737,6 @@ avatar.textContent = initial;
                     <div class="info-content">
                         <div class="info-label">Fecha de Venta</div>
                         <div class="info-value">${formatDate(sale.saleDate)}</div>
-                    </div>
-                </div>
-                <div class="info-group">
-                    <i class="fas fa-phone"></i>
-                    <div class="info-content">
-                        <div class="info-label">Teléfono</div>
-                        <div class="info-value">${escapeHtml(sale.clientPhone || 'No registrado')}</div>
                     </div>
                 </div>
                 <div class="info-group">
@@ -674,16 +767,8 @@ avatar.textContent = initial;
                         <div class="info-value" style="color: var(--danger);">${formatCurrency(remainingDebt)}</div>
                     </div>
                 </div>
-                <div class="info-group">
-                    <i class="fas fa-percentage"></i>
-                    <div class="info-content">
-                        <div class="info-label">Progreso</div>
-                        <div class="info-value">${paymentPercentage.toFixed(1)}%</div>
-                    </div>
-                </div>
             `;
 
-            // Estado de pago
             const statusBadge = document.getElementById('paymentStatusBadge');
             const progressSection = document.getElementById('progressSection');
             
@@ -702,89 +787,223 @@ avatar.textContent = initial;
                 document.getElementById('progressText').textContent = `${paymentPercentage.toFixed(1)}% completado`;
             }
 
-            // Calendario de pagos
-            renderPaymentCalendar(sale);
-
-            // Historial de pagos
+            renderFullCalendar(sale);
             renderPaymentsHistory(sale);
         }
 
-function renderPaymentCalendar(sale) {
-    const daysGrid   = document.getElementById('daysGrid');
-    const breakdown  = document.getElementById('installmentsBreakdown');
+        function setupCalendarNavigation() {
+            document.getElementById('prevMonth').addEventListener('click', () => {
+                currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+                renderFullCalendar(saleData);
+            });
 
-    // ----- 1. Leemos datos -----
-    const installments   = parseInt(sale.installments || 0);
-    let   paymentDaysStr = sale.paymentDays || '';
-    if (!installments || !paymentDaysStr) {          // sin cuotas o sin días
-        daysGrid.innerHTML = '<p style="text-align:center;color:var(--gray-500)">No se han definido cuotas / días de pago</p>';
-        breakdown.style.display = 'none';
-        return;
-    }
-    const paymentDays = paymentDaysStr.split(',').map(d => parseInt(d.trim())).filter(n => !isNaN(n));
-    if (!paymentDays.length) return;
-
-    // ----- 2. Fechas de cada cuota -----
-    const dates = [];                                // [{date:Date, dayNumber:Number}]
-    let   current = new Date();                      // empezamos hoy
-    let   generated = 0;
-
-    while (generated < installments) {
-        for (const day of paymentDays) {
-            if (generated >= installments) break;
-            const clone = new Date(current.getFullYear(), current.getMonth(), day);
-            // si el día ya pasó este mes, lo mandamos al mes siguiente
-            if (clone < current) clone.setMonth(clone.getMonth() + 1);
-            dates.push({date:clone, dayNumber:day});
-            generated++;
+            document.getElementById('nextMonth').addEventListener('click', () => {
+                currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+                renderFullCalendar(saleData);
+            });
         }
-        // pasamos al mes siguiente para seguir generando
-        current.setMonth(current.getMonth() + 1);
-    }
-    // dejamos solo las primeras <installments> fechas y las ordenamos cronológicamente
-    dates.length = installments;
-    dates.sort((a,b)=> a.date - b.date);
 
-    // ----- 3. Qué días ya están pagos -----
+function renderFullCalendar(sale) {
+    const calendarGrid = document.getElementById('calendarGrid');
+    const monthDisplay = document.getElementById('currentMonthDisplay');
+    const breakdown = document.getElementById('installmentsBreakdown');
+
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+
+    monthDisplay.textContent = new Date(year, month).toLocaleDateString('es-CO', {
+        month: 'long',
+        year: 'numeric'
+    });
+
+    // 🔧 Obtener días programados (semanal, quincenal, mensual)
+function generatePaymentDates(sale) {
+    const freq   = sale.paymentFrequency || 'mensual';
+    const raw    = sale.paymentDays || [];           // ["Miércoles"]  o ["1 y 15"]  o [1,15]
+    const cuotas = parseInt(sale.installments) || 1;
+    const start  = new Date(sale.saleDate);
+    const dates  = [];
+
+    /* ---------- 1.  SEMANAL  ---------- */
+/* ---------- 1.  SEMANAL (100 % fijo) ---------- */
+if (freq === 'semanal') {
+    const weekMap = {
+        'domingo': 0, 'lunes': 1, 'martes': 2, 'miércoles': 3,
+        'jueves': 4, 'viernes': 5, 'sábado': 6
+    };
+
+    const diasSemana = raw.map(d => String(d).toLowerCase().trim());
+    let cursor = new Date(start); // copia para no mutar start
+
+    for (let i = 0; i < cuotas; i++) {
+        diasSemana.forEach(diaTxt => {
+            const targetDay = (weekMap[diaTxt] - 1 + 7) % 7;
+            if (targetDay === undefined) return;
+
+            const next = new Date(cursor);
+            // Días que faltan (0 = ya estamos en él)
+            let daysUntil = (targetDay - next.getDay() + 7) % 7;
+
+            // Si ya pasó esta semana, ir al mismo día de la próxima
+            if (daysUntil === 0 && next.toDateString() === cursor.toDateString()) {
+                // es el mismo día de partida: usarlo
+            } else if (daysUntil === 0) {
+                // ya pasó el instante de hoy → próxima semana
+                daysUntil = 7;
+            }
+
+            next.setDate(next.getDate() + daysUntil);
+            dates.push(next.toISOString().slice(0, 10));
+        });
+        cursor.setDate(cursor.getDate() + 7); // saltar una semana completa
+    }
+    return dates;
+}
+
+    /* ---------- 2.  QUINCENAL  ---------- */
+   /* ---------- 2.  QUINCENAL (sin duplicar) ---------- */
+if (freq === 'quincenal') {
+    // Extraemos los 2 números del texto  "16 y 01" → [16,1]
+    const dias = raw.flatMap(txt =>
+        String(txt).match(/\d+/g)   // solo números
+    ).map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 31);
+
+    let mesCursor = new Date(start.getFullYear(), start.getMonth(), 1);
+
+    for (let i = 0; i < cuotas; i++) {          // ← 1 vuelta por cuota
+        dias.forEach(d => {
+            const fecha = new Date(mesCursor.getFullYear(), mesCursor.getMonth(), d);
+            if (fecha >= start) dates.push(fecha.toISOString().slice(0, 10));
+        });
+        mesCursor.setMonth(mesCursor.getMonth() + 1);
+    }
+    return dates;
+}
+
+    /* ---------- 3.  MENSUAL  ---------- */
+    if (freq === 'mensual') {
+        const dias = raw.map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 31);
+        for (let i = 0; i < cuotas; i++) {
+            dias.forEach(d => {
+                const fecha = new Date(start.getFullYear(), start.getMonth() + i, d);
+                if (fecha >= start) dates.push(fecha.toISOString().slice(0, 10));
+            });
+        }
+        return dates;
+    }
+
+    /* ---------- 4.  DIARIO  ---------- */
+    if (freq === 'diario') {
+        let cursor = new Date(start);
+        for (let i = 0; i < cuotas; i++) {
+            dates.push(cursor.toISOString().slice(0, 10));
+            cursor.setDate(cursor.getDate() + 1);
+        }
+        return dates;
+    }
+
+    return [];
+}
+
+
+    // 🔧 Obtener días con pagos realizados
     const paidDates = new Set();
     (sale.payments || []).forEach(p => {
         const d = parseDateLocal(p.date);
-        if (!isNaN(d)) paidDates.add(d.toISOString().slice(0,10)); // yyyy-mm-dd
+        if (!isNaN(d)) {
+            paidDates.add(d.toISOString().slice(0, 10));
+        }
     });
 
-    // ----- 4. Renderizamos -----
-    const todayStr = new Date().toISOString().slice(0,10);
-    daysGrid.innerHTML = '';
-    dates.forEach((obj,i) => {
+    // 🔧 Calcular cuántas veces repetir el día según cuotas
+    const installments = parseInt(sale.installments) || 1;
+    const freq = sale.paymentFrequency || 'mensual';
+
+    // 🔧 Generar fechas reales de pago (solo del mes actual)
+/* ---------- FECHAS REALES DE PAGO (nuevo) ---------- */
+const paymentDates = generatePaymentDates(sale);   // <-- usamos la función que ya metiste
+const today = new Date();
+const todayStr = today.toISOString().slice(0, 10);
+
+const firstDay = new Date(year, month, 1);
+const lastDay = new Date(year, month + 1, 0);
+const daysInMonth = lastDay.getDate();
+
+    // 🔧 Limpiar calendario
+    calendarGrid.innerHTML = '';
+
+    // Headers
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    dayNames.forEach(name => {
+        const header = document.createElement('div');
+        header.className = 'day-header';
+        header.textContent = name;
+        calendarGrid.appendChild(header);
+    });
+
+    // Espacios vacíos
+    const firstDayOfWeek = firstDay.getDay();
+    for (let i = 0; i < firstDayOfWeek; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'day-cell';
+        calendarGrid.appendChild(empty);
+    }
+
+    // 🔧 Renderizar días
+    let scheduledCount = 0, paidCount = 0, overdueCount = 0;
+
+    for (let day = 1; day <= daysInMonth; day++) {
         const cell = document.createElement('div');
-        cell.className = 'day-cell';
-        cell.style.animationDelay = `${i*100}ms`;
+        cell.className = 'day-cell current-month';
+        cell.textContent = day;
 
-        const dateStr   = obj.date.toISOString().slice(0,10);
-        const isPaid    = paidDates.has(dateStr);
-        const isToday   = dateStr === todayStr;
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const cellDate = new Date(year, month, day);
 
-        cell.classList.add(isPaid ? 'day-paid' : 'day-pending');
-        if (isToday) cell.classList.add('day-today');   // Azul completo sin borde extra
+        const isScheduled = paymentDates.includes(dateStr);
+        const hasPaid = paidDates.has(dateStr);
+        const isToday = dateStr === todayStr;
 
-        cell.innerHTML = `
-            <div>${obj.date.getDate()}</div>
-            <small style="font-size:.7em;opacity:.8">
-                ${obj.date.toLocaleDateString('es-CO',{month:'short'})}
-            </small>`;
-        daysGrid.appendChild(cell);
-    });
+        // 🔧 Colores
+        if (hasPaid) {
+            cell.classList.add('paid', 'has-payment');
+            paidCount++;
+        } else if (isScheduled) {
+            cell.classList.add('scheduled');
+            scheduledCount++;
+            if (cellDate < today) {
+                cell.classList.remove('scheduled');
+                cell.classList.add('overdue');
+                overdueCount++;
+            }
+            if (isToday) cell.classList.add('today');
+        }
 
-    // ----- 5. Resumen -----
-    const paidCount = paidDates.size;
+        calendarGrid.appendChild(cell);
+    }
+
+    // 🔧 Resumen
     breakdown.innerHTML = `
-        <div class="breakdown-title"><i class="fas fa-calculator"></i> Resumen de cuotas</div>
+        <div class="breakdown-title"><i class="fas fa-calculator"></i> Resumen del mes</div>
         <div class="breakdown-grid">
-            <div class="breakdown-item"><div class="breakdown-value">${installments}</div><div class="breakdown-label">Cuotas total</div></div>
-            <div class="breakdown-item"><div class="breakdown-value">${paymentDays.length}</div><div class="breakdown-label">Días de pago</div></div>
-            <div class="breakdown-item"><div class="breakdown-value">${paidCount}</div><div class="breakdown-label">Pagadas</div></div>
-            <div class="breakdown-item"><div class="breakdown-value">${Math.max(0,installments-paidCount)}</div><div class="breakdown-label">Pendientes</div></div>
-        </div>`;
+            <div class="breakdown-item">
+                <div class="breakdown-value" style="color: var(--purple);">${scheduledCount}</div>
+                <div class="breakdown-label">Programados</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value" style="color: var(--success);">${paidCount}</div>
+                <div class="breakdown-label">Pagados</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value" style="color: var(--danger);">${overdueCount}</div>
+                <div class="breakdown-label">Atrasados</div>
+            </div>
+            <div class="breakdown-item">
+                <div class="breakdown-value">${daysInMonth}</div>
+                <div class="breakdown-label">Días totales</div>
+            </div>
+        </div>
+    `;
 }
         function renderPaymentsHistory(sale) {
             const container = document.getElementById('paymentsTableContainer');
@@ -820,189 +1039,193 @@ function renderPaymentCalendar(sale) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${sortedPayments.map(payment => `
-                            <tr>
-                                <td>${formatDate(payment.date)}</td>
-                                <td class="payment-amount">${formatCurrency(payment.amount)}</td>
-                                <td><span style="background: var(--primary); color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem;">${new Date(payment.date).getDate()}</span></td>
-                            </tr>
-                        `).join('')}
+                        ${sortedPayments.map(payment => {
+                            const localDate = parseDateLocal(payment.date);
+                            const dayOfMonth = localDate.getDate();
+                            
+                            return `
+                                <tr>
+                                    <td>${formatDate(payment.date)}</td>
+                                    <td class="payment-amount">${formatCurrency(payment.amount)}</td>
+                                    <td><span style="background: var(--primary); color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem;">${dayOfMonth}</span></td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
         }
 
-function formatDate(dateString) {
-    if (!dateString) return 'Fecha inválida';
-    
-    const date = parseDateLocal(dateString); // usamos tu parseDateLocal
-    return date.toLocaleDateString('es-CO', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
+        function formatDate(dateString) {
+            if (!dateString) return 'Fecha inválida';
+            
+            const date = parseDateLocal(dateString);
+            return date.toLocaleDateString('es-CO', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
 
+        function escapeHtml(text) {
+            if (text === undefined || text === null) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
 
-       function escapeHtml(text) {
-    if (text === undefined || text === null) return '';
-    return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-
-function parseDateLocal(dateString) {
-    if (!dateString) return new Date(NaN);
-    // date-only "YYYY-MM-DD"
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const [y, m, d] = dateString.split('-').map(Number);
-        return new Date(y, m - 1, d);
-    }
-    // timezone-aware ISO
-    if (/Z$|[+-]\d{2}:\d{2}$/.test(dateString)) {
-        const d = new Date(dateString);
-        return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(),
-                        d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds());
-    }
-    // fallback
-    return new Date(dateString);
-}
+        function parseDateLocal(dateString) {
+            if (!dateString) return new Date(NaN);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                const [y, m, d] = dateString.split('-').map(Number);
+                return new Date(y, m - 1, d);
+            }
+            if (/Z$|[+-]\d{2}:\d{2}$/.test(dateString)) {
+                const d = new Date(dateString);
+                return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(),
+                                d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds());
+            }
+            return new Date(dateString);
+        }
         
-function refreshSaleDetails() {
-    // Lee el sale más reciente desde localStorage y vuelve a renderizar
-    const saleRaw = localStorage.getItem('saleDetails');
-    if (!saleRaw) return;
-    try {
-        const sale = JSON.parse(saleRaw);
-        loadSaleDetails(sale);
-    } catch (err) {
-        console.error('No se pudo parsear saleDetails desde localStorage', err);
-    }
-}
-
-// Escucha cambios desde OTRA pestaña/ventana (storage event)
-window.addEventListener('storage', (e) => {
-    if (e.key === 'saleDetails') {
-        refreshSaleDetails();
-    }
-});
-
-// Escucha un evento personalizado para cambios en la MISMA pestaña
-window.addEventListener('saleUpdated', (e) => {
-    refreshSaleDetails();
-});
-
-/* --- Funciones de ayuda para modificar el objeto sale y guardarlo --- */
-
-// Guarda el objeto sale en localStorage y notifica (para otras partes del app)
-function saveSaleToStorage(sale) {
-    localStorage.setItem('saleDetails', JSON.stringify(sale));
-    // Notifica a la MISMA pestaña que hubo un cambio
-    window.dispatchEvent(new Event('saleUpdated'));
-    // Nota: el evento storage se disparará automáticamente en otras pestañas.
-}
-
-// Ejemplo: eliminar un día de pago (por índice o por valor del día)
-function removePaymentDayFromSale(dayValueOrIndex) {
-    const saleRaw = localStorage.getItem('saleDetails');
-    if (!saleRaw) return;
-    const sale = JSON.parse(saleRaw);
-
-    // paymentDays se espera como "1,5,10" u otra cadena; normalizamos a array numérico
-    const payments = (sale.paymentDays || '')
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s !== '')
-        .map(Number)
-        .filter(n => !isNaN(n));
-
-    let newPayments;
-    if (typeof dayValueOrIndex === 'number') {
-        // si coincide con un valor de día, lo quitamos; si es índice, también soportado
-        if (payments[dayValueOrIndex] !== undefined && payments[dayValueOrIndex] === dayValueOrIndex) {
-            // improbable: índice igual que valor — preferimos interpetar como valor
+        function refreshSaleDetails() {
+            const saleRaw = localStorage.getItem('saleDetails');
+            if (!saleRaw) return;
+            try {
+                const sale = JSON.parse(saleRaw);
+                saleData = sale;
+                loadSaleDetails(sale);
+            } catch (err) {
+                console.error('No se pudo parsear saleDetails desde localStorage', err);
+            }
         }
-        // Si existe como valor, lo removemos
-        if (payments.includes(dayValueOrIndex)) {
-            newPayments = payments.filter(d => d !== dayValueOrIndex);
-        } else {
-            // si fue pasado como índice
-            newPayments = payments.slice();
-            newPayments.splice(dayValueOrIndex, 1);
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'saleDetails') {
+                refreshSaleDetails();
+            }
+        });
+
+        window.addEventListener('saleUpdated', (e) => {
+            refreshSaleDetails();
+        });
+
+        function saveSaleToStorage(sale) {
+            localStorage.setItem('saleDetails', JSON.stringify(sale));
+            window.dispatchEvent(new Event('saleUpdated'));
         }
-    } else {
-        // no es number, intenta parsear
-        const v = Number(dayValueOrIndex);
-        newPayments = payments.filter(d => d !== v);
-    }
 
-    sale.paymentDays = newPayments.join(',');
-    saveSaleToStorage(sale);
+        function removePaymentDayFromSale(dayValueOrIndex) {
+            const saleRaw = localStorage.getItem('saleDetails');
+            if (!saleRaw) return;
+            const sale = JSON.parse(saleRaw);
+
+            const payments = (sale.paymentDays || '')
+                .split(',')
+                .map(s => s.trim())
+                .filter(s => s !== '')
+                .map(Number)
+                .filter(n => !isNaN(n));
+
+            let newPayments;
+            if (typeof dayValueOrIndex === 'number') {
+                if (payments.includes(dayValueOrIndex)) {
+                    newPayments = payments.filter(d => d !== dayValueOrIndex);
+                } else {
+                    newPayments = payments.slice();
+                    newPayments.splice(dayValueOrIndex, 1);
+                }
+            } else {
+                const v = Number(dayValueOrIndex);
+                newPayments = payments.filter(d => d !== v);
+            }
+
+            sale.paymentDays = newPayments.join(',');
+            saveSaleToStorage(sale);
+        }
+
+        function addPaymentDayToSale(dayNumber) {
+            const day = Number(dayNumber);
+            if (isNaN(day) || day < 1 || day > 31) return;
+            const saleRaw = localStorage.getItem('saleDetails');
+            if (!saleRaw) return;
+            const sale = JSON.parse(saleRaw);
+
+            const payments = (sale.paymentDays || '')
+                .split(',')
+                .map(s => s.trim())
+                .filter(s => s !== '')
+                .map(Number)
+                .filter(n => !isNaN(n));
+
+            if (!payments.includes(day)) payments.push(day);
+            payments.sort((a,b)=>a-b);
+            sale.paymentDays = payments.join(',');
+            saveSaleToStorage(sale);
+        }
+
+        function removePaymentById(paymentIdOrIndex) {
+            const saleRaw = localStorage.getItem('saleDetails');
+            if (!saleRaw) return;
+            const sale = JSON.parse(saleRaw);
+            if (!Array.isArray(sale.payments)) return;
+
+            let newPayments;
+            if (typeof paymentIdOrIndex === 'string') {
+                newPayments = sale.payments.filter(p => String(p._id || p.id || '') !== paymentIdOrIndex);
+            } else if (typeof paymentIdOrIndex === 'number') {
+                newPayments = sale.payments.slice();
+                newPayments.splice(paymentIdOrIndex, 1);
+            } else {
+                return;
+            }
+            sale.payments = newPayments;
+            sale.totalPaid = (sale.payments || []).reduce((s,p)=> s + Number(p.amount || 0), 0);
+            saveSaleToStorage(sale);
+        }
+
+        function addPayment(paymentObject) {
+            const saleRaw = localStorage.getItem('saleDetails');
+            if (!saleRaw) return;
+            const sale = JSON.parse(saleRaw);
+            sale.payments = sale.payments || [];
+            sale.payments.push(paymentObject);
+            sale.totalPaid = (sale.payments || []).reduce((s,p)=> s + Number(p.amount || 0), 0);
+            saveSaleToStorage(sale);
+        }
+
+        // 🔧 Marcar como pagado el día del calendario que corresponda
+function markDayAsPaid(paymentDateStr) {
+    const paidDay = new Date(paymentDateStr).getDate(); // 1..31
+    const cell = Array.from(document.querySelectorAll('.day-cell.current-month'))
+                      .find(c => parseInt(c.textContent) === paidDay);
+
+    if (!cell) return;
+
+    // Quitar clases previas
+    cell.classList.remove('scheduled', 'overdue', 'today');
+    // Agregar verde
+    cell.classList.add('paid', 'has-payment');
+
+    // Actualizar contadores (sin recargar todo)
+    const breakdown = document.getElementById('installmentsBreakdown');
+    const paidEl   = breakdown.querySelector('.breakdown-value');
+    const schedEl  = breakdown.querySelector('.breakdown-value[style*="purple"]');
+
+    let paid   = parseInt(paidEl?.textContent   || 0);
+    let sched  = parseInt(schedEl?.textContent  || 0);
+
+    if (cell.classList.contains('scheduled')) sched--;
+    paid++;
+
+    if (paidEl)   paidEl.textContent   = paid;
+    if (schedEl)  schedEl.textContent  = sched;
 }
-
-// Ejemplo: agregar un día de pago (no duplica)
-function addPaymentDayToSale(dayNumber) {
-    const day = Number(dayNumber);
-    if (isNaN(day) || day < 1 || day > 31) return;
-    const saleRaw = localStorage.getItem('saleDetails');
-    if (!saleRaw) return;
-    const sale = JSON.parse(saleRaw);
-
-    const payments = (sale.paymentDays || '')
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s !== '')
-        .map(Number)
-        .filter(n => !isNaN(n));
-
-    if (!payments.includes(day)) payments.push(day);
-    payments.sort((a,b)=>a-b);
-    sale.paymentDays = payments.join(',');
-    saveSaleToStorage(sale);
-}
-
-// Ejemplo: eliminar un abono del array sale.payments por su id (o por índice)
-function removePaymentById(paymentIdOrIndex) {
-    const saleRaw = localStorage.getItem('saleDetails');
-    if (!saleRaw) return;
-    const sale = JSON.parse(saleRaw);
-    if (!Array.isArray(sale.payments)) return;
-
-    let newPayments;
-    // si tiene campo _id en los pagos:
-    if (typeof paymentIdOrIndex === 'string') {
-        newPayments = sale.payments.filter(p => String(p._id || p.id || '') !== paymentIdOrIndex);
-    } else if (typeof paymentIdOrIndex === 'number') {
-        // borramos por índice
-        newPayments = sale.payments.slice();
-        newPayments.splice(paymentIdOrIndex, 1);
-    } else {
-        return;
-    }
-    sale.payments = newPayments;
-    // Recalcular totalPaid si lo guardabas explícitamente
-    sale.totalPaid = (sale.payments || []).reduce((s,p)=> s + Number(p.amount || 0), 0);
-    saveSaleToStorage(sale);
-}
-
-// Ejemplo: agregar un abono
-function addPayment(paymentObject) {
-    // paymentObject debe ser { date: '2025-09-24T00:00:00.000Z', amount: 20000, _id: '...' }
-    const saleRaw = localStorage.getItem('saleDetails');
-    if (!saleRaw) return;
-    const sale = JSON.parse(saleRaw);
-    sale.payments = sale.payments || [];
-    sale.payments.push(paymentObject);
-    sale.totalPaid = (sale.payments || []).reduce((s,p)=> s + Number(p.amount || 0), 0);
-    saveSaleToStorage(sale);
-}
-
     </script>
 </body>
 </html>

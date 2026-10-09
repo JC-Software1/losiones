@@ -1,5 +1,6 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import "./authCheck.js";
 
 // DOM elements
 const productsList = document.getElementById("productsList");
@@ -17,6 +18,37 @@ const totalPotentialProfitSpan = document.getElementById("totalPotentialProfit")
 let allProducts = [];
 let filteredProducts = [];
 
+
+
+// Al inicio del archivo, después de las importaciones
+let puedeVerCostos = true; // Variable global
+
+// FunciÃ³n para verificar permiso y ocultar/mostrar costos
+async function verificarPermisoCostos() {
+    try {
+        const token = getToken();
+        const response = await apiFetch('/auth/mis-permisos', 'GET', null, token);
+        const { permisosDetallados, tipo } = response;
+
+        // Admins y jefes siempre ven costos
+        if (tipo === 2 || tipo === 3) {
+            return true;
+        }
+
+        // Vendedores: verificar permiso específico
+        return permisosDetallados?.verCostosYGanancias !== false;
+
+    } catch (error) {
+        console.error('Error al verificar permisos de costos:', error);
+        // Por defecto, ocultar en caso de error para mayor seguridad
+        return false;
+    }
+}
+
+// FunciÃ³n auxiliar para formatear texto oculto
+function ocultarTexto() {
+    return '<span style="color: var(--medium-gray); font-style: italic;">●●●●●</span>';
+}
 // Inicialización
 document.addEventListener("DOMContentLoaded", async () => {
     try {
@@ -25,11 +57,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             window.location.href = "index.html";
             return;
         }
-        
+
+        // ✅ Verificar permisos de costos ANTES de cargar productos
+        puedeVerCostos = await verificarPermisoCostos();
+
         await loadProducts();
+        showLowStockAlert(); // Alerta real de stock
+        showLowMarginAlert(); // Alerta de márgenes
         setupEventListeners();
-        setupMenuHandlers();
-        
+
     } catch (error) {
         console.error("Error al inicializar:", error);
         showError("Error al cargar la aplicación");
@@ -42,15 +78,16 @@ async function loadProducts() {
         const token = getToken();
         const products = await apiFetch("/products", "GET", null, token);
 
-        // Filtrar solo productos NO vendidos para Inventario
-        const availableProducts = products.filter(product => !product.sold);
+        // ✅ El usuario pide que si un producto no tiene stock, no aparezca en inventario
+        // ✅ Ordenar alfabéticamente por nombre
+        allProducts = products
+            .filter(p => (p.stock || 0) > 0)
+            .sort((a, b) => a.name.localeCompare(b.name));
+        filteredProducts = allProducts;
+        displayProducts(allProducts);
+        updateStatistics(allProducts);
+        populateFilters(allProducts);
 
-        allProducts = availableProducts;
-        filteredProducts = availableProducts;
-        displayProducts(availableProducts);
-        updateStatistics(availableProducts);
-         populateFilters(allProducts);
-        
     } catch (error) {
         console.error("Error al cargar productos:", error);
         showError("No se pudieron cargar los productos. Intenta nuevamente.");
@@ -60,7 +97,7 @@ async function loadProducts() {
 // Mostrar productos con el nuevo diseño
 function displayProducts(products) {
     productsList.innerHTML = "";
-    
+
     if (products.length === 0) {
         productsList.innerHTML = `
             <div class="empty-state">
@@ -75,42 +112,66 @@ function displayProducts(products) {
     products.forEach((product, index) => {
         const productCard = document.createElement("div");
         productCard.classList.add("product-card");
-        
-        // Calcular estadísticas del producto
-        const profit = product.salePrice - product.costPrice;
-        const margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
-        const roi = ((profit / product.costPrice) * 100).toFixed(1);
-        
-        // Determinar clase del margen
-        let marginClass = 'margin-low';
-        let marginText = 'Bajo';
-        if (margin >= 30) {
-            marginClass = 'margin-high';
-            marginText = 'Alto';
-        } else if (margin >= 20) {
-            marginClass = 'margin-medium';
-            marginText = 'Medio';
+
+        // Calcular estadísticas solo si puede ver costos
+        let margin = 0;
+        let profit = 0;
+
+        if (puedeVerCostos) {
+            profit = product.salePrice - product.costPrice;
+            margin = ((product.salePrice - product.costPrice) / product.salePrice * 100).toFixed(1);
         }
+
+        const marginClass = margin >= 30 ? 'margin-high' : margin >= 20 ? 'margin-medium' : 'margin-low';
+
+        // Mostrar u ocultar según permiso
+        const costoPriceHTML = puedeVerCostos
+            ? `<div class="price-value">$${product.costPrice.toLocaleString()}</div>`
+            : `<div class="price-value" style="color: var(--medium-gray); font-style: italic;">●●●●●</div>`;
+
+        const profitHighlightHTML = puedeVerCostos
+            ? `<div class="profit-highlight">
+                <div class="profit-text">
+                    <i class="fas fa-chart-line"></i> 
+                    Ganancia: $${profit.toLocaleString()} • Margen: ${margin}% 
+                    <span class="margin-indicator ${marginClass}"></span>
+                </div>
+            </div>`
+            : `<div class="profit-highlight">
+                <div class="profit-text" style="color: var(--medium-gray);">
+                    <i class="fas fa-lock"></i> 
+                    Ganancia: <span style="font-style: italic;">●●●●●</span> • Margen: <span style="font-style: italic;">●●●●●</span>
+                </div>
+            </div>`;
+
+        const stock = product.stock || 1;
+        const isOutOfStock = stock <= 0;
+        const isLowStock = stock > 0 && stock <= 3;
 
         productCard.innerHTML = `
             <div class="product-header">
                 <div class="product-info">
                     <h3>${product.name}</h3>
+                    <p>${isOutOfStock ? '<span style="color: #e74c3c; font-weight: bold;">❌ No hay stock disponible</span>' : 'Producto disponible en inventario'}</p>
                 </div>
-                <div class="product-status status-available">
-                    <i class="fas fa-check-circle"></i> Disponible
- <i class="fas fa-folder"></i> ${product.category} • 
-                <i class="fas fa-tag"></i> ${product.brand} • 
-                ${product.size ? `<i class="fas fa-ruler"></i> Talla: ${product.size}` : ''}
+                <div class="product-status ${isOutOfStock ? 'status-out' : 'status-available'}">
+                    <i class="fas ${isOutOfStock ? 'fa-times-circle' : 'fa-check-circle'}"></i> ${isOutOfStock ? 'Sin Stock' : 'Disponible'}
+                </div>
             </div>
-        </div>
 
-            
+            <div class="product-meta-custom">
+                <i class="fas fa-folder"></i> ${product.category} • 
+                <i class="fas fa-tag"></i> ${product.brand} • 
+                ${product.size ? `<i class="fas fa-ruler"></i> Talla: ${product.size} • ` : ''}
+                <span class="${isLowStock ? 'low-stock-warning' : ''}">
+                    <i class="fas fa-boxes"></i> Stock: ${stock} ${isLowStock ? '⚠️' : ''}
+                </span>
+            </div>
             
             <div class="product-prices">
                 <div class="price-item">
                     <div class="price-label">Precio de Costo</div>
-                    <div class="price-value">$${product.costPrice.toLocaleString()}</div>
+                    ${costoPriceHTML}
                 </div>
                 <div class="price-item">
                     <div class="price-label">Precio de Venta</div>
@@ -118,15 +179,17 @@ function displayProducts(products) {
                 </div>
             </div>
             
-            <div class="profit-highlight">
-                <div class="profit-text">
-                    <i class="fas fa-chart-line"></i> 
-                    Ganancia: $${profit.toLocaleString()} • Margen: ${margin}% (${marginText})
-                    <span class="margin-indicator ${marginClass}"></span>
-                </div>
-            </div>
+            ${profitHighlightHTML}
             
             <div class="product-actions">
+                ${isOutOfStock ? `
+                <button class="btn btn-info" onclick="showProductAnalysis('${product._id}')" title="Ver información">
+                    <i class="fas fa-info-circle"></i> Info
+                </button>
+                <button class="btn btn-warning" onclick="reinventarProducto('${product._id}')" title="Reinventar producto">
+                    <i class="fas fa-magic"></i> Reinventar
+                </button>
+                ` : `
                 <button class="btn btn-primary" onclick="editProduct('${product._id}')" title="Editar producto">
                     <i class="fas fa-edit"></i> Editar
                 </button>
@@ -136,10 +199,17 @@ function displayProducts(products) {
                 <button class="btn btn-accent" onclick="showProductAnalysis('${product._id}')" title="Ver análisis detallado">
                     <i class="fas fa-analytics"></i> Análisis
                 </button>
+                `}
             </div>
         `;
 
-        // Aplicar delay de animación
+        // Agregar clase de stock bajo o agotado
+        if (isOutOfStock) {
+            productCard.classList.add('out-of-stock');
+        } else if (isLowStock) {
+            productCard.classList.add('low-stock');
+        }
+
         productCard.style.animationDelay = `${index * 0.1}s`;
         productsList.appendChild(productCard);
     });
@@ -147,26 +217,37 @@ function displayProducts(products) {
 
 // Actualizar estadísticas
 function updateStatistics(products) {
-    totalProductsSpan.textContent = products.length;
-    
-    if (products.length > 0) {
-        // Calcular margen promedio
-        const avgMargin = (products.reduce((sum, product) => {
-            const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
-            return sum + margin;
-        }, 0) / products.length).toFixed(1);
-        avgMarginSpan.textContent = `${avgMargin}%`;
-        
-        // Calcular valor total del inventario (precio de costo)
-        const totalInventoryValue = products.reduce((sum, product) => sum + product.costPrice, 0);
-        totalInventoryValueSpan.textContent = `$${totalInventoryValue.toLocaleString()}`;
-        
-        // Calcular ganancia potencial total
-        const totalPotentialProfit = products.reduce((sum, product) => {
-            return sum + (product.salePrice - product.costPrice);
-        }, 0);
-        totalPotentialProfitSpan.textContent = `$${totalPotentialProfit.toLocaleString()}`;
-        
+    // Filtrar solo productos con stock para las estadísticas
+    const availableProducts = products.filter(p => (p.stock || 0) > 0);
+
+    // Sumar el stock total en lugar de contar productos
+    const totalStock = availableProducts.reduce((sum, product) => sum + (product.stock || 0), 0);
+    totalProductsSpan.textContent = totalStock;
+
+    if (availableProducts.length > 0) {
+        if (puedeVerCostos) {
+            // Calcular valor total ponderado por stock
+            const totalSaleValue = availableProducts.reduce((sum, product) =>
+                sum + (product.salePrice * (product.stock || 1)), 0);
+            const totalCostValue = availableProducts.reduce((sum, product) =>
+                sum + (product.costPrice * (product.stock || 1)), 0);
+
+            // Margen promedio ponderado por stock
+            const avgMargin = totalSaleValue > 0
+                ? ((totalSaleValue - totalCostValue) / totalSaleValue * 100).toFixed(1)
+                : "0.0";
+            avgMarginSpan.textContent = `${avgMargin}%`;
+
+            totalInventoryValueSpan.textContent = `$${totalCostValue.toLocaleString()}`;
+
+            const totalPotentialProfit = totalSaleValue - totalCostValue;
+            totalPotentialProfitSpan.textContent = `$${totalPotentialProfit.toLocaleString()}`;
+        } else {
+            // Ocultar estadísticas de costos y ganancias
+            avgMarginSpan.innerHTML = '<span style="font-style: italic; color: var(--medium-gray);">●●●●●</span>';
+            totalInventoryValueSpan.innerHTML = '<span style="font-style: italic; color: var(--medium-gray);">●●●●●</span>';
+            totalPotentialProfitSpan.innerHTML = '<span style="font-style: italic; color: var(--medium-gray);">●●●●●</span>';
+        }
     } else {
         avgMarginSpan.textContent = "0%";
         totalInventoryValueSpan.textContent = "$0";
@@ -224,29 +305,27 @@ function applyFilters() {
 }
 
 // Editar producto
-window.editProduct = function(productId) {
+window.editProduct = function (productId) {
     window.location.href = "productos.html";
 };
 
 // Vender producto
-window.sellProduct = async function(productId) {
+window.sellProduct = async function (productId) {
     const product = allProducts.find(p => p._id === productId);
     if (!product) return;
-    
-    const confirmMessage = `¿Confirmar venta del producto "${product.name}"?\n\nPrecio de venta: $${product.salePrice.toLocaleString()}\nGanancia obtenida: $${(product.salePrice - product.costPrice).toLocaleString()}`;
-    
-    if (!confirm(confirmMessage)) return;
-    
+
+    if (!await showConfirm(confirmMessage)) return;
+
     try {
         const token = getToken();
         await apiFetch(`/products/${productId}/sell`, "PUT", null, token);
         showNotification("¡Producto vendido exitosamente!", "success");
-        
+
         // Recargar productos después de un breve retraso
         setTimeout(() => {
             loadProducts();
         }, 1000);
-        
+
     } catch (error) {
         console.error("Error al marcar como vendido:", error);
         showNotification("Error al procesar la venta: " + error.message, "error");
@@ -254,19 +333,19 @@ window.sellProduct = async function(productId) {
 };
 
 // Mostrar análisis detallado del producto
-window.showProductAnalysis = function(productId) {
+window.showProductAnalysis = function (productId) {
     const product = allProducts.find(p => p._id === productId);
     if (!product) return;
-    
+
     const profit = product.salePrice - product.costPrice;
     const margin = ((profit / product.salePrice) * 100).toFixed(1);
     const roi = ((profit / product.costPrice) * 100).toFixed(1);
     const breakEven = product.costPrice;
-    
+
     // Calcular competitividad del margen
     let competitiveness = "";
     let recommendation = "";
-    
+
     if (margin >= 30) {
         competitiveness = "Excelente";
         recommendation = "Margen muy competitivo. Producto altamente rentable.";
@@ -277,7 +356,7 @@ window.showProductAnalysis = function(productId) {
         competitiveness = "Bajo";
         recommendation = "Margen bajo. Revisa precios de costo y venta.";
     }
-    
+
     const analysisMessage = `
 ANÁLISIS DETALLADO DEL PRODUCTO
 
@@ -301,26 +380,26 @@ DATOS ADICIONALES:
 • Por cada $1 invertido, obtienes $${(profit / product.costPrice + 1).toFixed(2)}
 • Tiempo estimado de recuperación: Inmediato al vender
     `;
-    
-    alert(analysisMessage);
+
+    showNotification(analysisMessage, "info", "Análisis de Inventario");
 };
 
 // Exportar datos del inventario
-window.exportInventoryData = function() {
+window.exportInventoryData = function () {
     if (filteredProducts.length === 0) {
         showNotification("No hay datos para exportar", "warning");
         return;
     }
-    
+
     const csvData = [
         ['Producto', 'Precio Costo', 'Precio Venta', 'Ganancia', 'Margen %', 'ROI %', 'Estado']
     ];
-    
+
     filteredProducts.forEach(product => {
         const profit = product.salePrice - product.costPrice;
         const margin = ((profit / product.salePrice) * 100).toFixed(1);
         const roi = ((profit / product.costPrice) * 100).toFixed(1);
-        
+
         csvData.push([
             product.name,
             product.costPrice,
@@ -331,108 +410,165 @@ window.exportInventoryData = function() {
             'Disponible'
         ]);
     });
-    
+
     const csvContent = csvData.map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', `inventario_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     showNotification("Inventario exportado correctamente", "success");
 };
 
 // Mostrar alertas de margen bajo
-window.showLowStockAlert = function() {
+window.showLowMarginAlert = function () {
     const lowMarginProducts = allProducts.filter(product => {
         const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
         return margin < 20;
     });
-    
+
     if (lowMarginProducts.length === 0) {
         showNotification("Excelente! Todos los productos tienen márgenes saludables", "success");
         return;
     }
-    
+
     let alertMessage = `ALERTA DE MÁRGENES BAJOS\n\nSe encontraron ${lowMarginProducts.length} productos con margen inferior al 20%:\n\n`;
-    
+
     lowMarginProducts.forEach((product, index) => {
         if (index < 5) { // Mostrar solo los primeros 5
             const margin = ((product.salePrice - product.costPrice) / product.salePrice) * 100;
             alertMessage += `• ${product.name}: ${margin.toFixed(1)}%\n`;
         }
     });
-    
+
     if (lowMarginProducts.length > 5) {
         alertMessage += `\n... y ${lowMarginProducts.length - 5} productos más.`;
     }
-    
+
     alertMessage += `\n\nRECOMENDACIÓN: Revisa los precios de estos productos para mejorar la rentabilidad.`;
-    
-    alert(alertMessage);
+
+    showNotification(alertMessage, "warning", "Alerta de Stock");
+};
+
+// ✅ Nueva función para mostrar alertas de STOCK BAJO (no invasiva)
+window.showLowStockAlert = function () {
+    if (sessionStorage.getItem('lowStockAlertShownInventory')) return;
+
+    const lowStockProducts = allProducts.filter(p => !p.sold && (p.stock === undefined || p.stock <= 3));
+
+    if (lowStockProducts.length > 0) {
+        const alertDiv = document.createElement('div');
+        alertDiv.id = 'lowStockAlert';
+        alertDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #e67e22, #f39c12);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(230, 126, 34, 0.4);
+            z-index: 10001;
+            max-width: 350px;
+            font-weight: 500;
+            animation: slideIn 0.5s ease-out;
+        `;
+
+        alertDiv.innerHTML = `
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-top: 2px;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; margin-bottom: 8px;">⚠️ Stock Bajo Detectado</div>
+                    <ul style="margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6;">
+                        ${lowStockProducts.slice(0, 5).map(p => `<li>${p.name}: <strong>${p.stock || 0}</strong> unds</li>`).join('')}
+                        ${lowStockProducts.length > 5 ? `<li>...y ${lowStockProducts.length - 5} más</li>` : ''}
+                    </ul>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove(); sessionStorage.setItem('lowStockAlertShownInventory', 'true');" 
+                        style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0; line-height: 1;">✕</button>
+            </div>
+        `;
+
+        document.body.appendChild(alertDiv);
+    }
+};
+
+// Función para reinventar desde inventario
+window.reinventarProducto = function (productId) {
+    const product = allProducts.find(p => p._id === productId);
+    if (!product) return;
+
+    // Guardar en localStorage para que productos.html lo recoja
+    localStorage.setItem('reinventarProduct', JSON.stringify(product));
+
+    // Redirigir
+    window.location.href = "productos.html";
 };
 
 // Generar reporte completo
-window.generateInventoryReport = function() {
+window.generateInventoryReport = function () {
     if (allProducts.length === 0) {
         showNotification("No hay productos para generar reporte", "warning");
         return;
     }
-    
-    // Calcular estadísticas avanzadas
-    const totalProducts = allProducts.length;
-    const totalCostValue = allProducts.reduce((sum, p) => sum + p.costPrice, 0);
-    const totalSaleValue = allProducts.reduce((sum, p) => sum + p.salePrice, 0);
+
+    // Calcular estadísticas avanzadas ponderadas por stock
+    const totalProducts = allProducts.reduce((sum, p) => sum + (p.stock || 1), 0);
+    const totalCostValue = allProducts.reduce((sum, p) => sum + (p.costPrice * (p.stock || 1)), 0);
+    const totalSaleValue = allProducts.reduce((sum, p) => sum + (p.salePrice * (p.stock || 1)), 0);
     const totalPotentialProfit = totalSaleValue - totalCostValue;
-    
-    const avgCost = totalCostValue / totalProducts;
-    const avgSale = totalSaleValue / totalProducts;
-    const avgMargin = ((totalSaleValue - totalCostValue) / totalSaleValue * 100).toFixed(1);
-    
-    // Productos por categoría de margen
-    const highMargin = allProducts.filter(p => ((p.salePrice - p.costPrice) / p.salePrice * 100) >= 30).length;
-    const mediumMargin = allProducts.filter(p => {
-        const margin = (p.salePrice - p.costPrice) / p.salePrice * 100;
-        return margin >= 20 && margin < 30;
-    }).length;
-    const lowMargin = allProducts.filter(p => ((p.salePrice - p.costPrice) / p.salePrice * 100) < 20).length;
-    
+
+    const avgCost = totalProducts > 0 ? totalCostValue / totalProducts : 0;
+    const avgSale = totalProducts > 0 ? totalSaleValue / totalProducts : 0;
+    const avgMargin = totalSaleValue > 0 ? ((totalSaleValue - totalCostValue) / totalSaleValue * 100).toFixed(1) : "0.0";
+
+    // Productos por categoría de margen (ponderado por stock)
+    let highMarginStock = 0, mediumMarginStock = 0, lowMarginStock = 0;
+    allProducts.forEach(p => {
+        const margin = ((p.salePrice - p.costPrice) / p.salePrice) * 100;
+        const stock = p.stock || 1;
+        if (margin >= 30) highMarginStock += stock;
+        else if (margin >= 20) mediumMarginStock += stock;
+        else lowMarginStock += stock;
+    });
+
     const reportMessage = `
 REPORTE COMPLETO DEL INVENTARIO
 Generado el: ${new Date().toLocaleDateString()}
 
 RESUMEN EJECUTIVO:
-• Total de productos: ${totalProducts}
+• Total de unidades en inventario: ${totalProducts}
 • Valor total invertido: $${totalCostValue.toLocaleString()}
 • Valor potencial de venta: $${totalSaleValue.toLocaleString()}
 • Ganancia potencial total: $${totalPotentialProfit.toLocaleString()}
-• Margen promedio: ${avgMargin}%
+• Margen promedio ponderado: ${avgMargin}%
 
 PROMEDIOS:
-• Precio de costo promedio: $${avgCost.toLocaleString()}
-• Precio de venta promedio: $${avgSale.toLocaleString()}
+• Precio de costo promedio por unidad: $${avgCost.toLocaleString()}
+• Precio de venta promedio por unidad: $${avgSale.toLocaleString()}
 
 DISTRIBUCIÓN POR MÁRGENES:
-• Margen alto (≥30%): ${highMargin} productos (${(highMargin/totalProducts*100).toFixed(1)}%)
-• Margen medio (20-29%): ${mediumMargin} productos (${(mediumMargin/totalProducts*100).toFixed(1)}%)
-• Margen bajo (<20%): ${lowMargin} productos (${(lowMargin/totalProducts*100).toFixed(1)}%)
+• Margen alto (≥30%): ${highMarginStock} unidades (${(highMarginStock / totalProducts * 100).toFixed(1)}%)
+• Margen medio (20-29%): ${mediumMarginStock} unidades (${(mediumMarginStock / totalProducts * 100).toFixed(1)}%)
+• Margen bajo (<20%): ${lowMarginStock} unidades (${(lowMarginStock / totalProducts * 100).toFixed(1)}%)
 
 RECOMENDACIONES:
-${highMargin >= totalProducts * 0.6 ? 'Excelente distribución de márgenes' : 'Considera optimizar productos con márgenes bajos'}
+${highMarginStock >= totalProducts * 0.6 ? 'Excelente distribución de márgenes' : 'Considera optimizar productos con márgenes bajos'}
 ${avgMargin >= 25 ? 'Margen promedio saludable' : 'Margen promedio por debajo del objetivo (25%)'}
     `;
-    
-    alert(reportMessage);
+
+    showNotification(reportMessage, "info", "Reporte de Valor");
 };
 
 // Mostrar consejos de optimización
-window.showBestSellingTips = function() {
+window.showBestSellingTips = function () {
     const tips = `
 CONSEJOS PARA OPTIMIZAR TU INVENTARIO
 
@@ -461,49 +597,25 @@ ACCIONES RÁPIDAS:
 • Revisa alertas de márgenes bajos
 • Mantén actualizada la información de productos
     `;
-    
-    alert(tips);
+
+    showNotification(tips, "info", "Consejos de Optimización");
 };
 
 // Mostrar notificaciones
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    const colors = {
-        success: '#27ae60',
-        error: '#e74c3c',
-        warning: '#f39c12',
-        info: '#3498db'
-    };
-    
-    const icons = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle',
-        info: 'fas fa-info-circle'
-    };
-    
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${colors[type]};
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 10000;
-        font-weight: 600;
-        max-width: 350px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    `;
-    notification.innerHTML = `<i class="${icons[type]}"></i> ${message}`;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
+function showNotification(message, type = 'info', title = '') {
+    if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type, title);
+    } else {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed; top: 20px; right: 20px;
+            background: #333; color: white; padding: 12px 20px;
+            border-radius: 8px; z-index: 10000;
+        `;
+        notification.innerHTML = message;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 4000);
+    }
 }
 
 // Mostrar error
@@ -517,60 +629,6 @@ function showError(message) {
 }
 
 // Configurar manejadores del menú
-function setupMenuHandlers() {
-    const menuToggle = document.getElementById('menuToggle');
-    const menuClose = document.getElementById('menuClose');
-    const menuItems = document.getElementById('menuItems');
-    const backdrop = document.getElementById('backdrop');
-
-    if (!menuToggle || !menuItems || !backdrop) {
-        console.warn("Elementos del menú no encontrados");
-        return;
-    }
-
-    function openMenu() {
-        menuItems.classList.add('show');
-        backdrop.classList.add('show');
-        menuToggle.classList.add('open');
-        menuToggle.setAttribute('aria-expanded', 'true');
-        menuItems.setAttribute('aria-hidden', 'false');
-    }
-
-    function closeMenu() {
-        menuItems.classList.remove('show');
-        backdrop.classList.remove('show');
-        menuToggle.classList.remove('open');
-        menuToggle.setAttribute('aria-expanded', 'false');
-        menuItems.setAttribute('aria-hidden', 'true');
-    }
-
-    menuToggle.addEventListener('click', () => {
-        if (menuItems.classList.contains('show')) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
-    });
-
-    if (menuClose) {
-        menuClose.addEventListener('click', closeMenu);
-    }
-    
-    backdrop.addEventListener('click', closeMenu);
-
-    // Cerrar menú con tecla Escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && menuItems.classList.contains('show')) {
-            closeMenu();
-        }
-    });
-
-    // Animación escalonada de los enlaces del menú
-    const menuLinks = document.querySelectorAll('.menu-link');
-    menuLinks.forEach((link, index) => {
-        link.style.transitionDelay = `${index * 50}ms`;
-    });
-}
 
 // Llenar filtros con valores únicos
 function populateFilters(products) {

@@ -1,6 +1,6 @@
 async function loginAsUser(email, password) {
     try {
-      const response = await fetch('https://losiones-1.onrender.com/api/login-as', {
+      const response = await fetch('https://losiones-fjt0.onrender.com/api/login-as', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -34,4 +34,6 @@ async function loginAsUser(email, password) {
     const password = document.getElementById('password').value;
     loginAsUser(email, password);
   });
+  
+
   
