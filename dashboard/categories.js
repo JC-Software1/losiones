@@ -2775,5 +2775,3 @@ setInterval(() => {
         console.log('🔄 Sesión de administrador renovada');
     }
 }, 5 * 60 * 1000); // Cada 5 minutos
-
-}, 5 * 60 * 1000); // Cada 5 minutos
