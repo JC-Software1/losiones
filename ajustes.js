@@ -14,8 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadSettings() {
     try {
-        const token = localStorage.getItem('token');
-        const config = await apiFetch('/auth/config/matias', 'GET', null, token);
+        const config = await apiFetch('/auth/config/matias', 'GET', null);
         
         if (config) {
             const enabled = config.activo || false;
@@ -69,8 +68,7 @@ window.saveSettings = async function() {
             currentNumber: document.getElementById('matiasCurrentNumber') ? parseInt(document.getElementById('matiasCurrentNumber').value) || 1 : 1
         };
 
-        const jwtToken = localStorage.getItem('token');
-        await apiFetch('/auth/config/matias', 'PUT', payload, jwtToken);
+        await apiFetch('/auth/config/matias', 'PUT', payload);
 
         localStorage.setItem('facturacionElectronicaActiva', enabled);
         showNotification('Ajustes guardados correctamente', 'success');
