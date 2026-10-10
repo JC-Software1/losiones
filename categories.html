@@ -9,1106 +9,561 @@
   <link rel="stylesheet" href="css/notifications.css">
   <link rel="stylesheet" href="css/navigation.css">
   <style>
-    /* Variables CSS */
+    /* ============================================================
+       Paleta: blanco · negro · beige · verde
+       ============================================================ */
     :root {
-      --primary: #2c3e50;
-      --secondary: #34495e;
-      --accent: #3498db;
-      --success: #27ae60;
-      --warning: #f39c12;
-      --danger: #e74c3c;
-      --light: #ecf0f1;
       --white: #ffffff;
-      --dark: #2c3e50;
-      --beige: #f5f5dc;
+
+      --beige-50: #faf8f3;
+      --beige-100: #f2ece0;
+      --beige-200: #e7ddc9;
+      --beige-300: #d8c8a8;
+
+      --black: #161310;
+      --ink: #26221c;
+      --muted: #7c7466;
+
+      --green-50: #eef6f1;
+      --green-100: #dcece3;
+      --green-500: #3f9e70;
+      --green-600: #2f7d5b;
+      --green-700: #245f46;
+
+      --danger: #b3492f;
+      --danger-dark: #963c26;
+
+      /* Compatibilidad con estilos inline existentes en el JS */
+      --primary: var(--ink);
+      --secondary: var(--green-700);
+      --accent: var(--green-600);
+      --success: var(--green-600);
+      --light: var(--beige-100);
+      --dark: var(--black);
+      --beige: #f2ece0;
       --cream: #faf8f3;
-      --light-gray: #f8f9fa;
-      --medium-gray: #6c757d;
-      --border: #e9ecef;
-      --shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-      --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
-      --radius: 8px;
-      --radius-lg: 12px;
-      --transition: all 0.3s ease;
+      --light-gray: var(--beige-100);
+      --medium-gray: var(--muted);
+      --border: #e7ddc9;
+
+      --shadow: 0 10px 30px rgba(38, 34, 28, .07);
+      --shadow-hover: 0 18px 44px rgba(38, 34, 28, .13);
+      --radius: 10px;
+      --radius-lg: 18px;
+      --transition: all .2s ease;
     }
 
     * {
       margin: 0;
       padding: 0;
-      box-sizing: border-box
+      box-sizing: border-box;
+      min-width: 0;
+    }
+
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, var(--cream) 0%, var(--light-gray) 100%);
-      color: var(--dark);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background:
+        radial-gradient(1100px 560px at 100% -10%, #ffffff 0%, rgba(255, 255, 255, 0) 55%),
+        linear-gradient(180deg, var(--beige-50) 0%, var(--beige-100) 100%);
+      background-attachment: fixed;
+      color: var(--ink);
       line-height: 1.5;
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
+    /* ============================================================
+       Layout general
+       ============================================================ */
     .container {
-      max-width: 100%;
+      width: 100%;
+      max-width: 1480px;
       margin: 0 auto;
-      padding: 16px;
-      min-height: 100vh
+      padding: 32px clamp(16px, 3vw, 40px) 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
     }
 
-    /* Header */
+    /* ---------- Header ---------- */
     .header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 18px;
       background: var(--white);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: var(--shadow);
-      text-align: center;
       border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
 
-    .header h1 {
-      color: var(--primary);
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 8px
+    .header::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      background: linear-gradient(180deg, var(--green-500), var(--green-700));
     }
 
-    .header p {
-      color: var(--medium-gray);
-      font-size: 14px
+    .header-icon {
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--green-50);
+      color: var(--green-600);
+      font-size: 22px;
+      border: 1px solid var(--green-100);
     }
 
-    /* NUEVO: Contenedor de búsqueda mejorado */
+    .header-text h1 {
+      font-size: clamp(20px, 2.2vw, 26px);
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -.02em;
+      line-height: 1.15;
+    }
+
+    .header-text p {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 3px;
+    }
+
+    /* ---------- Barra de búsqueda y filtros ---------- */
     .search-container {
       display: grid;
-      grid-template-columns: 1fr auto auto;
-      gap: 12px;
-      margin: 20px 0;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 14px;
       align-items: center;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
     }
 
     .search-input {
       width: 100%;
-      padding: 12px 16px;
+      padding: 13px 16px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      background: var(--white);
-      font-size: 16px;
+      background: var(--beige-50);
+      font-size: 15px;
+      color: var(--ink);
       transition: var(--transition);
+    }
+
+    .search-input::placeholder {
+      color: var(--muted);
     }
 
     .search-input:focus {
       outline: 0;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(52, 152, 219, .1);
+      border-color: var(--green-500);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(63, 158, 112, .15);
     }
 
-    /* NUEVO: Selector de día */
     .day-filter-wrapper {
-      position: relative;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .day-filter-select {
-      padding: 12px 40px 12px 16px;
+      padding: 12px 38px 12px 14px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      background: var(--white);
-      font-size: 16px;
+      background: var(--beige-50);
+      font-size: 14px;
+      color: var(--ink);
       cursor: pointer;
+      min-width: 140px;
       appearance: none;
-      min-width: 120px;
+      -webkit-appearance: none;
       transition: var(--transition);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232c3e50' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232f7d5b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 12px center;
     }
 
     .day-filter-select:focus {
       outline: 0;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(52, 152, 219, .1);
+      border-color: var(--green-500);
+      box-shadow: 0 0 0 3px rgba(63, 158, 112, .15);
     }
 
-    .day-filter-select option {
-      padding: 10px;
+    .day-filter-select:disabled {
+      opacity: .55;
+      cursor: not-allowed;
     }
 
-    /* Botón para limpiar filtro */
+    /* El select animado dentro de la barra de filtros conserva el tamaño inline */
+    .day-filter-wrapper .sa {
+      flex: 0 1 165px;
+      min-width: 130px;
+    }
+
     .clear-filter-btn {
-      padding: 12px 16px;
-      background: var(--danger);
-      color: white;
-      border: none;
-      border-radius: var(--radius);
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: var(--transition);
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       white-space: nowrap;
+      padding: 12px 18px;
+      border: 1px solid var(--beige-200);
+      border-radius: var(--radius);
+      background: var(--beige-100);
+      color: var(--black);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
     }
 
     .clear-filter-btn:hover {
-      background: #c0392b;
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-hover);
+      background: var(--beige-200);
     }
 
-    .clear-filter-btn:active {
-      transform: translateY(0);
+    /* ---------- Workspace: formulario + tarjetas ---------- */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      align-items: start;
     }
 
-    /* Responsive para búsqueda */
-    @media (max-width: 768px) {
-      .search-container {
-        grid-template-columns: 1fr;
-        gap: 10px;
-      }
-
-      .day-filter-wrapper {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 8px;
-      }
-
-      .day-filter-select {
-        min-width: auto;
-      }
-    }
-
-
-
+    /* ---------- Paneles ---------- */
     .form-container {
       background: var(--white);
+      border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 24px;
-      margin-bottom: 24px;
+      padding: 28px clamp(18px, 2.4vw, 34px);
       box-shadow: var(--shadow);
-      border: 1px solid var(--border)
     }
 
     .form-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: 20px;
-      text-align: center
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -.01em;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--beige-100);
     }
 
+    .form-title::before {
+      content: "";
+      width: 8px;
+      height: 22px;
+      border-radius: 4px;
+      background: linear-gradient(180deg, var(--green-500), var(--green-700));
+    }
+
+    /* ---------- Formulario ---------- */
     .form-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 20px
+      grid-template-columns: 1fr;
+      gap: 18px 20px;
     }
 
     .form-group {
       display: flex;
-      flex-direction: column
+      flex-direction: column;
+      min-width: 0;
     }
 
     .form-group.full-width {
-      grid-column: 1/-1
+      grid-column: 1 / -1;
     }
 
     .form-group label {
-      font-weight: 500;
-      color: var(--dark);
-      margin-bottom: 6px;
-      font-size: 14px
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 7px;
+      font-size: 13px;
+      letter-spacing: .01em;
     }
 
     .form-group input,
     .form-group select,
-    .form-group textarea {
-      padding: 12px;
+    .form-group textarea,
+    .form-control {
+      width: 100%;
+      padding: 12px 14px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      background: var(--white);
-      font-size: 16px;
-      transition: var(--transition)
+      background: var(--beige-50);
+      color: var(--ink);
+      font-size: 15px;
+      font-family: inherit;
+      transition: var(--transition);
     }
 
     .form-group input:focus,
     .form-group select:focus,
-    .form-group textarea:focus {
+    .form-group textarea:focus,
+    .form-control:focus {
       outline: 0;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(52, 152, 219, .1)
+      border-color: var(--green-500);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(63, 158, 112, .15);
+    }
+
+    /* Select múltiple (días de pago) */
+    .form-control[multiple] {
+      min-height: 170px;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .form-control option {
+      padding: 9px 12px;
+      border-radius: 6px;
+      margin: 2px 0;
+      cursor: pointer;
+      transition: background .15s ease;
+    }
+
+    .form-control option:hover {
+      background: var(--green-50);
+    }
+
+    .form-control option:checked {
+      background: var(--green-600) !important;
+      color: #fff !important;
+      font-weight: 600;
+    }
+
+    #paymentDaysContainer small {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 9px;
+      font-size: 12.5px;
+      color: var(--green-600);
+      font-weight: 500;
+    }
+
+    #paymentDaysContainer small::before {
+      content: "💡";
+      font-size: 15px;
+    }
+
+    #selectedDaysDisplay {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px;
+      background: var(--beige-50);
+      border: 1px dashed var(--beige-200);
+      border-radius: var(--radius);
+    }
+
+    #selectedDaysDisplay:empty::before {
+      content: "No hay días seleccionados";
+      color: var(--muted);
+      font-size: 13px;
     }
 
     .button-group {
       display: flex;
+      flex-wrap: wrap;
       gap: 12px;
-      justify-content: center;
-      margin-top: 20px
+      margin-top: 24px;
     }
 
+    .button-group .btn {
+      min-width: 140px;
+    }
+
+    /* ---------- Botones ---------- */
     .btn {
-      padding: 12px 24px;
-      border: 0;
-      border-radius: var(--radius);
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-      text-decoration: none;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
-      font-size: 14px
+      padding: 12px 20px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      text-decoration: none;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn i {
+      font-size: 13px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-sm {
+      padding: 9px 10px;
+      font-size: 12.5px;
+      border-radius: 9px;
     }
 
     .btn-primary {
-      background: var(--accent);
-      color: var(--white)
+      background: var(--green-600);
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(47, 125, 91, .22);
+    }
+
+    .btn-primary:hover {
+      background: var(--green-700);
     }
 
     .btn-success {
-      background: var(--success);
-      color: var(--white)
+      background: var(--green-500);
+      color: #fff;
+    }
+
+    .btn-success:hover {
+      background: var(--green-600);
+    }
+
+    .btn-info {
+      background: var(--black);
+      color: #fff;
+    }
+
+    .btn-info:hover {
+      background: #000;
     }
 
     .btn-warning {
-      background: var(--warning);
-      color: var(--white)
+      background: var(--beige-100);
+      color: var(--black);
+      border-color: var(--beige-200);
+    }
+
+    .btn-warning:hover {
+      background: var(--beige-200);
+    }
+
+    .btn-secondary {
+      background: var(--beige-100);
+      color: var(--black);
+      border-color: var(--beige-200);
+    }
+
+    .btn-secondary:hover {
+      background: var(--beige-200);
     }
 
     .btn-danger {
       background: var(--danger);
-      color: var(--white)
+      color: #fff;
     }
 
-    .btn-secondary {
-      background: var(--light-gray);
-      color: var(--dark)
+    .btn-danger:hover {
+      background: var(--danger-dark);
     }
 
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-hover)
-    }
-
-    .btn:active {
-      transform: translateY(0)
-    }
-
-    .btn-sm {
-      padding: 8px 16px;
-      font-size: 12px
-    }
-
-    .sales-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 24px
-    }
-
-    .sale-card {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      transition: var(--transition);
-      position: relative
-    }
-
-    .sale-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-hover)
-    }
-
-    .sale-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px
-    }
-
-    .sale-info h3 {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: 4px
-    }
-
-    .sale-info p {
-      font-size: 14px;
-      color: var(--medium-gray)
-    }
-
-    .sale-amount {
-      text-align: right
-    }
-
-    .debt-amount {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--danger)
-    }
-
-    .progress-text {
-      font-size: 12px;
-      color: var(--success)
-    }
-
-    .sale-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 16px;
-      flex-wrap: wrap
-    }
-
-    .sale-actions .btn {
-      flex: 1;
-      min-width: 80px;
-      justify-content: center
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 6px;
-      background: var(--light-gray);
-      border-radius: 3px;
-      margin: 12px 0;
-      overflow: hidden
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--success), var(--warning));
-      border-radius: 3px;
-      transition: width .3s ease
-    }
-
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, .5);
-      z-index: 2000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      visibility: hidden;
-      transition: var(--transition)
-    }
-
-    .modal.show {
-      opacity: 1;
-      visibility: visible
-    }
-
-    .modal-content {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      max-width: 400px;
-      width: calc(100% - 32px);
-      max-height: 80vh;
-      overflow-y: auto;
-      position: relative
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border)
-    }
-
-    .modal-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--primary)
-    }
-
-    .modal-close {
-      background: 0;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      color: var(--medium-gray);
-      padding: 4px
-    }
-
-    .modal-close:hover {
-      color: var(--danger)
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--medium-gray)
-    }
-
-    .empty-state i {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: .5
-    }
-
-    .loading {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 40px
-    }
-
-    .spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid var(--light-gray);
-      border-top: 3px solid var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg)
-      }
-
-      100% {
-        transform: rotate(360deg)
-      }
-    }
-
-    .total-debt {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: var(--white);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      text-align: center;
-      margin-bottom: 24px
-    }
-
-    .total-debt h2 {
-      font-size: 24px;
-      margin-bottom: 8px
-    }
-
-    .total-debt p {
-      opacity: .9;
-      font-size: 14px
-    }
-
-    .hidden {
-      display: none !important
-    }
-
+    /* ---------- Dropdown de productos ---------- */
     .custom-dropdown {
       position: relative;
-      width: 100%
+      width: 100%;
     }
 
     .dropdown-trigger {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 16px;
+      gap: 10px;
+      padding: 12px 14px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      background: var(--white);
+      background: var(--beige-50);
       cursor: pointer;
-      transition: var(--transition)
+      transition: var(--transition);
     }
 
     .dropdown-trigger:hover {
-      border-color: var(--accent)
+      border-color: var(--green-500);
     }
 
-    .dropdown-trigger i {
-      transition: transform 0.3s ease
-    }
-
-    .dropdown-trigger.active i {
-      transform: rotate(180deg)
-    }
-
-    .dropdown-panel {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      max-height: 300px;
-      overflow-y: auto;
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-hover);
-      z-index: 1000;
-      margin-top: 4px
-    }
-
-    .dropdown-item {
-      padding: 12px;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 0.2s ease
-    }
-
-    .dropdown-item:hover {
-      background: var(--light-gray)
-    }
-
-    .dropdown-item:last-child {
-      border-bottom: none
-    }
-
-    .dropdown-item.selected {
-      background: rgba(52, 152, 219, 0.1);
-      border-left: 4px solid var(--accent)
-    }
-
-    .product-card-dropdown {
-      display: flex;
-      justify-content: space-between;
-      align-items: center
-    }
-
-    .product-card-dropdown .info {
-      flex: 1
-    }
-
-    .product-card-dropdown .name {
-      font-weight: 600;
-      color: var(--primary)
-    }
-
-    .product-card-dropdown .price {
-      font-size: 14px;
-      color: var(--medium-gray)
-    }
-
-    .product-card-dropdown .actions {
-      display: flex;
-      gap: 8px
-    }
-
-    .btn-edit-dropdown {
-      padding: 6px 10px;
-      font-size: 12px;
-      border-radius: var(--radius);
-      background: var(--accent);
-      color: white;
-      border: none;
-      cursor: pointer
-    }
-
-    .dropdown-search {
+    .dropdown-trigger input {
       width: 100%;
-      padding: 10px 12px;
       border: none;
-      border-bottom: 1px solid var(--border);
-      font-size: 14px;
+      background: transparent;
+      padding: 0;
+      font-size: 15px;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .dropdown-trigger input:focus {
       outline: none;
-      background: var(--light-gray)
-    }
-
-    .selected-product-tag {
-      background: var(--accent);
-      color: white;
-      padding: 6px 10px;
-      border-radius: 20px;
-      font-size: 13px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px
-    }
-
-    .selected-product-tag .remove {
-      background: rgba(255, 255, 255, 0.3);
       border: none;
-      color: white;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      font-size: 10px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center
-    }
-
-    .selected-product-tag .remove:hover {
-      background: rgba(255, 255, 255, 0.5)
-    }
-
-    .calendar-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, .55);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 3000;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity .3s ease, visibility .3s ease
-    }
-
-    .calendar-modal.show {
-      opacity: 1;
-      visibility: visible
-    }
-
-    .calendar-content {
-      background: var(--white);
-      border-radius: var(--radius-lg);
-      width: 90%;
-      max-width: 420px;
-      padding: 20px;
-      transform: scale(.95);
-      transition: transform .3s ease
-    }
-
-    .calendar-modal.show .calendar-content {
-      transform: scale(1)
-    }
-
-    .calendar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px
-    }
-
-    .calendar-body {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 6px;
-      margin-bottom: 16px;
-      margin-top: 12px
-    }
-
-    .day-cell {
-      aspect-ratio: 1/1;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--white);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 500;
-      transition: background .2s ease, transform .2s ease, box-shadow .2s ease;
-      font-size: 14px
-    }
-
-    .day-cell:hover {
-      background: var(--accent);
-      color: #fff;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3)
-    }
-
-    .day-cell.selected {
-      background: var(--success);
-      color: #fff;
-      border-color: var(--success)
-    }
-
-    .days-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px
-    }
-
-    .day-pill {
-      background: var(--accent);
-      color: #fff;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 13px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px
-    }
-
-    .day-pill .remove-day {
-      background: rgba(255, 255, 255, .3);
-      border: none;
-      color: #fff;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      font-size: 12px;
-      cursor: pointer
-    }
-
-    .scanner-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, .7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 5000
-    }
-
-    .scanner-box {
-      background: #fff;
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      max-width: 520px;
-      width: 92%;
-      text-align: center
-    }
-
-    .scanner-box video {
-      width: 100%;
-      border-radius: var(--radius);
-      margin: 15px 0
-    }
-
-    .scanner-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: center
-    }
-
-    .btn-go-liquidation {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
-      color: #fff;
-      padding: 12px 24px;
-      border-radius: 50px;
-      font-weight: 600;
-      text-decoration: none;
-      box-shadow: 0 4px 15px rgba(22, 160, 133, 0.3);
-      transition: all 0.3s ease;
-    }
-
-    .btn-go-liquidation:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(22, 160, 133, 0.4);
-    }
-
-    /* ---------- iPhone 12 Pro ---------- */
-    @media only screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) {
-
-      /* Seguridad: evita el scroll horizontal */
-      html,
-      body {
-        overflow-x: hidden;
-      }
-
-      /* Acomoda el notch */
-      body {
-        padding-top: env(safe-area-inset-top, 47px);
-      }
-
-      /* Header más compacto */
-      .header {
-        padding: 16px 12px 12px;
-      }
-
-      .header h1 {
-        font-size: 22px;
-      }
-
-      .header p {
-        font-size: 13px;
-      }
-
-      /* Búsqueda: una columna, botones redondos */
-      .search-container {
-        grid-template-columns: 1fr;
-        gap: 10px;
-      }
-
-      .day-filter-wrapper {
-        grid-template-columns: 1fr auto;
-      }
-
-      .clear-filter-btn {
-        justify-self: center;
-      }
-
-      /* Formulario: inputs más altos para el pulgar */
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .form-group input,
-      .form-group select,
-      .form-group textarea {
-        font-size: 16px;
-        /* evita zoom en iOS */
-        padding: 14px 12px;
-        border-radius: 10px;
-      }
-
-      /* Botones: mínimo 44 px de altura (directriz Apple) */
-      .btn {
-        min-height: 44px;
-        font-size: 16px;
-      }
-
-      /* Tarjetas de venta: más aire */
-      .sale-card {
-        padding: 16px 14px;
-      }
-
-      .sale-actions {
-        gap: 6px;
-      }
-
-      .sale-actions .btn {
-        flex: 1 1 45%;
-      }
-
-      /* Dropdown de productos: altura máxima menor */
-      .dropdown-panel {
-        max-height: 40vh;
-      }
-
-      /* Modal de calendario: evita que quede debajo del notch */
-      .calendar-modal {
-        padding-top: env(safe-area-inset-top);
-      }
-
-      .calendar-content {
-        max-width: 360px;
-      }
-
-      /* Scanner: video con bordes redondeados y área de seguridad */
-      .scanner-box {
-        padding: 16px;
-      }
-
-      .scanner-box video {
-        border-radius: 12px;
-        max-height: 50vh;
-      }
-
-      .scanner-actions {
-        padding-bottom: env(safe-area-inset-bottom, 20px);
-      }
-
-      /* Menú hamburguesa: desplazado del notch */
-
-    }
-
-    /* ============================
-  Dos inputs por fila en móviles
-  y evitar que se salgan del contenedor
-   (Pegar AL FINAL de <style> en categories.html)
-   ============================ */
-
-    /* seguridad general */
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      min-width: 0;
-    }
-
-    /* contenedor principal: límite y padding para que no haya overflow */
-    .container,
-    .page-wrapper,
-    .page-content {
-      max-width: 920px;
-      margin-left: auto;
-      margin-right: auto;
-      padding-left: 16px;
-      padding-right: 16px;
-    }
-
-    /* grid por defecto: flexible */
-    .form-grid {
-      display: grid;
-      gap: 12px;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      align-items: start;
-    }
-
-    /* cada grupo/columna del formulario */
-    .form-grid .form-group,
-    .form-grid .field,
-    .form-grid .control {
-      width: 100%;
-      min-width: 0;
-      /* evita que el input imponga ancho mínimo */
-      display: flex;
-      flex-direction: column;
-      /* etiqueta arriba, control abajo */
-    }
-
-    /* inputs, selects, textarea y botones se adaptan siempre */
-    .form-grid input,
-    .form-grid select,
-    .form-grid textarea,
-    .form-grid button {
-      width: 100%;
-      min-width: 0;
-      box-sizing: border-box;
-      display: block;
-    }
-
-    /* etiquetas/chips que podrían romper la línea */
-    .selected-products,
-    .selected-product-tag,
-    .tags,
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      max-width: 100%;
-      word-break: break-word;
-    }
-
-    /* dropdowns y paneles no salgan del viewport */
-    .dropdown-panel,
-    .modal-content,
-    .sale-card {
-      max-width: calc(100% - 28px);
-      overflow: auto;
-      box-sizing: border-box;
-    }
-
-    /* --------------------------
-   Reglas específicas para móviles (dos por fila)
-   -------------------------- */
-    @media (max-width: 420px) {
-
-      /* dos columnas iguales en móviles */
-      .form-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 14px !important;
-      }
-
-      /* forzar que elementos que deben ocupar 2 columnas lo hagan */
-      .form-grid .full-width {
-        grid-column: 1 / -1;
-      }
-
-      /* reducir padding para que todo quepa sin overflow */
-      .container,
-      .page-wrapper,
-      .page-content {
-        padding-left: 12px;
-        padding-right: 12px;
-      }
-
-      /* botón o clear filter ocupe ancho completo si lo necesitas */
-      .clear-filter-btn,
-      .submit-btn,
-      .btn.full-width {
-        grid-column: 1 / -1;
-        width: 100%;
-      }
-
-      /* inputs con íconos dentro */
-      .input-with-icon {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .input-with-icon input {
-        flex: 1;
-        min-width: 0;
-      }
-
-      /* evitar scroll horizontal */
-      html,
-      body {
-        overflow-x: hidden;
-      }
-    }
-
-    /* Media query específica para iPhone 12/12 Pro (refuerzo) */
-    @media only screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) {
-
-      .form-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-      }
-
-      .form-grid input,
-      .form-grid select,
-      .form-grid textarea {
-        padding: 11px 10px;
-        font-size: 15px;
-      }
-    }
-
-
-
-    /* Si después de esto algún elemento sigue saliéndose:
-   - identifica su clase y aplica: `.mi-clase { min-width: 0; max-width: 100%; overflow-wrap: break-word; }` */
-
-
-
-    /* Dropdown de productos - Versión más amplia y legible */
-    .custom-dropdown {
-      position: relative;
-      width: 100%;
-    }
-
-    .dropdown-trigger {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--white);
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .dropdown-trigger:hover {
-      border-color: var(--accent);
+      background: transparent;
+      box-shadow: none;
     }
 
     .dropdown-trigger i {
-      transition: transform 0.3s ease;
+      color: var(--muted);
+      transition: transform .25s ease;
     }
 
     .dropdown-trigger.active i {
       transform: rotate(180deg);
     }
 
-    /* Panel más ancho y con mejor altura */
     .dropdown-panel {
       position: absolute;
-      top: 100%;
+      top: calc(100% + 6px);
       left: 0;
       right: 0;
-      max-height: 450px;
-      /* Aumentado de 300px */
+      max-height: 400px;
       overflow-y: auto;
-      background: var(--white);
+      background: #fff;
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: 12px;
       box-shadow: var(--shadow-hover);
       z-index: 1000;
-      margin-top: 4px;
     }
 
-    /* Búsqueda con botón de cámara */
     .dropdown-search-wrapper {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 10px;
       padding: 12px;
       border-bottom: 1px solid var(--border);
-      background: var(--light-gray);
+      background: var(--beige-50);
       position: sticky;
       top: 0;
       z-index: 10;
@@ -1117,873 +572,71 @@
 
     .dropdown-search {
       width: 100%;
-      padding: 12px 16px;
+      padding: 11px 14px;
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      font-size: 15px;
-      outline: none;
-      background: white;
-      transition: var(--transition);
+      font-size: 14px;
+      background: #fff;
+      color: var(--ink);
     }
 
     .dropdown-search:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(52, 152, 219, .1);
+      outline: 0;
+      border-color: var(--green-500);
+      box-shadow: 0 0 0 3px rgba(63, 158, 112, .15);
     }
 
     .btn-camera {
-      padding: 12px 14px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: var(--transition);
-      flex-shrink: 0;
-      min-width: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-
-
-
-    /* Items del dropdown - Más espaciosos */
-    .dropdown-item {
-      padding: 16px;
-      /* Aumentado de 12px */
-      border-bottom: 1px solid var(--border);
+      min-width: 48px;
+      padding: 11px 14px;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--green-600);
+      color: #fff;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: var(--transition);
     }
 
-    .dropdown-item:hover {
-      background: var(--light-gray);
+    .btn-camera:hover {
+      background: var(--green-700);
+    }
+
+    .dropdown-item {
+      border-bottom: 1px solid var(--beige-100);
+      cursor: pointer;
+      padding: 8px;
     }
 
     .dropdown-item:last-child {
       border-bottom: none;
     }
 
-    .dropdown-item.selected {
-      background: rgba(52, 152, 219, 0.1);
-      border-left: 4px solid var(--accent);
-    }
-
     .dropdown-item.disabled {
       cursor: not-allowed;
-      opacity: 0.6;
+      opacity: .7;
       padding: 20px;
       text-align: center;
-      color: var(--medium-gray);
+      color: var(--muted);
+      font-size: 13.5px;
     }
 
-    /* Card de producto dentro del dropdown - Más grande y legible */
-    .product-card-dropdown {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px;
-      /* Aumentado de 12px */
-      border-radius: 8px;
-      background: var(--light-gray);
-      transition: background 0.2s ease;
-      gap: 12px;
-    }
-
-    .product-card-dropdown:hover {
-      background: #e9ecef;
-    }
-
-    .product-card-dropdown .info {
-      flex: 1;
-      min-width: 0;
-      /* Permite que el texto se ajuste */
-    }
-
-    .product-card-dropdown .name {
-      font-weight: 600;
-      color: var(--primary);
-      font-size: 15px;
-      /* Aumentado de 14px */
-      margin-bottom: 4px;
-      line-height: 1.3;
-    }
-
-    .product-card-dropdown .price {
-      font-size: 14px;
-      /* Aumentado de 13px */
-      color: var(--success);
-      font-weight: 600;
-      margin: 4px 0;
-    }
-
-    .product-card-dropdown .info>div:last-child {
-      font-size: 12px;
-      /* Aumentado de 11px */
-      color: var(--medium-gray);
-      margin-top: 6px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .product-card-dropdown .info i {
-      font-size: 11px;
-      opacity: 0.7;
-    }
-
-    .product-card-dropdown .actions {
-      display: flex;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
-    .btn-edit-dropdown {
-      padding: 8px 12px;
-      /* Aumentado de 6px 8px */
-      font-size: 13px;
-      /* Aumentado de 12px */
-      border-radius: var(--radius);
-      background: var(--accent);
-      color: white;
-      border: none;
-      cursor: pointer;
-      transition: var(--transition);
-      white-space: nowrap;
-    }
-
-    .btn-edit-dropdown:hover {
-      background: #2980b9;
-      transform: translateY(-2px);
-      box-shadow: var(--shadow);
-    }
-
-    /* Tags de productos seleccionados - Más grandes */
+    /* ---------- Chips de productos seleccionados ---------- */
     .selected-products {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      /* Aumentado de 8px */
-      margin-bottom: 12px;
-      min-height: 40px;
-      padding: 8px;
-      background: var(--light-gray);
+      padding: 10px;
+      background: var(--beige-50);
+      border: 1px dashed var(--beige-200);
       border-radius: var(--radius);
+      min-height: 46px;
     }
 
     .selected-product-tag {
-      background: var(--accent);
-      color: white;
-      padding: 8px 14px;
-      /* Aumentado de 6px 10px */
-      border-radius: 20px;
-      font-size: 14px;
-      /* Aumentado de 13px */
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 500;
-      line-height: 1.2;
-    }
-
-    .selected-product-tag .remove {
-      background: rgba(255, 255, 255, 0.3);
-      border: none;
-      color: white;
-      border-radius: 50%;
-      width: 20px;
-      /* Aumentado de 18px */
-      height: 20px;
-      font-size: 12px;
-      /* Aumentado de 10px */
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s ease;
-      font-weight: bold;
-    }
-
-    .selected-product-tag .remove:hover {
-      background: rgba(255, 255, 255, 0.5);
-      transform: scale(1.1);
-    }
-
-    /* Responsive mejorado */
-    @media (max-width: 768px) {
-      .dropdown-panel {
-        max-height: 60vh;
-        /* Más alto en móviles */
-      }
-
-      .product-card-dropdown {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 16px;
-      }
-
-      .product-card-dropdown .actions {
-        width: 100%;
-        justify-content: flex-end;
-        margin-top: 8px;
-      }
-    }
-
-    @media (max-width: 420px) {
-      .dropdown-panel {
-        max-height: 50vh;
-      }
-
-      .product-card-dropdown .name {
-        font-size: 14px;
-      }
-
-      .selected-product-tag {
-        font-size: 13px;
-        padding: 7px 12px;
-      }
-    }
-
-    /* ============================
-  Ajustes finales para iPhone 13 y móviles pequeños
-  ============================ */
-
-    /* Regla específica para iPhone 13 / 12 Pro (390x844, device-pixel-ratio 3) */
-    @media only screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) {
-
-      /* Forzar columna única en el formulario para mejor lectura */
-      .form-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 16px !important;
-      }
-
-
-      /* Aumentar tamaño de inputs para dedo/pulgar y evitar zoom en iOS */
-      .form-group input,
-      .form-group select,
-      .form-group textarea,
-      .dropdown-trigger,
-      .dropdown-search {
-        font-size: 16px !important;
-        padding: 14px 14px !important;
-        border-radius: 10px !important;
-        -webkit-text-size-adjust: 100%;
-        /* evita zoom en iOS */
-      }
-
-      /* Botones más accesibles */
-      .button-group {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .button-group .btn {
-        width: 100%;
-        min-height: 48px;
-        font-size: 16px;
-        padding: 12px 14px;
-        border-radius: 10px;
-      }
-
-      /* Dropdown / panel de productos ocupa todo el ancho y no se corte */
-      .dropdown-panel {
-        position: relative !important;
-        width: 100% !important;
-        max-height: 280px;
-        /* puedes ajustar */
-        margin-top: 6px;
-        /* separadito del input */
-        box-shadow: none !important;
-        border-radius: 8px;
-      }
-
-
-      /* Asegurar que el trigger del dropdown no quede chiquito */
-      .dropdown-trigger {
-        min-height: 50px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      /* Spacing del formulario para que no quede pegado al borde */
-      .form-container {
-        padding-left: 18px;
-        padding-right: 18px;
-        padding-top: 22px;
-        padding-bottom: 22px;
-      }
-
-      /* Ajustes para el botón de calendario */
-      #btnOpenCalendar {
-        width: 100%;
-        text-align: left;
-        justify-content: flex-start;
-        padding: 12px 14px;
-        min-height: 48px;
-        border-radius: 10px;
-      }
-
-      /* Selected pills: legibles y con wrapping */
-      .days-pills,
-      .selected-products {
-        gap: 8px;
-        padding-top: 8px;
-        flex-wrap: wrap;
-      }
-
-      /* Prevenir overflow horizontal por si algún elemento es más ancho */
-      html,
-      body {
-        overflow-x: hidden;
-      }
-
-      /* Ajusta el top de la barra de menú para evitar notch */
-      .menu-toggle {
-        top: calc(env(safe-area-inset-top, 8px) + 6px);
-        right: 10px;
-      }
-    }
-
-    /* Regla más general para pantallas <= 420px para reforzar el mismo comportamiento */
-    @media (max-width: 420px) {
-      .form-grid {
-        grid-template-columns: 1fr !important;
-        gap: 12px !important;
-      }
-
-      .form-container {
-        padding-left: 14px;
-        padding-right: 14px;
-        padding-top: 18px;
-        padding-bottom: 18px;
-      }
-
-      .form-title {
-        font-size: 18px;
-        margin-bottom: 12px;
-      }
-
-      .form-group input,
-      .form-group select,
-      .form-group textarea {
-        font-size: 15px;
-        padding: 12px;
-        border-radius: 8px;
-      }
-
-      .button-group {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .sales-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .button-group .btn {
-        min-height: 44px;
-        font-size: 15px;
-      }
-
-      .dropdown-panel {
-        left: 10px;
-        right: 10px;
-        max-height: 55vh;
-      }
-    }
-
-    /* Estilos para el nuevo sistema de selección de días */
-    .form-control {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--white);
-      font-size: 16px;
-      transition: var(--transition);
-    }
-
-    .form-control:focus {
-      outline: 0;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(52, 152, 219, .1);
-    }
-
-    .form-control[multiple] {
-      min-height: 150px;
-      padding: 8px;
-    }
-
-    .form-control option {
-      padding: 8px 12px;
-      border-radius: 4px;
-      margin: 2px 0;
-      cursor: pointer;
-    }
-
-    .form-control option:hover {
-      background: var(--light-gray);
-    }
-
-    .form-control option:checked {
-      background: var(--accent) !important;
-      color: white;
-    }
-
-    #selectedDaysDisplay {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      min-height: 40px;
-      padding: 8px;
-      background: var(--light-gray);
-      border-radius: var(--radius);
-    }
-
-    #selectedDaysDisplay:empty::before {
-      content: "No hay días seleccionados";
-      color: var(--medium-gray);
-      font-size: 14px;
-    }
-
-    .day-pill {
-      background: var(--accent);
-      color: white;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 500;
-    }
-
-    .day-pill .remove-day {
-      background: rgba(255, 255, 255, 0.3);
-      border: none;
-      color: white;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      font-size: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-
-    .day-pill .remove-day:hover {
-      background: rgba(255, 255, 255, 0.5);
-    }
-
-    /* Estilos mejorados para selección múltiple */
-    .form-control[multiple] {
-      min-height: 200px;
-      /* Aumentado para ver más opciones */
-      padding: 8px;
-      cursor: pointer;
-    }
-
-    .form-control option {
-      padding: 10px 12px;
-      /* Más padding para mejor táctil */
-      border-radius: 4px;
-      margin: 3px 0;
-      cursor: pointer;
-      transition: background 0.2s ease;
-    }
-
-    .form-control option:hover {
-      background: rgba(52, 152, 219, 0.1);
-    }
-
-    .form-control option:checked {
-      background: var(--accent) !important;
-      color: white !important;
-      font-weight: 600;
-    }
-
-    /* Mensaje de ayuda más visible */
-    #paymentDaysContainer small {
-      color: var(--accent);
-      font-weight: 500;
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-    }
-
-    #paymentDaysContainer small::before {
-      content: "💡";
-      font-size: 16px;
-    }
-
-    /* Responsive: En móviles mostrar instrucción más clara */
-    @media (max-width: 768px) {
-      .form-control[multiple] {
-        min-height: 250px;
-      }
-
-      #paymentDaysContainer small {
-        background: rgba(52, 152, 219, 0.1);
-        padding: 10px;
-        border-radius: 6px;
-        border-left: 3px solid var(--accent);
-        font-size: 12px;
-      }
-    }
-
-
-    /* =========================
-  Layout responsivo para pantallas grandes (desktop)
-  ========================= */
-
-    /* Limita el ancho máximo para que no se estire demasiado en pantallas enormes */
-    .container {
-      max-width: 1200px;
-      /* antes era 920px en algunas reglas */
-      margin-left: auto;
-      margin-right: auto;
-      padding-left: 20px;
-      padding-right: 20px;
-      display: grid;
-      grid-template-columns: 1fr;
-      /* por defecto 1 columna; se activa 2 columnas en desktop */
-      gap: 24px;
-      align-items: start;
-    }
-
-    /* Organización de región principal en desktop:
-   - Columna izquierda: formulario y listado (contenido principal)
-   - Columna derecha: panel lateral (totales, filtros, acciones)
-*/
-    @media (min-width: 992px) {
-      .container {
-        grid-template-columns: 1fr 360px;
-      }
-
-      /* Cabecera y búsqueda ocupan ambas columnas */
-      .header,
-      .search-container {
-        grid-column: 1 / -1;
-      }
-
-      /* Formulario: colocar en la columna izquierda y darle width 100% */
-      .form-container {
-        grid-column: 1 / 2;
-        align-self: start;
-      }
-
-      /* Payment section (si existe) también en la columna izquierda */
-      #paymentSection {
-        grid-column: 1 / 2;
-      }
-
-      /* Sales list pasa a la columna derecha o puede ocupar la izquierda según prefieras.
-     Aquí lo dejamos en la columna izquierda *debajo* del formulario para flujo natural,
-     pero lo hacemos más flexible para que no se vea apretado. */
-      .sales-grid {
-        grid-column: 1 / -1;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 18px;
-        align-items: start;
-      }
-
-      /* Si quieres que el sales-grid quede a la derecha como panel separado,
-     reemplaza la regla anterior por:
-     .sales-grid { grid-column: 2 / 3; display:grid; grid-auto-rows: minmax(120px, auto); }
-  */
-
-      /* Haz las tarjetas fluidas */
-      .sale-card {
-        width: 100%;
-      }
-
-      /* Panel lateral sticky: si tienes .total-debt u otros widgets, los fijamos */
-      .total-debt {
-        grid-column: 2 / 3;
-        position: sticky;
-        top: 20px;
-        align-self: start;
-      }
-
-      /* Ajustes para el menú flotante para que no tape contenido en desktop */
-      .menu-toggle {
-        right: 24px;
-        top: 18px;
-      }
-    }
-
-    /* Ajustes visuales para tarjetas y grid en pantallas grandes */
-    @media (min-width: 1200px) {
-      .container {
-        max-width: 1400px;
-        gap: 28px;
-      }
-
-      .form-container {
-        padding: 28px;
-      }
-
-      .sale-card {
-        padding: 22px;
-        border-radius: 14px;
-      }
-    }
-
-    /* Asegurar que inputs y elementos no provoquen overflow en desktop */
-    .form-grid input,
-    .form-grid select,
-    .form-grid textarea,
-    .selected-products,
-    .dropdown-panel,
-    .sale-card,
-    .menu-items {
-      min-width: 0;
-      /* evita romper el grid por un ancho mínimo impuesto */
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-
-    /* Mejora de legibilidad: aumenta el tamaño de textos en desktop */
-    @media (min-width: 992px) {
-      .header h1 {
-        font-size: 28px;
-      }
-
-      .form-title {
-        font-size: 22px;
-      }
-
-      .sale-info h3 {
-        font-size: 18px;
-      }
-
-      .debt-amount {
-        font-size: 20px;
-      }
-    }
-
-    /* Si algún elemento específico se sale, aplica overflow wrap */
-    .sale-card,
-    .selected-product-tag,
-    .menu-link span {
-      overflow-wrap: anywhere;
-      word-break: break-word;
-    }
-
-    /* Espaciado extra para botones en desktop */
-    @media (min-width: 768px) {
-      .button-group {
-        justify-content: flex-start;
-        gap: 12px;
-      }
-    }
-
-    /* Pequeño helper para centrar el contenido en pantallas muy anchas */
-    @media (min-width: 1600px) {
-      .container {
-        padding-left: 28px;
-        padding-right: 28px;
-      }
-    }
-
-    /* =========================
-   Extender ancho del formulario en pantallas grandes
-   ========================= */
-
-    @media (min-width: 992px) {
-
-      /* Aumentamos el ancho general de la página */
-      .container {
-        grid-template-columns: 70% 30%;
-        /* antes era 1fr 360px */
-      }
-
-      /* Hacemos que el formulario use todo el ancho disponible de su columna */
-      .form-container {
-        width: 100%;
-        max-width: none;
-        /* elimina límites que pueda tener */
-        grid-column: 1 / 2;
-        padding: 32px;
-        /* más respiración visual */
-        background-color: #fff;
-        border-radius: 14px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-      }
-
-      /* Si hay una sección de resultados o cards, ajustamos su posición */
-      .sales-grid {
-        grid-column: 1 / -1;
-        grid-template-columns: repeat(4, 1fr);
-      }
-    }
-
-    /* Opcional: si quieres que el formulario ocupe casi toda la pantalla */
-    @media (min-width: 1400px) {
-      .container {
-        grid-template-columns: 80% 20%;
-      }
-    }
-
-    /* Botón voltear cámara */
-    .btn-warning {
-      background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-      color: white;
-    }
-
-    .btn-warning:hover {
-      background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
-      transform: translateY(-2px);
-    }
-
-    .scanner-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    #btnFlipCamera i {
-      animation: none;
-    }
-
-    #btnFlipCamera:active i {
-      animation: spin 0.5s ease;
-    }
-
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .selected-product-tag {
-      background: var(--accent);
-      color: white;
-      padding: 8px 14px;
-      border-radius: 20px;
-      font-size: 14px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 500;
-      transition: var(--transition);
-    }
-
-    .selected-product-tag:hover {
-      background: #2980b9;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
-    }
-
-    .selected-product-tag .product-name {
-      flex: 1;
-    }
-
-    .selected-product-tag .product-price {
-      font-weight: 700;
-      font-size: 13px;
-      padding: 2px 6px;
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 4px;
-    }
-
-    .selected-product-tag .edit-price {
-      background: rgba(255, 255, 255, 0.2);
-      border: none;
-      color: white;
-      border-radius: 4px;
-      width: 24px;
-      height: 24px;
-      cursor: pointer;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: var(--transition);
-    }
-
-    .selected-product-tag .edit-price:hover {
-      background: rgba(255, 255, 255, 0.35);
-      transform: scale(1.1);
-    }
-
-    .selected-product-tag .remove {
-      background: rgba(255, 255, 255, 0.3);
-      border: none;
-      color: white;
-      border-radius: 50%;
-      width: 22px;
-      height: 22px;
-      font-size: 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      transition: var(--transition);
-    }
-
-    .selected-product-tag .remove:hover {
-      background: rgba(255, 255, 255, 0.5);
-      transform: scale(1.15);
-    }
-
-    /* Alternativa: Diseño tipo card para móviles */
-    @media (max-width: 420px) {
-      .selected-product-tag-card {
-        background: linear-gradient(135deg, var(--accent), #2980b9);
-        border-radius: 12px;
-        padding: 14px;
-        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.25);
-      }
-
-      .selected-product-tag-card .product-name {
-        display: block;
-        margin-bottom: 10px;
-        font-size: 14px;
-        font-weight: 600;
-        line-height: 1.3;
-      }
-
-      .selected-product-tag-card .product-actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .selected-product-tag-card .product-price {
-        font-size: 16px;
-        font-weight: 700;
-        background: rgba(255, 255, 255, 0.25);
-        padding: 6px 12px;
-        border-radius: 8px;
-      }
-
-      .selected-product-tag-card .product-buttons {
-        display: flex;
-        gap: 8px;
-      }
-    }
-
-    .selected-product-tag {
-      background: var(--accent);
+      background: linear-gradient(135deg, var(--green-600), var(--green-700));
       color: #fff;
       padding: 10px 14px;
       border-radius: 10px;
@@ -1992,12 +645,13 @@
       flex-direction: column;
       gap: 6px;
       width: 100%;
-      max-width: 240px;
+      max-width: 260px;
+      box-shadow: 0 6px 16px rgba(47, 125, 91, .18);
     }
 
     .product-name {
       font-weight: 600;
-      line-height: 1.2;
+      line-height: 1.25;
     }
 
     .product-bottom {
@@ -2010,6 +664,9 @@
     .product-price {
       font-weight: 700;
       font-size: 15px;
+      background: rgba(255, 255, 255, .18);
+      padding: 2px 8px;
+      border-radius: 6px;
     }
 
     .product-buttons {
@@ -2018,50 +675,924 @@
     }
 
     .product-buttons button {
-      background: rgba(255, 255, 255, 0.25);
-      border: none;
-      color: #fff;
-      border-radius: 6px;
       width: 28px;
       height: 28px;
-      font-size: 16px;
+      border: none;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, .22);
+      color: #fff;
+      font-size: 14px;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: background .2s ease;
     }
 
     .product-buttons button:hover {
-      background: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, .4);
+    }
+
+    .days-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .day-pill {
+      background: var(--green-600);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+
+    .day-pill .remove-day {
+      width: 18px;
+      height: 18px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .3);
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .day-pill .remove-day:hover {
+      background: rgba(255, 255, 255, .5);
+    }
+
+    /* ============================================================
+       Sección de ventas (tarjetas)
+       ============================================================ */
+    .sales-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 4px;
+    }
+
+    .section-head h2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -.01em;
+    }
+
+    .section-head h2 i {
+      color: var(--green-600);
+    }
+
+    .section-head p {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .sales-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .sale-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 26px 22px 22px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .sale-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--green-500), var(--green-700));
+    }
+
+    .sale-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-hover);
+      border-color: var(--beige-300);
+    }
+
+    .sale-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .sale-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .sale-info h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 6px;
+      line-height: 1.25;
+    }
+
+    .sale-info p {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13.5px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .sale-info p i {
+      color: var(--green-600);
+      font-size: 12px;
+    }
+
+    .sale-amount {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .debt-amount {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--black);
+      letter-spacing: -.02em;
+    }
+
+    .progress-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--green-600);
+      margin-top: 2px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--beige-100);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green-500), var(--green-700));
+      border-radius: 999px;
+      transition: width .3s ease;
+    }
+
+    .sale-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .sale-actions .btn {
+      width: 100%;
+    }
+
+    /* ---------- Estados ---------- */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 56px 24px;
+      color: var(--muted);
+      background: var(--white);
+      border: 1px dashed var(--beige-200);
+      border-radius: var(--radius-lg);
+    }
+
+    .empty-state i {
+      font-size: 44px;
+      color: var(--beige-300);
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .empty-state h3 {
+      color: var(--black);
+      font-size: 17px;
+      margin-bottom: 6px;
+    }
+
+    .loading {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 56px;
+    }
+
+    .spinner {
+      width: 34px;
+      height: 34px;
+      border: 3px solid var(--beige-200);
+      border-top-color: var(--green-600);
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ============================================================
+       Modales
+       ============================================================ */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(22, 19, 16, .5);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .25s ease, visibility .25s ease;
+    }
+
+    .modal.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      width: 100%;
+      max-width: 460px;
+      max-height: 85vh;
+      overflow-y: auto;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      box-shadow: var(--shadow-hover);
+      transform: translateY(10px);
+      transition: transform .25s ease;
+    }
+
+    .modal.show .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--beige-100);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--black);
+    }
+
+    .modal-close {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 9px;
+      background: var(--beige-100);
+      color: var(--ink);
+      font-size: 16px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .modal-close:hover {
+      background: var(--beige-200);
+      color: var(--danger);
+    }
+
+    /* ---------- Calendario ---------- */
+    .calendar-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(22, 19, 16, .55);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .25s ease, visibility .25s ease;
+    }
+
+    .calendar-modal.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .calendar-content {
+      width: 100%;
+      max-width: 440px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: var(--shadow-hover);
+      transform: scale(.96);
+      transition: transform .25s ease;
+    }
+
+    .calendar-modal.show .calendar-content {
+      transform: scale(1);
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .calendar-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--black);
+    }
+
+    .btn-close {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 8px;
+      background: var(--beige-100);
+      color: var(--ink);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-close:hover {
+      background: var(--beige-200);
+    }
+
+    .calendar-body {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin: 8px 0 16px;
+    }
+
+    .day-cell {
+      aspect-ratio: 1/1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--beige-50);
+      color: var(--ink);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .day-cell:hover {
+      background: var(--green-100);
+      border-color: var(--green-500);
+      transform: translateY(-2px);
+    }
+
+    .day-cell.selected {
+      background: var(--green-600);
+      border-color: var(--green-600);
+      color: #fff;
+    }
+
+    .calendar-footer {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* ---------- Scanner ---------- */
+    .scanner-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(22, 19, 16, .75);
+    }
+
+    .scanner-box {
+      width: 92%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      text-align: center;
+      box-shadow: var(--shadow-hover);
+    }
+
+    .scanner-box h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 8px;
+    }
+
+    .scanner-box video {
+      width: 100%;
+      border-radius: var(--radius);
+      margin: 15px 0;
+      background: #000;
+    }
+
+    .scanner-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* ---------- Utilidades ---------- */
+    .hidden {
+      display: none !important;
+    }
+
+    .btn-go-liquidation {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 22px;
+      border-radius: 999px;
+      background: var(--green-600);
+      color: #fff;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 6px 16px rgba(47, 125, 91, .25);
+      transition: var(--transition);
+    }
+
+    .btn-go-liquidation:hover {
+      background: var(--green-700);
+      transform: translateY(-2px);
+    }
+
+    /* ============================================================
+       Responsive
+       ============================================================ */
+    @media (min-width: 600px) {
+      .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1200px) {
+      .workspace {
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      }
+
+      .form-container {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      #paymentSection {
+        grid-column: 1;
+        grid-row: 2;
+      }
+
+      .sales-section {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+      }
+
+      .sales-grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      }
+    }
+
+    @media (min-width: 1500px) {
+      .form-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 767px) {
+      .search-container {
+        grid-template-columns: 1fr;
+      }
+
+      .day-filter-wrapper {
+        justify-content: stretch;
+      }
+
+      .day-filter-select {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .clear-filter-btn {
+        flex: 1;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .container {
+        padding: 16px 14px 48px;
+        gap: 18px;
+      }
+
+      .header {
+        padding: 18px 20px;
+      }
+
+      .header-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+      }
+
+      .form-container {
+        padding: 20px 16px;
+      }
+
+      .button-group .btn {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+
+      .sale-header {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .sale-amount {
+        text-align: left;
+      }
+
+      .section-head {
+        flex-direction: column;
+        gap: 4px;
+      }
+    }
+
+    /* ============================================================
+       Select animado: el panel se "arma" al abrirse
+       1) Las líneas del borde se dibujan desde el botón hacia el lado opuesto.
+       2) El fondo se despliega siguiendo esa dirección.
+       3) Las opciones aparecen en cascada.
+       Direcciones: abajo, arriba, derecha, izquierda (el JS elige la que tenga espacio).
+       ============================================================ */
+    .sa {
+      /* ---- Colores del nuevo estilo (blanco · negro · beige · verde) ---- */
+      --sa-fondo: var(--beige-50, #faf8f3);
+      --sa-panel: #ffffff;
+      --sa-fondo-hover: var(--green-50, #eef6f1);
+      --sa-borde: var(--border, #e7ddc9);
+      --sa-texto: var(--ink, #26221c);
+      --sa-suave: var(--muted, #7c7466);
+      --sa-acento: var(--green-600, #2f7d5b);
+      --sa-radio: 10px;
+
+      --sa-trazo: 650ms;
+      --sa-dur: 420ms;
+      --sa-inicio: 140ms;
+      --sa-paso: 45ms;
+      --sa-curva: cubic-bezier(.2, 0, 0, 1);
+
+      position: relative;
+      display: block;
+      width: 100%;
+      max-width: none;
+      font: inherit;
+      color: var(--sa-texto);
+    }
+
+    /* El <select> original queda oculto pero sigue enviándose en el formulario */
+    .sa-native {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    /* --- Botón --- */
+    .sa-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      font: inherit;
+      font-size: 15px;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      background: var(--sa-fondo);
+      border: 1px solid var(--sa-borde);
+      border-radius: var(--sa-radio);
+      transition: border-color 160ms, background 160ms, box-shadow 160ms;
+    }
+
+    .sa-btn:hover {
+      border-color: var(--sa-acento);
+    }
+
+    .sa-btn:focus-visible {
+      outline: 2px solid var(--sa-acento);
+      outline-offset: 2px;
+    }
+
+    .sa-btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .sa.abierto .sa-btn {
+      border-color: var(--sa-acento);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(63, 158, 112, .15);
+    }
+
+    .sa-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sa-label.vacio {
+      color: var(--sa-suave);
+    }
+
+    .sa-chev {
+      flex: none;
+      width: 7px;
+      height: 7px;
+      opacity: .6;
+      border: solid var(--sa-acento);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg) translateY(-2px);
+      transition: transform var(--sa-dur) var(--sa-curva);
+    }
+
+    .sa.abierto .sa-chev {
+      transform: rotate(225deg) translateY(-2px);
+    }
+
+    /* --- Contenedor del panel (posición y dirección) --- */
+    .sa-panel {
+      --sa-cierre: inset(0 0 100% 0 round var(--sa-radio));
+      --sa-x: 0px;
+      --sa-y: -8px;
+      --sa-oy: -4px;
+
+      position: absolute;
+      z-index: 1500;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: visibility 0s linear 240ms;
+    }
+
+    .sa.abierto .sa-panel {
+      visibility: visible;
+      pointer-events: auto;
+      transition: visibility 0s;
+    }
+
+    .sa[data-dir="arriba"] .sa-panel {
+      top: auto;
+      bottom: calc(100% + 6px);
+      --sa-cierre: inset(100% 0 0 0 round var(--sa-radio));
+      --sa-y: 8px;
+      --sa-oy: 4px;
+    }
+
+    .sa[data-dir="derecha"] .sa-panel,
+    .sa[data-dir="izquierda"] .sa-panel {
+      width: max-content;
+      min-width: 100%;
+      max-width: min(320px, 90vw);
+      --sa-y: 0px;
+      --sa-oy: 0px;
+    }
+
+    .sa[data-dir="derecha"] .sa-panel {
+      left: calc(100% + 6px);
+      right: auto;
+      --sa-cierre: inset(0 100% 0 0 round var(--sa-radio));
+      --sa-x: -8px;
+    }
+
+    .sa[data-dir="izquierda"] .sa-panel {
+      right: calc(100% + 6px);
+      left: auto;
+      --sa-cierre: inset(0 0 0 100% round var(--sa-radio));
+      --sa-x: 8px;
+    }
+
+    .sa[data-dir="derecha"][data-alin="ini"] .sa-panel,
+    .sa[data-dir="izquierda"][data-alin="ini"] .sa-panel {
+      top: 0;
+      bottom: auto;
+    }
+
+    .sa[data-dir="derecha"][data-alin="fin"] .sa-panel,
+    .sa[data-dir="izquierda"][data-alin="fin"] .sa-panel {
+      bottom: 0;
+      top: auto;
+    }
+
+    /* --- Fondo del panel (se despliega) --- */
+    .sa-list {
+      box-sizing: border-box;
+      width: 100%;
+      margin: 0;
+      padding: 6px;
+      list-style: none;
+      max-height: min(300px, 60vh);
+      overflow-y: auto;
+      outline: none;
+      background: var(--sa-panel);
+      border: 1px solid var(--sa-borde);
+      border-radius: var(--sa-radio);
+      box-shadow: var(--shadow-hover, 0 18px 44px rgba(38, 34, 28, .13));
+
+      opacity: 0;
+      clip-path: var(--sa-cierre);
+      transform: translate(var(--sa-x), var(--sa-y));
+      transition: opacity 200ms ease-in, transform 200ms ease-in, clip-path 200ms ease-in;
+    }
+
+    .sa.abierto .sa-list {
+      opacity: 1;
+      clip-path: inset(0 0 0 0 round var(--sa-radio));
+      transform: none;
+      transition: opacity var(--sa-dur) var(--sa-curva) 80ms,
+        transform var(--sa-dur) var(--sa-curva) 80ms,
+        clip-path var(--sa-dur) var(--sa-curva) 80ms;
+    }
+
+    /* --- Líneas del borde (SVG que dibuja el JS) --- */
+    .sa-trazo {
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 2;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .sa-trazo path {
+      fill: none;
+      stroke: var(--sa-acento);
+      stroke-width: 1;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      transition: stroke-dashoffset 220ms ease-in;
+    }
+
+    .sa.abierto .sa-trazo path {
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset var(--sa-trazo) cubic-bezier(.65, 0, .35, 1);
+    }
+
+    /* --- Opciones (aparecen en cascada) --- */
+    .sa-op {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      font-size: 14.5px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: calc(var(--sa-radio) - 2px);
+      opacity: 0;
+      transform: translateY(var(--sa-oy));
+      transition: opacity 120ms ease-in, background-color 120ms;
+    }
+
+    .sa.abierto .sa-op {
+      opacity: 1;
+      transform: none;
+      transition: opacity 300ms var(--sa-curva) calc(var(--i) * var(--sa-paso) + var(--sa-inicio)),
+        transform 300ms var(--sa-curva) calc(var(--i) * var(--sa-paso) + var(--sa-inicio)),
+        background-color 120ms;
+    }
+
+    .sa-op.activo {
+      background: var(--sa-fondo-hover);
+    }
+
+    .sa-op[aria-selected="true"] {
+      color: var(--sa-acento);
+      font-weight: 600;
+    }
+
+    .sa-op[aria-selected="true"]::after {
+      content: "";
+      flex: none;
+      width: 5px;
+      height: 9px;
+      border: solid currentColor;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg) translate(-1px, -1px);
+    }
+
+    .sa-op[aria-disabled="true"] {
+      opacity: .4 !important;
+      cursor: not-allowed;
+    }
+
+    /* --- Accesibilidad: sin movimiento si el usuario lo pide --- */
+    @media (prefers-reduced-motion: reduce) {
+
+      .sa-panel,
+      .sa-list,
+      .sa.abierto .sa-list,
+      .sa-op,
+      .sa.abierto .sa-op,
+      .sa-chev,
+      .sa-trazo path,
+      .sa.abierto .sa-trazo path {
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+      }
     }
   </style>
 </head>
 
 <body>
 
-
-
   <!-- Menú Removido - Usando navigation.js global -->
 
   <div class="container">
 
     <!-- Header -->
-    <div class="header">
-      <h1><i class="fas fa-chart-line"></i> Registro de Ventas</h1>
-      <p>Gestiona tus ventas y pagos de manera eficiente</p>
-    </div>
+    <header class="header">
+      <div class="header-icon"><i class="fas fa-chart-line"></i></div>
+      <div class="header-text">
+        <h1>Registro de Ventas</h1>
+        <p>Gestiona tus ventas y pagos de manera eficiente</p>
+      </div>
+    </header>
 
-    <!-- 🔥 BÚSQUEDA MEJORADA CON FILTRO DE DÍA -->
+    <!-- Búsqueda y filtros -->
     <div class="search-container">
       <input type="text" class="search-input" id="searchInput" placeholder="🔍 Buscar cliente o producto...">
 
       <div class="day-filter-wrapper">
-        <select class="day-filter-select" id="dayFilterType">
+        <select class="day-filter-select" id="dayFilterType" data-animado>
           <option value="">📅 Filtrar por…</option>
           <option value="semanal">Semanal</option>
           <option value="quincenal">Quincenal</option>
           <option value="mensual">Mensual</option>
         </select>
 
-        <select class="day-filter-select" id="dayFilterInput" disabled>
+        <select class="day-filter-select" id="dayFilterInput" disabled data-animado>
           <option value="">Elige un día</option>
         </select>
 
@@ -2070,7 +1601,10 @@
           <span>Limpiar</span>
         </button>
       </div>
+    </div>
 
+    <!-- Workspace: formulario + tarjetas -->
+    <div class="workspace">
 
       <!-- Formulario de ventas -->
       <div class="form-container">
@@ -2093,7 +1627,7 @@
               <label for="productName">Producto</label>
               <div class="custom-dropdown" id="productDropdown">
                 <div class="selected-products" id="selectedProducts"
-                  style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                  style="margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
 
                 <div class="dropdown-trigger">
                   <input type="text" id="productNameDisplay" placeholder="Seleccioná un producto" readonly>
@@ -2125,7 +1659,7 @@
 
             <div class="form-group full-width">
               <label>Tipo de Pago</label>
-              <select id="paymentType" class="form-control" onchange="togglePaymentFields()">
+              <select id="paymentType" class="form-control" onchange="togglePaymentFields()" data-animado>
                 <option value="contado" selected>Contado</option>
                 <option value="cuotas">A Cuotas</option>
               </select>
@@ -2133,7 +1667,7 @@
 
             <div class="form-group full-width" id="facturacionContainer" style="display: none;">
               <label>Facturación Electrónica (Matias API)</label>
-              <select id="facturacionType" class="form-control" onchange="toggleFacturacionFields()">
+              <select id="facturacionType" class="form-control" onchange="toggleFacturacionFields()" data-animado>
                 <option value="ninguna" selected>Ninguna</option>
                 <option value="pos">Factura POS</option>
                 <option value="electronica">Factura Electrónica</option>
@@ -2146,16 +1680,14 @@
               <input type="email" id="facturacionEmail" placeholder="cliente@correo.com">
             </div>
 
-
             <div class="form-group full-width credit-fields" style="display: none;">
               <label for="installments">Número de Cuotas</label>
               <input type="number" id="installments" placeholder="Ej: 12 o 4.5" min="0.01" step="0.01">
             </div>
 
-            <!-- Dentro del formulario, reemplazar la sección de días de pago -->
             <div class="form-group full-width credit-fields">
               <label>Plan de Pago</label>
-              <select id="paymentPlanType" class="form-control">
+              <select id="paymentPlanType" class="form-control" data-animado>
                 <option value="">Selecciona un plan</option>
                 <option value="diario">Diario</option>
                 <option value="semanal">Semanal</option>
@@ -2165,13 +1697,11 @@
             </div>
 
             <div class="form-group full-width credit-fields" id="paymentDaysContainer" style="display: none;">
-
-
               <label id="paymentDaysLabel">Días de pago</label>
               <select id="paymentDaysSelect" class="form-control" multiple size="5">
                 <!-- Se llenará dinámicamente -->
               </select>
-              <small style="color: #7f8c8d; margin-top: 8px; display: block;">
+              <small style="color: #7c7466; margin-top: 8px; display: block;">
                 Mantén presionado Ctrl (o Cmd en Mac) para seleccionar múltiples días
               </small>
             </div>
@@ -2183,8 +1713,6 @@
               <input type="number" id="advancePayment" placeholder="0" min="0" step="1000">
             </div>
 
-            <!-- Valor de cada cuota (auto-calculado) -->
-            <!-- Valor de cada cuota (AHORA EDITABLE) -->
             <div class="form-group full-width credit-fields">
               <label for="installmentAmount">Valor por cuota</label>
               <input type="number" id="installmentAmount" placeholder="Se calculará automáticamente" step="1000">
@@ -2214,7 +1742,7 @@
         <h3 class="form-title">Registrar Nuevo Abono</h3>
         <div class="form-group full-width">
           <label for="paymentDateSection">Fecha del Abono</label>
-          <input type="date" id="paymentDateSection" class="input">
+          <input type="date" id="paymentDateSection" class="form-control">
         </div>
         <div class="button-group">
           <button type="button" class="btn btn-success" id="addPayment">
@@ -2224,84 +1752,92 @@
       </div>
 
       <!-- Listado de ventas -->
-      <div class="sales-grid" id="salesList">
-        <div class="loading">
-          <div class="spinner"></div>
+      <section class="sales-section">
+        <div class="section-head">
+          <h2><i class="fas fa-receipt"></i> Ventas activas</h2>
+          <p>Panel de seguimiento de pagos</p>
         </div>
+
+        <div class="sales-grid" id="salesList">
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Modal de pago -->
+  <div class="modal" id="paymentModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Registrar Pago</h3>
+        <button class="modal-close" id="closePaymentModal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="form-group">
+        <label for="paymentAmount">Monto del Pago</label>
+        <input type="number" id="paymentAmount" placeholder="0" min="0" step="1000" required>
+      </div>
+      <div class="form-group">
+        <label for="paymentDate">Fecha del Pago</label>
+        <input type="date" id="paymentDate" required>
+      </div>
+      <div class="button-group">
+        <button type="button" class="btn btn-success" id="confirmPayment">
+          <i class="fas fa-check"></i> Registrar Pago
+        </button>
+        <button type="button" class="btn btn-secondary" id="cancelPayment">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
       </div>
     </div>
+  </div>
 
-    <!-- Modal de pago -->
-    <div class="modal" id="paymentModal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 class="modal-title">Registrar Pago</h3>
-          <button class="modal-close" id="closePaymentModal">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="form-group">
-          <label for="paymentAmount">Monto del Pago</label>
-          <input type="number" id="paymentAmount" placeholder="0" min="0" step="1000" required>
-        </div>
-        <div class="form-group">
-          <label for="paymentDate">Fecha del Pago</label>
-          <input type="date" id="paymentDate" required>
-        </div>
-        <div class="button-group">
-          <button type="button" class="btn btn-success" id="confirmPayment">
-            <i class="fas fa-check"></i> Registrar Pago
-          </button>
-          <button type="button" class="btn btn-secondary" id="cancelPayment">
-            <i class="fas fa-times"></i> Cancelar
-          </button>
-        </div>
+  <!-- Calendario modal -->
+  <div id="calendarModal" class="calendar-modal">
+    <div class="calendar-content">
+      <div class="calendar-header">
+        <h3>Seleccioná los días de pago</h3>
+        <button type="button" id="closeCalendar" class="btn-close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div id="calendarBody" class="calendar-body"></div>
+      <div class="calendar-footer">
+        <button type="button" id="confirmDays" class="btn btn-success">
+          <i class="fas fa-check"></i> Establecer días
+        </button>
       </div>
     </div>
+  </div>
 
-    <!-- Calendario modal -->
-    <div id="calendarModal" class="calendar-modal">
-      <div class="calendar-content">
-        <div class="calendar-header">
-          <h3>Seleccioná los días de pago</h3>
-          <button type="button" id="closeCalendar" class="btn-close">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div id="calendarBody" class="calendar-body"></div>
-        <div class="calendar-footer">
-          <button type="button" id="confirmDays" class="btn btn-success">
-            <i class="fas fa-check"></i> Establecer días
-          </button>
-        </div>
+  <!-- Modal scanner -->
+  <div id="scannerModal" class="scanner-modal hidden">
+    <div class="scanner-box">
+      <h3>Enfoca el código QR</h3>
+      <video id="scannerVideo" playsinline></video>
+      <div class="scanner-actions">
+        <button type="button" id="btnFlipCamera" class="btn btn-warning">
+          <i class="fas fa-sync-alt"></i> Voltear Cámara
+        </button>
+        <button type="button" id="btnStopScan" class="btn btn-danger">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
       </div>
     </div>
+  </div>
 
-    <!-- Modal scanner -->
-    <!-- Modal scanner -->
-    <div id="scannerModal" class="scanner-modal hidden">
-      <div class="scanner-box">
-        <h3>Enfoca el código QR</h3>
-        <video id="scannerVideo" playsinline></video>
-        <div class="scanner-actions">
-          <button type="button" id="btnFlipCamera" class="btn btn-warning">
-            <i class="fas fa-sync-alt"></i> Voltear Cámara
-          </button>
-          <button type="button" id="btnStopScan" class="btn btn-danger">
-            <i class="fas fa-times"></i> Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    <script src="loader.js"></script>
-    <script src="utils/barcodeScanner.js"></script>
-    <script src="utils/notifications.js" type="module"></script>
-    <script src="utils/navigation.js" type="module"></script>
-    <script src="dashboard/categories.js" type="module"></script>
-    <script src="main.js" type="module"></script>
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="loader.js"></script>
+  <script src="utils/selectAnimado.js"></script>
+  <script src="utils/barcodeScanner.js"></script>
+  <script src="utils/notifications.js" type="module"></script>
+  <script src="utils/navigation.js" type="module"></script>
+  <script src="dashboard/categories.js" type="module"></script>
+  <script src="main.js" type="module"></script>
 </body>
 
 </html>
