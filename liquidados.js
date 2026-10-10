@@ -434,47 +434,40 @@ function openInvoiceTypeModal(saleId) {
     const sale = filteredSales.find(s => s._id === saleId);
     const cliente = sale ? sale.clientName : '';
 
-    const modal = document.createElement('div');
+    const modal = document.createElement('dialog');
     modal.id = 'invoiceTypeModal';
-    modal.className = 'modal show';
+    modal.setAttribute('data-modal-animado', '');
 
     modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title"><i class="fas fa-file-invoice"></i> Tipo de factura</h3>
-                <button class="modal-close" onclick="closeInvoiceTypeModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+            <h2><i class="fas fa-file-invoice"></i> Tipo de factura</h2>
             <div class="form-group">
                 <label>Cliente</label>
                 <input type="text" value="${(cliente || '').replace(/"/g, '&quot;')}" readonly
                     style="background: var(--beige-100); cursor: not-allowed;">
             </div>
-            <p style="font-size: 14px; color: var(--muted); margin: 4px 0 6px;">
+            <p>
                 ¿Qué tipo de factura deseas generar?
             </p>
-            <div class="button-group">
-                <button type="button" class="btn btn-primary" onclick="elegirFacturaPOS('${saleId}')">
+            <div class="ma-acciones">
+                <button type="button" class="ma-boton sec" onclick="elegirFacturaPOS('${saleId}')">
                     <i class="fas fa-print"></i> Factura POS
                 </button>
-                <button type="button" class="btn btn-success" onclick="openElectronicEmailModal('${saleId}')">
+                <button type="button" class="ma-boton" onclick="openElectronicEmailModal('${saleId}')">
                     <i class="fas fa-envelope"></i> Electrónica
                 </button>
             </div>
-        </div>
     `;
 
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeInvoiceTypeModal();
-    });
-
     document.body.appendChild(modal);
+    if (window.ModalAnimado) window.ModalAnimado.abrir('invoiceTypeModal');
+    else modal.showModal();
 }
 
 window.closeInvoiceTypeModal = function () {
     const modal = document.getElementById('invoiceTypeModal');
-    if (modal) modal.remove();
+    if (!modal) return;
+    if (window.ModalAnimado) window.ModalAnimado.cerrar('invoiceTypeModal');
+    setTimeout(() => modal.remove(), 320);
 };
 
 window.elegirFacturaPOS = function (saleId) {
@@ -493,44 +486,37 @@ window.elegirFacturaPOS = function (saleId) {
 function openElectronicEmailModal(saleId) {
     closeElectronicEmailModal();
 
-    const modal = document.createElement('div');
+    const modal = document.createElement('dialog');
     modal.id = 'electronicEmailModal';
-    modal.className = 'modal show';
+    modal.setAttribute('data-modal-animado', '');
 
     modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title"><i class="fas fa-envelope"></i> Factura electrónica</h3>
-                <button class="modal-close" onclick="closeElectronicEmailModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
+            <h2><i class="fas fa-envelope"></i> Factura electrónica</h2>
             <div class="form-group">
                 <label for="electronicInvoiceEmail">Correo para enviar la factura</label>
                 <input type="email" id="electronicInvoiceEmail" placeholder="cliente@correo.com" autocomplete="email">
             </div>
-            <div class="button-group">
-                <button type="button" class="btn btn-success" onclick="enviarFacturaElectronica('${saleId}')">
-                    <i class="fas fa-paper-plane"></i> Enviar
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="volverATipoFactura('${saleId}')">
+            <div class="ma-acciones">
+                <button type="button" class="ma-boton sec" onclick="volverATipoFactura('${saleId}')">
                     <i class="fas fa-arrow-left"></i> Volver
                 </button>
+                <button type="button" class="ma-boton" onclick="enviarFacturaElectronica('${saleId}')">
+                    <i class="fas fa-paper-plane"></i> Enviar
+                </button>
             </div>
-        </div>
     `;
 
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeElectronicEmailModal();
-    });
-
     document.body.appendChild(modal);
+    if (window.ModalAnimado) window.ModalAnimado.abrir('electronicEmailModal');
+    else modal.showModal();
     setTimeout(() => document.getElementById('electronicInvoiceEmail')?.focus(), 60);
 }
 
 window.closeElectronicEmailModal = function () {
     const modal = document.getElementById('electronicEmailModal');
-    if (modal) modal.remove();
+    if (!modal) return;
+    if (window.ModalAnimado) window.ModalAnimado.cerrar('electronicEmailModal');
+    setTimeout(() => modal.remove(), 320);
 };
 
 window.volverATipoFactura = function (saleId) {

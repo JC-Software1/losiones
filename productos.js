@@ -83,12 +83,15 @@ function showBarcode(id, name, price) {
     document.getElementById('barcodeTitle').textContent = name;
     document.getElementById('barcodePrice').textContent =
         `Precio: $${Number(price).toLocaleString()}`;
-    document.getElementById('barcodeModal').classList.add('show');
+    if (window.ModalAnimado) window.ModalAnimado.abrir('barcodeModal');
+    else document.getElementById('barcodeModal').showModal();
 }
 
-function closeBarcodeModal(e) {
-    if (!e || e.target.id === 'barcodeModal') {
-        document.getElementById('barcodeModal').classList.remove('show');
+function closeBarcodeModal() {
+    if (window.ModalAnimado) window.ModalAnimado.cerrar('barcodeModal');
+    else {
+        const d = document.getElementById('barcodeModal');
+        if (d.open) d.close();
     }
 }
 
@@ -1217,15 +1220,18 @@ window.openBulkBarcodeModal = function () {
     updateLayoutPreview();
 
     // Mostrar modal
-    document.getElementById('bulkBarcodeModal').classList.add('show');
+    if (window.ModalAnimado) window.ModalAnimado.abrir('bulkBarcodeModal');
+    else document.getElementById('bulkBarcodeModal').showModal();
 };
 
 // Cerrar modal
-window.closeBulkBarcodeModal = function (event) {
-    if (!event || event.target.id === 'bulkBarcodeModal') {
-        document.getElementById('bulkBarcodeModal').classList.remove('show');
-        bulkSelectedProducts = [];
+window.closeBulkBarcodeModal = function () {
+    if (window.ModalAnimado) window.ModalAnimado.cerrar('bulkBarcodeModal');
+    else {
+        const d = document.getElementById('bulkBarcodeModal');
+        if (d.open) d.close();
     }
+    bulkSelectedProducts = [];
 };
 
 // Poblar filtros con categorías, marcas y tallas únicas

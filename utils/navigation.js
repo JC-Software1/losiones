@@ -56,7 +56,99 @@
         }
     }
 
+    function currentNavItems() {
+        const isAdmin = localStorage.getItem('userType') === '2' || localStorage.getItem('userType') === '3';
+        const isSuperAdmin = localStorage.getItem('userType') === '3';
+        const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+
+        const navItems = [
+            { href: 'categories.html', icon: 'fas fa-shopping-cart', text: 'Ventas' },
+            { href: 'abonos.html', icon: 'fas fa-receipt', text: 'Abonos' },
+            { href: 'vendidos.html', icon: 'fas fa-tags', text: 'Vendidos' },
+            { href: 'historial.html', icon: 'fas fa-history', text: 'Historial' },
+            { href: 'inventario.html', icon: 'fas fa-warehouse', text: 'Inventario' },
+            { href: 'productos.html', icon: 'fas fa-box', text: 'Productos' },
+            { href: 'liquidados.html', icon: 'fas fa-check-double', text: 'Liquidados' },
+            { href: 'gastos.html', icon: 'fas fa-wallet', text: 'Gastos' },
+            { href: 'liquidacion.html', icon: 'fas fa-cash-register', text: 'Liquidación' },
+            { href: 'historial-liquidaciones.html', icon: 'fas fa-list-alt', text: 'His. Liq.' },
+            { href: 'ajustes.html', icon: 'fas fa-cogs', text: 'Ajustes' }
+        ];
+
+        const adminItems = [
+            { href: 'admin.html', icon: 'fas fa-user-cog', text: 'Admin' },
+            { href: 'GestorVendedores.html', icon: 'fas fa-users-cog', text: 'Vendedores' },
+            { href: 'inspeccion-liquidacion.html', icon: 'fas fa-search-dollar', text: 'Inspección' },
+            { href: 'saleDetails.html', icon: 'fas fa-info-circle', text: 'Detalles' },
+            { href: 'fix-liquidations.html', icon: 'fas fa-tools', text: 'Fix Liq.' }
+        ];
+
+        let navHtml = '';
+        navItems.forEach(item => {
+            if (item.href !== currentPath) {
+                navHtml += `
+                    <a href="${item.href}" class="nav-item">
+                        <i class="${item.icon}"></i>
+                        <span>${item.text}</span>
+                    </a>`;
+            }
+        });
+
+        if (isAdmin) {
+            adminItems.forEach(item => {
+                if (item.href !== currentPath) {
+                    navHtml += `
+                        <a href="${item.href}" class="nav-item admin-exclusive">
+                            <i class="${item.icon}"></i>
+                            <span>${item.text}</span>
+                        </a>`;
+                }
+            });
+        }
+
+        if (isSuperAdmin && currentPath !== 'superAdmin.html') {
+            navHtml += `
+                <a href="superAdmin.html" class="nav-item admin-exclusive">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Super Admin</span>
+                </a>`;
+        }
+
+        return navHtml;
+    }
+
+    function renderNavInto(dlg) {
+        // El init de ModalAnimado mueve los hijos al panel; re-renderizar cada vez
+        // destruye la estructura animada, así que solo se pinta la primera vez.
+        if (dlg._maListo) return;
+        dlg.innerHTML = `
+            <button class="ma-x" type="button" data-modal-cerrar aria-label="Cerrar"></button>
+            <h2>Navegación Global</h2>
+            <p>Selecciona un destino</p>
+            <div class="nav-grid">
+                ${currentNavItems()}
+                <a href="#" class="nav-item logout" onclick="handleLogout(event)">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Salir</span>
+                </a>
+            </div>
+        `;
+    }
+
     function openNavigation() {
+        // Si el modal animado está disponible, usar <dialog> con animación de dibujo
+        if (window.ModalAnimado) {
+            let dlg = document.getElementById('globalNavDialog');
+            if (!dlg) {
+                dlg = document.createElement('dialog');
+                dlg.id = 'globalNavDialog';
+                dlg.setAttribute('data-modal-animado', '');
+                document.body.appendChild(dlg);
+            }
+            renderNavInto(dlg);
+            window.ModalAnimado.abrir('globalNavDialog');
+            return;
+        }
         if (document.getElementById('globalNavModal')) {
             const modal = document.getElementById('globalNavModal');
             modal.classList.add('show');

@@ -145,23 +145,22 @@
         </div>
     </div>
 
-    <div id="barcodeModal" onclick="closeBarcodeModal(event)">
-        <div class="barcode-box" onclick="event.stopPropagation()">
-            <h3 id="barcodeTitle">Código QR</h3>
-            <p id="barcodePrice"></p>
-            <div id="barcodeCanvas" style="display:flex;justify-content:center;"></div>
-            <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
-                <button class="btn btn-primary" onclick="downloadBarcode()">
-                    <i class="fas fa-download"></i> Descargar QR
-                </button>
-                <button class="btn btn-secondary" onclick="closeBarcodeModal()">
-                    <i class="fas fa-times"></i> Cerrar
-                </button>
-            </div>
+    <dialog id="barcodeModal" data-modal-animado>
+        <h2 id="barcodeTitle">Código QR</h2>
+        <p id="barcodePrice"></p>
+        <div id="barcodeCanvas" style="display:flex;justify-content:center;margin:8px 0 16px;"></div>
+        <div class="ma-acciones">
+            <button class="ma-boton sec" type="button" data-modal-cerrar>
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+            <button class="ma-boton" type="button" onclick="downloadBarcode()">
+                <i class="fas fa-download"></i> Descargar QR
+            </button>
         </div>
-    </div>
+    </dialog>
 
     <!-- ---------- SCRIPTS ---------- -->
+    <script src="utils/modalAnimado.js"></script>
     <script src="utils/selectAnimado.js"></script>
     <script src="utils/notifications.js" type="module"></script>
     <script type="module" src="productos.js"></script>
@@ -170,8 +169,9 @@
     <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/minified/html5-qrcode.min.js"></script>
 
     <!-- Modal para códigos de barras masivos -->
-    <div id="bulkBarcodeModal" class="modal-overlay" onclick="closeBulkBarcodeModal(event)">
-        <div class="bulk-barcode-container" onclick="event.stopPropagation()">
+    <dialog id="bulkBarcodeModal" data-modal-animado style="--ma-fondo: #ffffff; width: min(760px, calc(100vw - 32px));">
+        <button class="ma-x" type="button" data-modal-cerrar aria-label="Cerrar"></button>
+        <div class="bulk-barcode-container">
             <div class="modal-header">
                 <h2><i class="fas fa-barcode"></i> Generar Códigos de Barras Masivos</h2>
                 <button class="btn-close" onclick="closeBulkBarcodeModal()">
@@ -299,18 +299,17 @@
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button class="btn btn-success btn-lg" onclick="generateBulkBarcodes()">
-                    <i class="fas fa-download"></i> Generar y Descargar
-                </button>
-                <button class="btn btn-secondary btn-lg" onclick="closeBulkBarcodeModal()">
+            <div class="ma-acciones">
+                <button class="ma-boton sec" type="button" data-modal-cerrar>
                     <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button class="ma-boton" type="button" onclick="generateBulkBarcodes()">
+                    <i class="fas fa-download"></i> Generar y Descargar
                 </button>
             </div>
         </div>
-    </div>
-
-    <script src="utils/barcodeScanner.js"></script>
+    </dialog>
+<script src="utils/barcodeScanner.js"></script>
     <script src="utils/notifications.js" type="module"></script>
     <script src="utils/navigation.js" type="module"></script>
 </body>

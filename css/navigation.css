@@ -157,3 +157,96 @@
         grid-column: span 1;
     }
 }
+/* ---------- Menú global dentro del modal animado (<dialog>) ---------- */
+#globalNavDialog .nav-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    overflow-y: auto;
+    padding-right: 5px;
+    margin-bottom: 15px;
+}
+
+#globalNavDialog .nav-grid::-webkit-scrollbar {
+    width: 4px;
+}
+
+#globalNavDialog .nav-grid::-webkit-scrollbar-thumb {
+    background: var(--beige-300, #d8c8a8);
+    border-radius: 10px;
+}
+
+#globalNavDialog .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 5px;
+    background: var(--beige-50, #faf8f3);
+    border: 1px solid var(--border, #e7ddc9);
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--ink, #26221c);
+    transition: all 0.3s ease;
+    text-align: center;
+    min-height: 90px;
+}
+
+#globalNavDialog .nav-item i {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: var(--green-600, #2f7d5b);
+    transition: transform 0.3s ease;
+}
+
+#globalNavDialog .nav-item span {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#globalNavDialog .nav-item:hover {
+    background: var(--green-50, #eef6f1);
+    border-color: var(--green-600, #2f7d5b);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(47, 125, 91, 0.12);
+}
+
+#globalNavDialog .nav-item:hover i {
+    transform: scale(1.1);
+}
+
+#globalNavDialog .nav-item.logout {
+    grid-column: span 3;
+    background: var(--beige-100, #f2ece0);
+    border-color: var(--beige-200, #e7ddc9);
+    color: var(--danger, #b3492f);
+    flex-direction: row;
+    gap: 10px;
+    padding: 15px;
+    min-height: auto;
+}
+
+#globalNavDialog .nav-item.logout i {
+    color: var(--danger, #b3492f);
+    margin-bottom: 0;
+    font-size: 18px;
+}
+
+#globalNavDialog .nav-item.admin-exclusive {
+    border-color: var(--beige-300, #d8c8a8);
+    background: var(--green-50, #eef6f1);
+}
+
+#globalNavDialog .nav-item.admin-exclusive i {
+    color: var(--green-700, #245f46);
+}
+
+@media (max-width: 500px) {
+    #globalNavDialog .nav-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    #globalNavDialog .nav-item.logout {
+        grid-column: span 2;
+    }
+}

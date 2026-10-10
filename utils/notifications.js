@@ -68,6 +68,41 @@ export function showNotification(message, type = 'info', title = '') {
 
 export function showConfirm(message, title = '¿Estás seguro?') {
     return new Promise((resolve) => {
+        // Si el sistema de modal animado está disponible, usarlo (dialog nativo + dibujo del borde)
+        if (window.ModalAnimado) {
+            const dlg = document.createElement('dialog');
+            dlg.setAttribute('data-modal-animado', '');
+            dlg.setAttribute('data-persistente', '');
+            dlg.innerHTML = `
+                <h2>${title}</h2>
+                <p>${message}</p>
+                <div class="ma-acciones">
+                    <button class="ma-boton sec" type="button" data-ma-cancel>Cancelar</button>
+                    <button class="ma-boton" type="button" data-ma-accept>Confirmar</button>
+                </div>
+            `;
+            document.body.appendChild(dlg);
+
+            let done = false;
+            const finish = (result) => {
+                if (done) return;
+                done = true;
+                window.ModalAnimado.cerrar(dlg.id || dlg);
+                setTimeout(() => {
+                    dlg.remove();
+                    resolve(result);
+                }, 300);
+            };
+
+            dlg.querySelector('[data-ma-cancel]').onclick = () => finish(false);
+            dlg.querySelector('[data-ma-accept]').onclick = () => finish(true);
+
+            window.ModalAnimado.init(dlg);
+            dlg._maAbrir();
+            return;
+        }
+
+        // Fallback: overlay clásico
         const overlay = document.createElement('div');
         overlay.className = 'confirm-overlay';
 

@@ -779,7 +779,8 @@ async function addPayment(force = false) {
             }
         }
 
-        document.getElementById("paymentModal").classList.remove("show");
+        if (window.ModalAnimado) window.ModalAnimado.cerrar('paymentModal');
+        else document.getElementById("paymentModal").close?.();
         cancelUpdate();
         loadSales();
     } catch (error) {
@@ -837,7 +838,8 @@ function openPaymentModal(saleId) {
 
     // 2. Abrir modal y autollenar
     const modal = document.getElementById('paymentModal');
-    modal?.classList.add('show');
+    if (window.ModalAnimado) window.ModalAnimado.abrir('paymentModal');
+    else modal?.showModal?.();
     document.getElementById('paymentAmount').value = sale?.paymentPerInstallment || '';
     document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
     modal.dataset.saleId = saleId;
@@ -1489,8 +1491,14 @@ btnConf.addEventListener("click", async () => {
         btnConf.disabled = false;
     }
 });
-btnCerr.addEventListener("click", () => modal.classList.remove("show"));
-btnX.addEventListener("click", () => modal.classList.remove("show"));
+btnCerr.addEventListener("click", () => {
+    if (window.ModalAnimado) window.ModalAnimado.cerrar('paymentModal');
+    else modal.close?.();
+});
+btnX.addEventListener("click", () => {
+    if (window.ModalAnimado) window.ModalAnimado.cerrar('paymentModal');
+    else modal.close?.();
+});
 
 
 /* ---------- NUEVO SISTEMA DE SELECCIÃ"N DE DÃAS DE PAGO ---------- */
@@ -2089,58 +2097,51 @@ async function handleStandardBarcode(code) {
    MODAL DE BÚSQUEDA PARA CÓDIGOS ESTÁNDAR
    --------------------------------------------------------- */
 function showProductSearchModal(scannedCode, products) {
-    const modal = document.createElement('div');
+    closeProductSearchModal();
+    const modal = document.createElement('dialog');
     modal.id = 'productSearchModal';
-    modal.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;
-        z-index: 10000;
-    `;
+    modal.setAttribute('data-modal-animado', '');
 
     modal.innerHTML = `
-        <div style="
-            background: white; border-radius: 15px; padding: 25px;
-            max-width: 500px; width: 90%; max-height: 80%; overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        ">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="color: #2c3e50; margin: 0;">Código: ${scannedCode}</h3>
-                <button onclick="closeProductSearchModal()" style="
-                    background: none; border: none; font-size: 24px; cursor: pointer;
-                    color: #7f8c8d; padding: 5px;
-                ">×</button>
-            </div>
-            
-            <p style="color: #7f8c8d; margin-bottom: 20px;">
+            <h2>Código: ${scannedCode}</h2>
+            <p>
                 Este código no está en tu inventario. Selecciona el producto correspondiente:
             </p>
-            
+
             <input type="text" id="productSearchInput" placeholder="Buscar producto..." style="
-                width: 100%; padding: 12px; margin-bottom: 15px; 
-                border: 1px solid #ddd; border-radius: 8px; font-size: 16px;
+                width: 100%; padding: 12px 14px; margin-bottom: 15px; box-sizing: border-box;
+                border: 1px solid var(--border, #e7ddc9); border-radius: 10px; font-size: 15px;
+                background: var(--beige-50, #faf8f3); color: var(--ink, #26221c);
             ">
-            
+
             <div id="productSearchResults" style="
-                max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;
+                max-height: 250px; overflow-y: auto; border: 1px solid var(--border, #e7ddc9); border-radius: 10px;
+                background: #fff;
             "></div>
-            
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-                <h4 style="color: #2c3e50; margin-bottom: 15px;">O ingresar manualmente:</h4>
+
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border, #e7ddc9);">
+                <h4 style="color: var(--black, #161310); margin: 0 0 12px; font-size: 16px;">O ingresar manualmente:</h4>
                 <input type="text" id="manualProductName" placeholder="Nombre del producto" style="
-                    width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px;
+                    width: 100%; padding: 12px 14px; margin: 0 0 10px; box-sizing: border-box;
+                    border: 1px solid var(--border, #e7ddc9); border-radius: 10px; font-size: 15px;
+                    background: var(--beige-50, #faf8f3); color: var(--ink, #26221c);
                 ">
                 <input type="number" id="manualProductPrice" placeholder="Precio" style="
-                    width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px;
+                    width: 100%; padding: 12px 14px; margin: 0 0 10px; box-sizing: border-box;
+                    border: 1px solid var(--border, #e7ddc9); border-radius: 10px; font-size: 15px;
+                    background: var(--beige-50, #faf8f3); color: var(--ink, #26221c);
                 ">
-                <button onclick="useManualProduct('${scannedCode}')" style="
-                    background: #3498db; color: white; border: none; border-radius: 8px;
-                    padding: 12px 20px; cursor: pointer; font-weight: 600; margin-top: 10px;
-                ">Usar estos datos</button>
+                <div class="ma-acciones">
+                    <button type="button" class="ma-boton sec" data-modal-cerrar>Cancelar</button>
+                    <button type="button" class="ma-boton" onclick="useManualProduct('${scannedCode}')">Usar estos datos</button>
+                </div>
             </div>
-        </div>
     `;
 
     document.body.appendChild(modal);
+
+    if (window.ModalAnimado) window.ModalAnimado.abrir('productSearchModal');
+    else modal.showModal();
 
     // Configurar búsqueda
     const searchInput = document.getElementById('productSearchInput');
@@ -2197,7 +2198,9 @@ function showProductSearchModal(scannedCode, products) {
    --------------------------------------------------------- */
 window.closeProductSearchModal = function () {
     const modal = document.getElementById('productSearchModal');
-    if (modal) modal.remove();
+    if (!modal) return;
+    if (window.ModalAnimado) window.ModalAnimado.cerrar('productSearchModal');
+    setTimeout(() => modal.remove(), 320);
 };
 
 window.selectSearchedProduct = function (productId) {

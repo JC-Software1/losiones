@@ -3075,3 +3075,227 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* ============================================================
+   Modal animado: se "dibuja" al abrirse
+   1) Las líneas del borde se dibujan desde el centro del lado superior.
+   2) El fondo del modal se despliega de arriba hacia abajo.
+   3) El contenido (título, texto, botones...) aparece en cascada.
+   Usa el elemento nativo <dialog>.
+   ============================================================ */
+.ma {
+  /* ---- Colores de la UI (blanco · negro · beige · verde) ---- */
+  --ma-fondo: #ffffff;
+  --ma-texto: var(--black, #161310);
+  --ma-suave: var(--muted, #7c7466);
+  --ma-acento: var(--green-600, #2f7d5b);
+  --ma-radio: 18px;
+
+  --ma-trazo: 900ms;
+  --ma-dur: 520ms;
+  --ma-inicio: 220ms;
+  --ma-paso: 70ms;
+  --ma-curva: cubic-bezier(.2, 0, 0, 1);
+
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 32px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ma-texto);
+  font: inherit;
+  overflow: visible;
+}
+
+.ma::backdrop {
+  background: rgba(22, 19, 16, .5);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 240ms ease-in;
+}
+
+.ma.abierto::backdrop {
+  opacity: 1;
+  transition: opacity 450ms ease-out;
+}
+
+html.ma-bloqueado {
+  overflow: hidden;
+}
+
+.ma-caja {
+  position: relative;
+}
+
+.ma-panel {
+  box-sizing: border-box;
+  padding: 26px;
+  background: var(--ma-fondo);
+  border: 1px solid var(--border, #e7ddc9);
+  border-radius: var(--ma-radio);
+  box-shadow: var(--shadow-hover, 0 18px 44px rgba(38, 34, 28, .13));
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+
+  opacity: 0;
+  clip-path: inset(0 0 100% 0 round var(--ma-radio));
+  transform: translateY(-10px);
+  transition: opacity 240ms ease-in, transform 240ms ease-in, clip-path 240ms ease-in;
+}
+
+.ma.abierto .ma-panel {
+  opacity: 1;
+  clip-path: inset(0 0 0 0 round var(--ma-radio));
+  transform: none;
+  transition: opacity var(--ma-dur) var(--ma-curva) 120ms,
+    transform var(--ma-dur) var(--ma-curva) 120ms,
+    clip-path var(--ma-dur) var(--ma-curva) 120ms;
+}
+
+.ma-trazo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 20;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ma-trazo path {
+  fill: none;
+  stroke: var(--ma-acento);
+  stroke-width: 1.5;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 240ms ease-in;
+}
+
+.ma.abierto .ma-trazo path {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--ma-trazo) cubic-bezier(.65, 0, .35, 1);
+}
+
+.ma-item {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 160ms ease-in, transform 160ms ease-in;
+}
+
+.ma.abierto .ma-item {
+  opacity: 1;
+  transform: none;
+  transition: opacity 420ms var(--ma-curva) calc(var(--i) * var(--ma-paso) + var(--ma-inicio)),
+    transform 420ms var(--ma-curva) calc(var(--i) * var(--ma-paso) + var(--ma-inicio));
+}
+
+.ma h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--black, #161310);
+  letter-spacing: -.01em;
+}
+
+.ma p {
+  margin: 0 0 16px;
+  line-height: 1.6;
+  color: var(--ma-suave);
+  font-size: 14px;
+}
+
+.ma-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.ma-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--green-600, #2f7d5b);
+  border: 1px solid var(--green-600, #2f7d5b);
+  transition: all .2s ease;
+}
+
+.ma-boton:hover {
+  background: var(--green-700, #245f46);
+}
+
+.ma-boton.sec {
+  color: var(--black, #161310);
+  background: var(--beige-100, #f2ece0);
+  border-color: var(--beige-200, #e7ddc9);
+}
+
+.ma-boton.sec:hover {
+  background: var(--beige-200, #e7ddc9);
+}
+
+.ma-boton:focus-visible,
+.ma-x:focus-visible {
+  outline: 2px solid var(--green-600, #2f7d5b);
+  outline-offset: 2px;
+}
+
+.ma-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.ma-x::before,
+.ma-x::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 2px;
+  background: var(--ma-suave);
+  border-radius: 1px;
+}
+
+.ma-x::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ma-x::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .ma::backdrop,
+  .ma.abierto::backdrop,
+  .ma-panel,
+  .ma.abierto .ma-panel,
+  .ma-item,
+  .ma.abierto .ma-item,
+  .ma-trazo path,
+  .ma.abierto .ma-trazo path {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}

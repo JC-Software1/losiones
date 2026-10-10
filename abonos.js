@@ -319,24 +319,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function showCommissionModal(totalAbonado) {
-        // Crear modal dinámicamente
-        const modal = document.createElement('div');
+        closeCommissionModal();
+        // Crear modal dinámicamente (<dialog> animado)
+        const modal = document.createElement('dialog');
         modal.id = 'commissionModal';
-        modal.className = 'modal show';
-        modal.style.zIndex = '10000';
+        modal.setAttribute('data-modal-animado', '');
 
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 450px;">
-                <div class="modal-header">
-                    <h3 class="modal-title">
+                    <h2>
                         <i class="fas fa-percentage"></i> Calcular Comisión del Cobrador
-                    </h3>
-                    <button class="modal-close" onclick="closeCommissionModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <div style="padding: 20px 0;">
+                    </h2>
                     <div class="form-group">
                         <label for="commissionPercentage" style="font-size: 16px; margin-bottom: 10px; display: block;">
                             ¿Qué porcentaje pagas al cobrador por abono?
@@ -382,21 +374,22 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </div>
                 </div>
 
-                <div class="button-group" style="margin-top: 20px;">
-                    <button class="btn btn-primary" onclick="calculateCommission(${totalAbonado})">
-                        <i class="fas fa-calculator"></i> Calcular
-                    </button>
-                    <button class="btn btn-success" onclick="saveCommissionPercentage()" style="display: none;" id="saveCommissionBtn">
-                        <i class="fas fa-save"></i> Guardar
-                    </button>
-                    <button class="btn btn-secondary" onclick="closeCommissionModal()">
+                <div class="ma-acciones">
+                    <button class="ma-boton sec" onclick="closeCommissionModal()">
                         <i class="fas fa-times"></i> Cerrar
                     </button>
+                    <button class="ma-boton sec" onclick="saveCommissionPercentage()" style="display: none;" id="saveCommissionBtn">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                    <button class="ma-boton" onclick="calculateCommission(${totalAbonado})">
+                        <i class="fas fa-calculator"></i> Calcular
+                    </button>
                 </div>
-            </div>
         `;
 
         document.body.appendChild(modal);
+        if (window.ModalAnimado) window.ModalAnimado.abrir('commissionModal');
+        else modal.showModal();
 
         // Cargar porcentaje guardado si existe
         loadSavedCommission();
@@ -482,10 +475,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     window.closeCommissionModal = function () {
         const modal = document.getElementById('commissionModal');
-        if (modal) {
-            modal.style.animation = 'fadeOut 0.2s ease';
-            setTimeout(() => modal.remove(), 200);
-        }
+        if (!modal) return;
+        if (window.ModalAnimado) window.ModalAnimado.cerrar('commissionModal');
+        setTimeout(() => modal.remove(), 320);
     };
 
     async function deletePayment(paymentId, saleId, cardElement) {

@@ -1815,50 +1815,38 @@
   </div>
 
   <!-- Modal de pago -->
-  <div class="modal" id="paymentModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">Registrar Pago</h3>
-        <button class="modal-close" id="closePaymentModal">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="form-group">
-        <label for="paymentAmount">Monto del Pago</label>
-        <input type="number" id="paymentAmount" placeholder="0" min="0" step="1000" required>
-      </div>
-      <div class="form-group">
-        <label for="paymentDate">Fecha del Pago</label>
-        <input type="date" id="paymentDate" required>
-      </div>
-      <div class="button-group">
-        <button type="button" class="btn btn-success" id="confirmPayment">
-          <i class="fas fa-check"></i> Registrar Pago
-        </button>
-        <button type="button" class="btn btn-secondary" id="cancelPayment">
-          <i class="fas fa-times"></i> Cancelar
-        </button>
-      </div>
+  <dialog id="paymentModal" data-modal-animado>
+    <button class="ma-x" type="button" id="closePaymentModal" aria-label="Cerrar"></button>
+    <h2>Registrar Pago</h2>
+    <div class="form-group">
+      <label for="paymentAmount">Monto del Pago</label>
+      <input type="number" id="paymentAmount" placeholder="0" min="0" step="1000" required>
     </div>
-  </div>
+    <div class="form-group">
+      <label for="paymentDate">Fecha del Pago</label>
+      <input type="date" id="paymentDate" required>
+    </div>
+    <div class="ma-acciones">
+      <button type="button" class="ma-boton sec" id="cancelPayment">
+        <i class="fas fa-times"></i> Cancelar
+      </button>
+      <button type="button" class="ma-boton" id="confirmPayment">
+        <i class="fas fa-check"></i> Registrar Pago
+      </button>
+    </div>
+  </dialog>
 
   <!-- Calendario modal -->
-  <div id="calendarModal" class="calendar-modal">
-    <div class="calendar-content">
-      <div class="calendar-header">
-        <h3>Seleccioná los días de pago</h3>
-        <button type="button" id="closeCalendar" class="btn-close">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div id="calendarBody" class="calendar-body"></div>
-      <div class="calendar-footer">
-        <button type="button" id="confirmDays" class="btn btn-success">
-          <i class="fas fa-check"></i> Establecer días
-        </button>
-      </div>
+  <dialog id="calendarModal" data-modal-animado>
+    <button class="ma-x" type="button" id="closeCalendar" aria-label="Cerrar"></button>
+    <h2>Seleccioná los días de pago</h2>
+    <div id="calendarBody" class="calendar-body"></div>
+    <div class="ma-acciones">
+      <button type="button" class="ma-boton" id="confirmDays">
+        <i class="fas fa-check"></i> Establecer días
+      </button>
     </div>
-  </div>
+  </dialog>
 
   <!-- Modal scanner -->
   <div id="scannerModal" class="scanner-modal hidden">
@@ -1879,7 +1867,8 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <script src="loader.js"></script>
-  <script src="utils/selectAnimado.js"></script>
+  <script src="utils/modalAnimado.js"></script>
+    <script src="utils/selectAnimado.js"></script>
   <script src="utils/barcodeScanner.js"></script>
   <script src="utils/notifications.js" type="module"></script>
   <script src="utils/navigation.js" type="module"></script>
