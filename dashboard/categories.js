@@ -1042,25 +1042,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });
 
-    document.addEventListener("click", (e) => {
-        const dropdown = document.getElementById("productDropdown");
-        const panel = document.getElementById("productDropdownPanel");
-        const trigger = document.querySelector(".dropdown-trigger");
-
-        if (!dropdown) return;
-
-        // Si hacen clic en el trigger, abrir/cerrar
-        if (trigger.contains(e.target)) {
-            panel.classList.toggle("hidden");
-            trigger.classList.toggle("active");
-        }
-
-        // Si hacen clic fuera, cerrar
-        if (!dropdown.contains(e.target)) {
-            panel.classList.add("hidden");
-            trigger.classList.remove("active");
-        }
-    });
+    // El panel animado de productos (abrir/cerrar, dirección y borde)
+    // lo gestiona utils/selectAnimado.js a través de data-sa-panel.
 });
 
 async function loadProductsForDropdown() {
@@ -1163,6 +1146,10 @@ async function loadProductsForDropdown() {
 
                 listContainer.appendChild(item);
             });
+
+            // Reajustar el panel animado si cambia la altura de la lista
+            const dd = document.getElementById("productDropdown");
+            if (dd && dd._saReajustar) dd._saReajustar();
         }
 
         // Búsqueda en tiempo real
@@ -1203,6 +1190,10 @@ function selectProduct(product, quantity = 1) {
     }
     renderSelectedProducts();
     updateTotalPrice();
+
+    // Cerrar el panel animado de productos tras agregar
+    const dropdown = document.getElementById("productDropdown");
+    if (dropdown && dropdown._saCerrar) dropdown._saCerrar(false);
 }
 
 function renderSelectedProducts() {
@@ -1442,10 +1433,13 @@ function removeSelectedProduct(index) {
 }
 
 function toggleDropdown() {
-    const panel = document.getElementById("productDropdownPanel");
-    const trigger = document.querySelector(".dropdown-trigger");
-    panel.classList.toggle("hidden");
-    trigger.classList.toggle("active");
+    const dropdown = document.getElementById("productDropdown");
+    if (!dropdown) return;
+    if (dropdown.classList.contains("abierto")) {
+        if (dropdown._saCerrar) dropdown._saCerrar(false);
+    } else if (dropdown._saAbrir) {
+        dropdown._saAbrir();
+    }
 }
 
 window.editProductFromDropdown = function (productId) {

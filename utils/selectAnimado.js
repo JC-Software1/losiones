@@ -1,23 +1,106 @@
-/* Convierte <select data-animado> en un menú cuyo panel se "arma" al abrirse:
-   se dibujan las líneas del borde, se despliega el fondo y aparecen las opciones.
-   El <select> original sigue existiendo (oculto y sincronizado): formularios,
-   .value y el evento 'change' funcionan igual.
+/* Sistema de "select/panel animado": el panel se arma al abrirse.
+   1) Las líneas del borde se dibujan desde el botón hacia el lado opuesto.
+   2) El fondo se despliega siguiendo esa dirección.
+   3) Las opciones aparecen en cascada.
 
-   Opciones en el <select>:
-     data-direccion="abajo|arriba|derecha|izquierda"  fuerza la dirección
-     (sin esto, elige sola según el espacio disponible)
-   Opción en un contenedor (modal, panel con scroll...):
-     data-sa-limite   usa ese contenedor, en vez de la ventana, para medir el espacio */
+   Uso:
+     - <select data-animado>  => se convierte en un menú animado.
+       · El <select> original sigue existiendo (oculto y sincronizado):
+         formularios, .value y el evento 'change' funcionan igual.
+       · data-direccion="abajo|arriba|derecha|izquierda" fuerza la dirección.
+       · data-sa-limite en un contenedor mide el espacio contra ese contenedor.
+     - Panel propio (p. ej. el selector de productos):
+       · Marca el contenedor con class="sa" y data-sa-panel.
+       · Dentro: un botón .sa-btn y un panel .sa-panel.
+         El .sa-panel contiene un .sa-list (superficie que se despliega)
+         y un <svg class="sa-trazo"> con dos <path>.
+     - Los selects múltiples ([multiple]) se dejan intactos. */
 (function () {
   var uid = 0;
   var NS = 'http://www.w3.org/2000/svg';
 
   function crear(tag, clase) {
     var e = document.createElement(tag);
-    e.className = clase;
+    if (clase) e.className = clase;
     return e;
   }
 
+  function svgConTrazos() {
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'sa-trazo');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    var g = document.createElementNS(NS, 'g');
+    var a = document.createElementNS(NS, 'path');
+    var b = document.createElementNS(NS, 'path');
+    a.setAttribute('pathLength', '1');
+    b.setAttribute('pathLength', '1');
+    g.appendChild(a);
+    g.appendChild(b);
+    svg.appendChild(g);
+    return { svg: svg, g: g, a: a, b: b };
+  }
+
+  /* Dibuja el borde del panel. El cálculo asume apertura "abajo" y luego gira. */
+  function dibujarTrazo(ctx, w, h, dir) {
+    if (!ctx.g || !w || !h) return;
+    var horiz = dir === 'derecha' || dir === 'izquierda';
+    var lw = horiz ? h : w, lh = horiz ? w : h;
+    var radio = parseFloat(getComputedStyle(ctx.wrap).getPropertyValue('--sa-radio')) || 10;
+    var r = Math.max(0, Math.min(radio, lw / 2, lh / 2) - 0.5);
+    var x0 = 0.5, y0 = 0.5, x1 = lw - 0.5, y1 = lh - 0.5, cx = lw / 2;
+
+    ctx.a.setAttribute('d',
+      'M' + cx + ',' + y0 + ' H' + (x1 - r) +
+      ' A' + r + ',' + r + ' 0 0 1 ' + x1 + ',' + (y0 + r) +
+      ' V' + (y1 - r) +
+      ' A' + r + ',' + r + ' 0 0 1 ' + (x1 - r) + ',' + y1 + ' H' + cx);
+    ctx.b.setAttribute('d',
+      'M' + cx + ',' + y0 + ' H' + (x0 + r) +
+      ' A' + r + ',' + r + ' 0 0 0 ' + x0 + ',' + (y0 + r) +
+      ' V' + (y1 - r) +
+      ' A' + r + ',' + r + ' 0 0 0 ' + (x0 + r) + ',' + y1 + ' H' + cx);
+
+    var giro = '';
+    if (dir === 'arriba') giro = 'rotate(180 ' + (w / 2) + ' ' + (h / 2) + ')';
+    else if (dir === 'derecha') giro = 'translate(0 ' + h + ') rotate(-90)';
+    else if (dir === 'izquierda') giro = 'translate(' + w + ' 0) rotate(90)';
+    ctx.g.setAttribute('transform', giro);
+
+    ctx.svg.setAttribute('width', w);
+    ctx.svg.setAttribute('height', h);
+    ctx.svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+  }
+
+  /* Elige la dirección según el espacio disponible y dibuja el borde. */
+  function ajustarPanel(ctx, lista) {
+    if (lista) lista.style.maxHeight = '';
+    var wrap = ctx.wrap;
+    var btn = ctx.btn;
+    var panel = ctx.panel;
+    var lim = wrap.closest('[data-sa-limite]');
+    var caja = lim ? lim.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+    var r = btn.getBoundingClientRect();
+    var alto = panel.offsetHeight;
+    var abajo = caja.bottom - r.bottom - 12;
+    var arriba = r.top - caja.top - 12;
+    var dir = wrap.dataset.direccion ||
+      ((abajo >= alto || abajo >= arriba) ? 'abajo' : 'arriba');
+    wrap.dataset.dir = dir;
+
+    if (lista && (dir === 'abajo' || dir === 'arriba')) {
+      var esp = dir === 'abajo' ? abajo : arriba;
+      lista.style.maxHeight = Math.max(140, Math.min(460, esp)) + 'px';
+    } else {
+      wrap.dataset.alin = (caja.bottom - r.top - 12 >= alto) ? 'ini' : 'fin';
+    }
+    dibujarTrazo(ctx, panel.offsetWidth, panel.offsetHeight, dir);
+    if (lista) void lista.offsetHeight;
+  }
+
+  /* ------------------------------------------------------------------
+     Convierte un <select data-animado> en menú animado
+     ------------------------------------------------------------------ */
   function init(sel) {
     if (sel.dataset.saListo) return;
     if (sel.multiple) return;
@@ -44,17 +127,9 @@
     lista.tabIndex = -1;
     lista.setAttribute('role', 'listbox');
 
-    var svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('class', 'sa-trazo');
-    svg.setAttribute('aria-hidden', 'true');
-    svg.setAttribute('focusable', 'false');
-    var g = document.createElementNS(NS, 'g');
-    var trazoA = document.createElementNS(NS, 'path');
-    var trazoB = document.createElementNS(NS, 'path');
-    [trazoA, trazoB].forEach(function (p) { p.setAttribute('pathLength', '1'); g.appendChild(p); });
-    svg.appendChild(g);
+    var trazos = svgConTrazos();
     panel.appendChild(lista);
-    panel.appendChild(svg);
+    panel.appendChild(trazos.svg);
 
     if (sel.id) {
       var lb = document.querySelector('label[for="' + sel.id + '"]');
@@ -66,6 +141,7 @@
       }
     }
 
+    var ctx = { wrap: wrap, btn: btn, panel: panel, svg: trazos.svg, g: trazos.g, a: trazos.a, b: trazos.b };
     var items = [];
     var activo = -1;
     var anchoAlAbrir = 0;
@@ -93,8 +169,7 @@
         var pos = 0;
         items.forEach(function (it, k) { if (it.i === idxSeleccionado) pos = k; });
         mover(pos);
-        var h = lista.offsetHeight;
-        if (panel.offsetWidth && h) trazar(panel.offsetWidth, panel.offsetHeight, wrap.dataset.dir || 'abajo');
+        ajustarPanel(ctx, lista);
       } else {
         activo = -1;
       }
@@ -131,57 +206,6 @@
       return desde;
     }
 
-    function trazar(w, h, dir) {
-      var horiz = dir === 'derecha' || dir === 'izquierda';
-      var lw = horiz ? h : w, lh = horiz ? w : h;
-      var radio = parseFloat(getComputedStyle(wrap).getPropertyValue('--sa-radio')) || 10;
-      var r = Math.max(0, Math.min(radio, lw / 2, lh / 2) - 0.5);
-      var x0 = 0.5, y0 = 0.5, x1 = lw - 0.5, y1 = lh - 0.5, cx = lw / 2;
-
-      trazoA.setAttribute('d',
-        'M' + cx + ',' + y0 + ' H' + (x1 - r) +
-        ' A' + r + ',' + r + ' 0 0 1 ' + x1 + ',' + (y0 + r) +
-        ' V' + (y1 - r) +
-        ' A' + r + ',' + r + ' 0 0 1 ' + (x1 - r) + ',' + y1 + ' H' + cx);
-      trazoB.setAttribute('d',
-        'M' + cx + ',' + y0 + ' H' + (x0 + r) +
-        ' A' + r + ',' + r + ' 0 0 0 ' + x0 + ',' + (y0 + r) +
-        ' V' + (y1 - r) +
-        ' A' + r + ',' + r + ' 0 0 0 ' + (x0 + r) + ',' + y1 + ' H' + cx);
-
-      var giro = '';
-      if (dir === 'arriba') giro = 'rotate(180 ' + (w / 2) + ' ' + (h / 2) + ')';
-      else if (dir === 'derecha') giro = 'translate(0 ' + h + ') rotate(-90)';
-      else if (dir === 'izquierda') giro = 'translate(' + w + ' 0) rotate(90)';
-      g.setAttribute('transform', giro);
-
-      svg.setAttribute('width', w);
-      svg.setAttribute('height', h);
-      svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
-    }
-
-    function posicionar() {
-      lista.style.maxHeight = '';
-      var lim = wrap.closest('[data-sa-limite]');
-      var caja = lim ? lim.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
-      var r = btn.getBoundingClientRect();
-      var alto = lista.offsetHeight;
-      var abajo = caja.bottom - r.bottom - 12;
-      var arriba = r.top - caja.top - 12;
-      var dir = sel.dataset.direccion ||
-                ((abajo >= alto || abajo >= arriba) ? 'abajo' : 'arriba');
-      wrap.dataset.dir = dir;
-
-      if (dir === 'abajo' || dir === 'arriba') {
-        var esp = dir === 'abajo' ? abajo : arriba;
-        lista.style.maxHeight = Math.max(120, Math.min(300, esp)) + 'px';
-      } else {
-        wrap.dataset.alin = (caja.bottom - r.top - 12 >= alto) ? 'ini' : 'fin';
-      }
-      trazar(panel.offsetWidth, panel.offsetHeight, dir);
-      void lista.offsetHeight;
-    }
-
     function fuera(e) { if (!wrap.contains(e.target)) cerrar(false); }
     function alRedimensionar() { if (window.innerWidth !== anchoAlAbrir) cerrar(false); }
 
@@ -190,7 +214,7 @@
       [].forEach.call(document.querySelectorAll('.sa.abierto'), function (w) {
         if (w._saCerrar) w._saCerrar(false);
       });
-      posicionar();
+      ajustarPanel(ctx, lista);
       wrap.classList.add('abierto');
       btn.setAttribute('aria-expanded', 'true');
       var pos = 0;
@@ -211,6 +235,7 @@
       if (devolverFoco) btn.focus();
     }
     wrap._saCerrar = cerrar;
+    wrap._saAbrir = abrir;
 
     function elegir(pos) {
       var it = items[pos];
@@ -243,7 +268,7 @@
       for (var k = 0; k < items.length; k++) {
         var p = (desde + k) % items.length;
         if (items[p].li.textContent.toLowerCase().indexOf(texto) === 0 &&
-            !items[p].li.hasAttribute('aria-disabled')) { mover(p); return; }
+          !items[p].li.hasAttribute('aria-disabled')) { mover(p); return; }
       }
     }
 
@@ -280,7 +305,7 @@
 
     construir();
     sel.addEventListener('change', pintar);
-    if (sel.form) sel.form.addEventListener('reset', function () { setTimeout(function () { construir(); }, 0); });
+    if (sel.form) sel.form.addEventListener('reset', function () { setTimeout(construir, 0); });
 
     var mo = new MutationObserver(function () { construir(); });
     mo.observe(sel, { childList: true, subtree: false, attributes: true, attributeFilter: ['disabled'] });
@@ -288,11 +313,85 @@
     wrap._saConstruir = construir;
   }
 
+  /* ------------------------------------------------------------------
+     Da vida a un panel propio ya presente en el HTML (class="sa" + data-sa-panel)
+     Estructura: .sa > .sa-btn  y  .sa > .sa-panel > (.sa-list, svg.sa-trazo)
+     ------------------------------------------------------------------ */
+  function initPanel(wrap) {
+    if (wrap.dataset.saPanelListo) return;
+    var btn = wrap.querySelector('.sa-btn');
+    var panel = wrap.querySelector('.sa-panel');
+    if (!btn || !panel) return;
+    wrap.dataset.saPanelListo = '1';
+
+    var lista = panel.querySelector('.sa-list');
+    var trazos;
+    var svg = panel.querySelector('svg.sa-trazo');
+    if (svg) {
+      var g = svg.querySelector('g') || svg.appendChild(document.createElementNS(NS, 'g'));
+      var ps = svg.querySelectorAll('path');
+      var a = ps[0] || g.appendChild(document.createElementNS(NS, 'path'));
+      var b = ps[1] || g.appendChild(document.createElementNS(NS, 'path'));
+      a.setAttribute('pathLength', '1');
+      b.setAttribute('pathLength', '1');
+      trazos = { svg: svg, g: g, a: a, b: b };
+    } else {
+      trazos = svgConTrazos();
+      panel.appendChild(trazos.svg);
+    }
+
+    var ctx = { wrap: wrap, btn: btn, panel: panel, svg: trazos.svg, g: trazos.g, a: trazos.a, b: trazos.b };
+    var anchoAlAbrir = 0;
+
+    function fuera(e) { if (!wrap.contains(e.target)) cerrar(false); }
+    function alRedimensionar() { if (window.innerWidth !== anchoAlAbrir) cerrar(false); }
+
+    function abrir() {
+      if (wrap.classList.contains('abierto')) return;
+      [].forEach.call(document.querySelectorAll('.sa.abierto'), function (w) {
+        if (w._saCerrar) w._saCerrar(false);
+      });
+      ajustarPanel(ctx, lista);
+      wrap.classList.add('abierto');
+      btn.setAttribute('aria-expanded', 'true');
+      anchoAlAbrir = window.innerWidth;
+      document.addEventListener('pointerdown', fuera, true);
+      window.addEventListener('resize', alRedimensionar);
+      var focusable = panel.querySelector('input:not([type="hidden"]), textarea, select');
+      if (focusable) setTimeout(function () { focusable.focus({ preventScroll: true }); }, 60);
+    }
+
+    function cerrar(devolverFoco) {
+      if (!wrap.classList.contains('abierto')) return;
+      wrap.classList.remove('abierto');
+      btn.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('pointerdown', fuera, true);
+      window.removeEventListener('resize', alRedimensionar);
+      if (devolverFoco) btn.focus();
+    }
+    wrap._saCerrar = cerrar;
+    wrap._saAbrir = abrir;
+    wrap._saReajustar = function () { if (wrap.classList.contains('abierto')) ajustarPanel(ctx, lista); };
+
+    btn.addEventListener('click', function () {
+      wrap.classList.contains('abierto') ? cerrar(false) : abrir();
+    });
+    btn.addEventListener('keydown', function (e) {
+      if (['ArrowDown', 'Enter', ' '].indexOf(e.key) > -1) {
+        e.preventDefault();
+        abrir();
+      } else if (e.key === 'Escape') {
+        cerrar(true);
+      }
+    });
+  }
+
   function auto() {
     [].forEach.call(document.querySelectorAll('select[data-animado]:not([multiple])'), init);
+    [].forEach.call(document.querySelectorAll('.sa[data-sa-panel]'), initPanel);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', auto);
   else auto();
 
-  window.SelectAnimado = { init: init, auto: auto };
+  window.SelectAnimado = { init: init, initPanel: initPanel, auto: auto };
 })();

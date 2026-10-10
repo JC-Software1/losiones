@@ -1480,7 +1480,7 @@
       position: absolute;
       left: 0;
       top: 0;
-      z-index: 2;
+      z-index: 20;
       overflow: visible;
       pointer-events: none;
     }
@@ -1545,6 +1545,42 @@
     .sa-op[aria-disabled="true"] {
       opacity: .4 !important;
       cursor: not-allowed;
+    }
+
+    /* ============================================================
+       Panel animado de productos (reutiliza el sistema .sa)
+       ============================================================ */
+    #productDropdown {
+      --sa-radio: 12px;
+      max-width: none;
+    }
+
+    #productDropdown .sa-btn {
+      padding: 14px 16px;
+      font-size: 15px;
+    }
+
+    #productDropdownPanel {
+      z-index: 1500;
+    }
+
+    #productDropdownPanel .sa-list {
+      padding: 0;
+      max-height: min(460px, 64vh);
+    }
+
+    #productDropdownPanel .dropdown-search-wrapper {
+      border-radius: var(--sa-radio) var(--sa-radio) 0 0;
+      border-bottom: 1px solid var(--sa-borde);
+    }
+
+    #productDropdownPanel #productDropdownList {
+      padding: 6px;
+    }
+
+    #productDropdownPanel .dropdown-item {
+      padding: 6px;
+      border-bottom: none;
     }
 
     /* --- Accesibilidad: sin movimiento si el usuario lo pide --- */
@@ -1623,25 +1659,36 @@
               <input type="text" id="clientAddress" placeholder="Dirección del cliente">
             </div>
 
-            <div class="form-group">
+            <div class="form-group full-width">
               <label for="productName">Producto</label>
-              <div class="custom-dropdown" id="productDropdown">
+              <div class="custom-dropdown sa" id="productDropdown" data-sa-panel>
                 <div class="selected-products" id="selectedProducts"
                   style="margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
 
-                <div class="dropdown-trigger">
-                  <input type="text" id="productNameDisplay" placeholder="Seleccioná un producto" readonly>
-                  <i class="fas fa-chevron-down"></i>
-                </div>
+                <!-- Botón animado (sa-btn) -->
+                <button type="button" class="dropdown-trigger sa-btn" id="productDropdownTrigger"
+                  aria-haspopup="listbox" aria-expanded="false" aria-controls="productDropdownList">
+                  <span class="sa-label vacio" id="productNameDisplay">Seleccioná un producto</span>
+                  <span class="sa-chev" aria-hidden="true"></span>
+                </button>
 
-                <div class="dropdown-panel hidden" id="productDropdownPanel">
-                  <div class="dropdown-search-wrapper">
-                    <input type="text" id="productSearchInput" placeholder="Buscar producto..." class="dropdown-search">
-                    <button type="button" id="btnBarcodeScanner" class="btn-camera" title="Escanear código QR">
-                      <i class="fas fa-qrcode"></i>
-                    </button>
+                <!-- Panel animado (sa-panel) -->
+                <div class="sa-panel" id="productDropdownPanel">
+                  <div class="sa-list">
+                    <div class="dropdown-search-wrapper">
+                      <input type="text" id="productSearchInput" placeholder="Buscar producto..." class="dropdown-search">
+                      <button type="button" id="btnBarcodeScanner" class="btn-camera" title="Escanear código QR">
+                        <i class="fas fa-qrcode"></i>
+                      </button>
+                    </div>
+                    <div id="productDropdownList" role="listbox"></div>
                   </div>
-                  <div id="productDropdownList"></div>
+                  <svg class="sa-trazo" aria-hidden="true" focusable="false">
+                    <g>
+                      <path pathLength="1" />
+                      <path pathLength="1" />
+                    </g>
+                  </svg>
                 </div>
               </div>
               <input type="hidden" id="productName" name="productName">
