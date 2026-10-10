@@ -684,6 +684,37 @@ router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, 
     }
 });
 
+// Enviar factura electrónica de una venta ya creada (p. ej. liquidada)
+router.post("/:id/factura-electronica", auth, checkPermission('crearVentas'), async (req, res) => {
+    try {
+        const { email } = req.body || {};
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+            return res.status(400).json({ error: "Correo electrónico inválido" });
+        }
+
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
+        if (!sale) {
+            return res.status(404).json({ error: "Venta no encontrada" });
+        }
+
+        sale.facturacionType = 'electronica';
+        sale.facturacionEmail = String(email).trim();
+        await sale.save();
+
+        try {
+            const result = await matiasApi.emitirFactura(sale, req.user.id);
+            return res.json({ message: "Factura electrónica enviada", numero: result?.numero });
+        } catch (err) {
+            console.error("Error Matias FE (reenvío):", err.message);
+            return res.status(502).json({ error: err.message || "No se pudo emitir la factura electrónica" });
+        }
+    } catch (error) {
+        console.error("Error al enviar factura electrónica:", error);
+        res.status(500).json({ error: "Error al enviar la factura electrónica" });
+    }
+});
+
 // Eliminar una venta
 router.delete("/:id", auth, checkPermission('eliminarVentas'), async (req, res) => {
     try {

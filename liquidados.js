@@ -391,7 +391,9 @@ window.showAdvancedStats = function () {
     showNotification(message, 'info', 'Estadísticas Avanzadas');
 };
 /**
- * Genera la factura POS para una venta liquidada
+ * Genera la factura para una venta liquidada.
+ * - Si el usuario NO tiene facturación electrónica habilitada: genera POS directo.
+ * - Si la tiene habilitada: abre un modal para elegir POS o Electrónica.
  */
 window.generateInvoice = function (saleId) {
     const sale = filteredSales.find(s => s._id === saleId);
@@ -400,12 +402,165 @@ window.generateInvoice = function (saleId) {
         return;
     }
 
-    // Preparar el objeto saleData esperado por generatePOS
+    const electronicaHabilitada = localStorage.getItem('facturacionElectronicaActiva') === 'true';
+
+    if (!electronicaHabilitada) {
+        emitirFacturaPOS(sale);
+        return;
+    }
+
+    openInvoiceTypeModal(saleId);
+};
+
+/**
+ * Emite la factura POS (flujo actual).
+ */
+function emitirFacturaPOS(sale) {
     const saleDataForInvoice = {
         ...sale,
-        paymentType: 'contado', 
+        paymentType: 'contado',
         remainingBalance: 0
     };
 
     generatePOS(saleDataForInvoice);
+}
+
+/**
+ * Modal para elegir el tipo de factura (POS o Electrónica).
+ */
+function openInvoiceTypeModal(saleId) {
+    closeInvoiceTypeModal();
+
+    const sale = filteredSales.find(s => s._id === saleId);
+    const cliente = sale ? sale.clientName : '';
+
+    const modal = document.createElement('div');
+    modal.id = 'invoiceTypeModal';
+    modal.className = 'modal show';
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-file-invoice"></i> Tipo de factura</h3>
+                <button class="modal-close" onclick="closeInvoiceTypeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label>Cliente</label>
+                <input type="text" value="${(cliente || '').replace(/"/g, '&quot;')}" readonly
+                    style="background: var(--beige-100); cursor: not-allowed;">
+            </div>
+            <p style="font-size: 14px; color: var(--muted); margin: 4px 0 6px;">
+                ¿Qué tipo de factura deseas generar?
+            </p>
+            <div class="button-group">
+                <button type="button" class="btn btn-primary" onclick="elegirFacturaPOS('${saleId}')">
+                    <i class="fas fa-print"></i> Factura POS
+                </button>
+                <button type="button" class="btn btn-success" onclick="openElectronicEmailModal('${saleId}')">
+                    <i class="fas fa-envelope"></i> Electrónica
+                </button>
+            </div>
+        </div>
+    `;
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeInvoiceTypeModal();
+    });
+
+    document.body.appendChild(modal);
+}
+
+window.closeInvoiceTypeModal = function () {
+    const modal = document.getElementById('invoiceTypeModal');
+    if (modal) modal.remove();
+};
+
+window.elegirFacturaPOS = function (saleId) {
+    const sale = filteredSales.find(s => s._id === saleId);
+    closeInvoiceTypeModal();
+    if (!sale) {
+        showNotification("No se encontró la información de la venta.", "error");
+        return;
+    }
+    emitirFacturaPOS(sale);
+};
+
+/**
+ * Modal para pedir el correo y enviar la factura electrónica.
+ */
+function openElectronicEmailModal(saleId) {
+    closeElectronicEmailModal();
+
+    const modal = document.createElement('div');
+    modal.id = 'electronicEmailModal';
+    modal.className = 'modal show';
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-envelope"></i> Factura electrónica</h3>
+                <button class="modal-close" onclick="closeElectronicEmailModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label for="electronicInvoiceEmail">Correo para enviar la factura</label>
+                <input type="email" id="electronicInvoiceEmail" placeholder="cliente@correo.com" autocomplete="email">
+            </div>
+            <div class="button-group">
+                <button type="button" class="btn btn-success" onclick="enviarFacturaElectronica('${saleId}')">
+                    <i class="fas fa-paper-plane"></i> Enviar
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="volverATipoFactura('${saleId}')">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </button>
+            </div>
+        </div>
+    `;
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeElectronicEmailModal();
+    });
+
+    document.body.appendChild(modal);
+    setTimeout(() => document.getElementById('electronicInvoiceEmail')?.focus(), 60);
+}
+
+window.closeElectronicEmailModal = function () {
+    const modal = document.getElementById('electronicEmailModal');
+    if (modal) modal.remove();
+};
+
+window.volverATipoFactura = function (saleId) {
+    closeElectronicEmailModal();
+    openInvoiceTypeModal(saleId);
+};
+
+window.enviarFacturaElectronica = async function (saleId) {
+    const sale = filteredSales.find(s => s._id === saleId);
+    if (!sale) {
+        showNotification("No se encontró la información de la venta.", "error");
+        return;
+    }
+
+    const emailInput = document.getElementById('electronicInvoiceEmail');
+    const email = (emailInput?.value || '').trim();
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showNotification("Ingresa un correo electrónico válido.", "warning");
+        emailInput?.focus();
+        return;
+    }
+
+    try {
+        const token = getToken();
+        await apiFetch(`/sales/${saleId}/factura-electronica`, 'POST', { email }, token);
+        closeElectronicEmailModal();
+        showNotification("Factura electrónica enviada correctamente.", "success");
+    } catch (error) {
+        console.error('Error al enviar factura electrónica:', error);
+        showNotification("No se pudo enviar la factura electrónica: " + error.message, "error");
+    }
 };

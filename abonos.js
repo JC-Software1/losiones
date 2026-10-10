@@ -183,7 +183,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // 🔥 Agregar badge si es pago inicial
         const initialPaymentBadge = payment.isInitialPayment
-            ? `<div class="status-badge" style="background: #9b59b6; margin-top: 4px;">Seña/Pago Inicial</div>`
+            ? `<div class="status-badge" style="background: var(--green-700); color: #fff; margin-top: 4px;">Seña/Pago Inicial</div>`
             : '';
 
         let settlementInfo = '';
@@ -348,22 +348,22 @@ document.addEventListener("DOMContentLoaded", async () => {
                             min="0" 
                             max="100" 
                             step="0.1"
-                            style="width: 100%; padding: 12px; font-size: 18px; text-align: center; border: 2px solid var(--accent); border-radius: var(--radius);"
+                            style="width: 100%; padding: 12px; font-size: 18px; text-align: center; border: 2px solid var(--green-600); border-radius: var(--radius); background: var(--beige-50);"
                         >
-                        <small style="display: block; text-align: center; color: var(--medium-gray); margin-top: 8px;">
+                        <small style="display: block; text-align: center; color: var(--muted); margin-top: 8px;">
                             Ingresa solo el número (sin el símbolo %)
                         </small>
                     </div>
 
-                    <div style="margin-top: 30px; padding: 20px; background: var(--light-gray); border-radius: var(--radius); text-align: center;">
-                        <div style="font-size: 14px; color: var(--medium-gray); margin-bottom: 8px;">
+                    <div style="margin-top: 30px; padding: 20px; background: var(--beige-100); border-radius: var(--radius); text-align: center;">
+                        <div style="font-size: 14px; color: var(--muted); margin-bottom: 8px;">
                             Total Abonado
                         </div>
                         <div style="font-size: 28px; font-weight: 700; color: var(--primary); margin-bottom: 20px;">
                             ${totalAbonado.toLocaleString('es-CO')}
                         </div>
 
-                        <div id="commissionResult" style="display: none; margin-top: 20px; padding: 20px; background: linear-gradient(135deg, var(--success), #2ecc71); border-radius: var(--radius); color: white;">
+                        <div id="commissionResult" style="display: none; margin-top: 20px; padding: 20px; background: linear-gradient(135deg, var(--green-600), var(--green-700)); border-radius: var(--radius); color: white;">
                             <div style="font-size: 14px; margin-bottom: 8px; opacity: 0.9;">
                                 Comisión del Cobrador
                             </div>
@@ -466,7 +466,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const saveBtn = document.getElementById('saveCommissionBtn');
             const originalText = saveBtn.innerHTML;
             saveBtn.innerHTML = '<i class="fas fa-check"></i> ¡Guardado!';
-            saveBtn.style.background = '#27ae60';
+            saveBtn.style.background = 'var(--green-600)';
 
             setTimeout(() => {
                 saveBtn.innerHTML = originalText;

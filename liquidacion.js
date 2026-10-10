@@ -125,7 +125,7 @@ function displayPendingData() {
     // Detalles de abonos
     const paymentsDetailsHTML = payments.data.map(p => {
         const badge = p.isInitialPayment
-            ? '<span style="background: #9b59b6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 8px;">Seña</span>'
+            ? '<span class="badge-sena">Seña</span>'
             : '';
 
         return `
@@ -135,7 +135,7 @@ function displayPendingData() {
         </div>
     `;
     }).join('');
-    document.getElementById("paymentsDetails").innerHTML = paymentsDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay abonos pendientes</p>';
+    document.getElementById("paymentsDetails").innerHTML = paymentsDetailsHTML || '<p class="detail-empty">No hay abonos pendientes</p>';
 
     // Ventas
     document.getElementById("salesCount").textContent = sales.count;
@@ -148,7 +148,7 @@ function displayPendingData() {
             <strong>$${s.price.toLocaleString('es-CO')}</strong>
         </div>
     `).join('');
-    document.getElementById("salesDetails").innerHTML = salesDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay ventas pendientes</p>';
+    document.getElementById("salesDetails").innerHTML = salesDetailsHTML || '<p class="detail-empty">No hay ventas pendientes</p>';
 
     // ✅ NUEVO: Seguimiento de clientes mejorado
     if (clientTracking) {
@@ -170,7 +170,7 @@ function displayPendingData() {
             <strong>$${p.costPrice.toLocaleString('es-CO')}</strong>
         </div>
     `).join('');
-    document.getElementById("inventoryDetails").innerHTML = inventoryDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay productos pendientes</p>';
+    document.getElementById("inventoryDetails").innerHTML = inventoryDetailsHTML || '<p class="detail-empty">No hay productos pendientes</p>';
 
     // Gastos
     document.getElementById("expensesCount").textContent = pendingData.expenses?.count || 0;
@@ -184,13 +184,13 @@ function displayPendingData() {
 
         return expense.items.map(item => `
         <div class="detail-item">
-            <span>${item.description} <small style="color: var(--medium-gray);">(${formattedDate})</small></span>
+            <span>${item.description} <small>(${formattedDate})</small></span>
             <strong>$${item.amount.toLocaleString('es-CO')}</strong>
         </div>
     `).join('');
     }).join('');
 
-    document.getElementById("expensesDetails").innerHTML = expensesDetailsHTML || '<p style="padding: 10px; color: var(--medium-gray);">No hay gastos pendientes</p>';
+    document.getElementById("expensesDetails").innerHTML = expensesDetailsHTML || '<p class="detail-empty">No hay gastos pendientes</p>';
 
 }
 
@@ -250,9 +250,9 @@ function refrescarCajaActual() {
     cajaActualTxt.textContent = texto;
 }
 
-btnAbrir.onclick = () => { modal.style.display = 'block'; refrescarCajaActual(); };
-btnCerrar.onclick = () => { modal.style.display = 'none'; };
-window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+btnAbrir.onclick = () => { modal.classList.add('abierto'); refrescarCajaActual(); };
+btnCerrar.onclick = () => { modal.classList.remove('abierto'); };
+window.onclick = e => { if (e.target === modal) modal.classList.remove('abierto'); };
 
 async function enviarMovimiento(tipo) {
     const valor = parseInt(inputValor.value);
