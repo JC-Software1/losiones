@@ -1,0 +1,50 @@
+/* ===== Transición zoom entre páginas (blanco · negro · beige · verde) ===== */
+:root {
+  --zoom-salida: 350ms;
+  --zoom-entrada: 450ms;
+  --zoom-retraso: 120ms;
+  --curva-salida: cubic-bezier(.4, 0, .2, 1);
+  --curva-entrada: cubic-bezier(.2, 0, 0, 1);
+}
+
+/* Fondo real de la app (beige-50) para que no parpadee blanco al cambiar de página */
+html { background: #faf8f3; }
+
+@keyframes zoom-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(1.08); }
+}
+@keyframes zoom-in {
+  from { opacity: 0; transform: scale(.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* --- Navegadores con View Transitions entre páginas (CSS puro) --- */
+@view-transition { navigation: auto; }
+
+::view-transition-old(root) {
+  animation: zoom-out var(--zoom-salida) var(--curva-salida) both;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  animation: zoom-in var(--zoom-entrada) var(--curva-entrada) var(--zoom-retraso) both;
+  mix-blend-mode: normal;
+}
+
+/* --- Respaldo para navegadores sin soporte (lo activa utils/transicion-zoom.js) --- */
+html.vt-fallback body {
+  animation: zoom-in var(--zoom-entrada) var(--curva-entrada) backwards;
+}
+html.vt-fallback body.saliendo {
+  animation: zoom-out var(--zoom-salida) var(--curva-salida) forwards;
+  pointer-events: none;
+}
+
+/* --- Accesibilidad: sin animación si el usuario lo pide --- */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+  html.vt-fallback body,
+  html.vt-fallback body.saliendo { animation: none !important; }
+}
