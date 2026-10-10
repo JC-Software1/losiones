@@ -188,6 +188,8 @@ const emitirFactura = async (order, userId, retryCount = 0) => {
     const payload = formatInvoicePayload(order, config);
     const baseUrl = getBaseUrl(config.environment);
 
+    console.log(`📧 Emitiendo factura ${payload.prefix}${payload.document_number} | Email: ${payload.customer?.email} | send_email: ${payload.send_email} | Env: ${config.environment}`);
+
     try {
         const response = await axios.post(`${baseUrl}/invoice`, payload, {
             headers: {
@@ -196,6 +198,8 @@ const emitirFactura = async (order, userId, retryCount = 0) => {
                 'Accept': 'application/json'
             }
         });
+
+        console.log(`✅ Factura ${payload.prefix}${payload.document_number} emitida exitosamente. Respuesta MATIAS:`, JSON.stringify(response.data).substring(0, 300));
 
         return {
             success: true,
