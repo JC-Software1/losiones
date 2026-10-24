@@ -4,113 +4,201 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Login — JC</title>
+  <title>Login — JC-C</title>
   <script src="loader.js"></script>
 
   <!-- Fuentes -->
   <link
-    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Poppins:wght@300;500;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Poppins:wght@300;500;600;700&display=swap"
     rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="css/notifications.css">
 
   <style>
+    /* ============================================================
+       Paleta login: blanco · negro
+       ============================================================ */
     :root {
-      --dark-1: #0f0f11;
-      --dark-2: #141418;
-      --panel-dark: #151416;
-      --orange-1: #d96a39;
-      /* highlight */
-      --orange-2: #ff7f3d;
-      /* gradient */
-      --glass: rgba(255, 255, 255, 0.03);
-      --text-light: #f2efe9;
-      --muted: rgba(255, 255, 255, 0.55);
-      --card-radius: 18px;
+      --white: #ffffff;
+      --off: #f6f5f3;
+      --line: #e8e6e1;
+      --black: #161310;
+      --ink: #26221c;
+      --muted: #7c7466;
+      --shadow: 0 24px 60px rgba(22, 19, 16, .12);
+      --radius-lg: 22px;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
-      padding: 0
+      padding: 0;
     }
 
     html,
     body {
-      height: 100%
+      min-height: 100%;
     }
 
     body {
       font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      background: linear-gradient(180deg, #0b0b0c 0%, #0b0b0c 100%);
+      background:
+        radial-gradient(1100px 560px at 100% -10%, #ffffff 0%, rgba(255, 255, 255, 0) 55%),
+        linear-gradient(180deg, #ffffff 0%, var(--off) 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 24px;
+      color: var(--ink);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      color: var(--text-light);
     }
 
-    /* Contenedor principal con borde naranja tenue */
+    /* ============ Tarjeta principal ============ */
     .card {
       width: 100%;
-      max-width: 1100px;
-      height: calc(100vh - 80px);
-      max-height: 720px;
-      border-radius: var(--card-radius);
+      max-width: 1080px;
+      min-height: min(680px, calc(100vh - 48px));
+      border-radius: var(--radius-lg);
       overflow: hidden;
       position: relative;
       display: flex;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), inset 0 0 0 2px rgba(217, 106, 57, 0.06);
-      border: 3px solid rgba(217, 106, 57, 0.06);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.02));
+      background: var(--white);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      animation: cardIn .55s cubic-bezier(.2, 0, 0, 1) both;
     }
 
-    /* borde exterior lumínico */
-    .card::after {
-      content: "";
+    @keyframes cardIn {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(.97);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* Trazo SVG que dibuja el borde de la tarjeta */
+    .card-trazo {
       position: absolute;
-      inset: 6px;
-      border-radius: calc(var(--card-radius) - 6px);
+      inset: 0;
+      width: 100%;
+      height: 100%;
       pointer-events: none;
-      box-shadow: 0 0 0 2px rgba(217, 106, 57, 0.04) inset, 0 0 30px rgba(217, 106, 57, 0.06);
+      z-index: 3;
+      overflow: visible;
     }
 
-    /* SECCION IZQUIERDA - Login */
+    .card-trazo rect {
+      fill: none;
+      stroke: var(--black);
+      stroke-width: 1.5;
+      opacity: 0;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      animation: trazar 1s cubic-bezier(.4, 0, .2, 1) .25s both;
+    }
+
+    @keyframes trazar {
+      0% {
+        stroke-dashoffset: 1;
+        opacity: .85;
+      }
+
+      70% {
+        opacity: .85;
+      }
+
+      100% {
+        stroke-dashoffset: 0;
+        opacity: 0;
+      }
+    }
+
+    /* Entrada escalonada */
+    .fx {
+      opacity: 0;
+      animation: fadeUp .5s cubic-bezier(.2, 0, 0, 1) both;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* ============ Sección izquierda: login ============ */
     .left {
-      flex: 1;
-      min-width: 360px;
-      background: linear-gradient(135deg, rgba(21, 21, 22, 0.95) 0%, rgba(22, 22, 24, 0.95) 100%);
-      padding: 54px 48px;
+      flex: 1.05;
+      min-width: 0;
+      padding: 52px 56px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       position: relative;
+      background: var(--white);
     }
 
-    /* Triángulo oscuro sobre la derecha para mimetizar la imagen */
-    .left::before {
-      content: "";
-      position: absolute;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      width: 55%;
-      background: linear-gradient(135deg, rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.02));
-      clip-path: polygon(0 0, 100% 0, 100% 100%);
-      pointer-events: none;
-      transform: translateX(12%);
-      opacity: 0.18;
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 34px;
     }
 
-    h1.logo {
+    .brand-mark {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: var(--black);
+      color: var(--white);
       font-family: 'Montserrat', sans-serif;
       font-weight: 800;
-      font-size: 40px;
-      color: var(--text-light);
-      margin-bottom: 38px;
-      letter-spacing: 1px;
-      text-align: left;
+      font-size: 20px;
+      letter-spacing: .5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 24px rgba(22, 19, 16, .25);
+      animation: marcaIn .6s cubic-bezier(.34, 1.4, .64, 1) .15s both;
+    }
+
+    @keyframes marcaIn {
+      from {
+        opacity: 0;
+        transform: scale(.6) rotate(-8deg);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .brand-text h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 26px;
+      color: var(--black);
+      letter-spacing: .5px;
+      line-height: 1.1;
+    }
+
+    .brand-text p {
+      color: var(--muted);
+      font-size: 13.5px;
+      font-weight: 500;
     }
 
     /* Formulario */
@@ -119,24 +207,25 @@
       max-width: 420px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 20px;
     }
 
     .input-wrap {
       position: relative;
-      padding-top: 6px;
+      padding-top: 8px;
     }
 
     .input-wrap input {
       width: 100%;
       background: transparent;
       border: none;
-      padding: 16px 46px 10px 0;
-      color: var(--text-light);
+      padding: 16px 46px 12px 0;
+      color: var(--ink);
       font-size: 16px;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+      font-family: inherit;
+      border-bottom: 2px solid var(--line);
       outline: none;
-      transition: all .25s ease;
+      transition: border-color .25s ease;
     }
 
     .input-wrap input::placeholder {
@@ -146,287 +235,413 @@
     .input-wrap label {
       position: absolute;
       left: 0;
-      top: 18px;
+      top: 22px;
       transform-origin: left top;
       color: var(--muted);
-      font-size: 16px;
+      font-size: 15.5px;
       pointer-events: none;
       transition: all .22s ease;
     }
 
     .input-wrap input:focus,
     .input-wrap input:not(:placeholder-shown) {
-      border-bottom-color: var(--orange-1);
+      border-bottom-color: var(--black);
     }
 
     .input-wrap input:focus+label,
     .input-wrap input:not(:placeholder-shown)+label {
-      top: -8px;
+      top: -6px;
       font-size: 12px;
-      color: var(--orange-1);
+      font-weight: 600;
+      color: var(--black);
     }
 
-    /* icono a la derecha */
     .input-wrap .icon {
       position: absolute;
-      right: 6px;
-      top: 16px;
+      right: 4px;
+      top: 18px;
       width: 36px;
       height: 36px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: rgba(255, 255, 255, 0.45);
-      font-size: 18px;
+      color: #c9c5bd;
+      font-size: 17px;
       pointer-events: none;
+      transition: color .25s ease, transform .25s ease;
     }
 
-    /* linea naranja fina debajo del username (más prominente) */
-    .input-wrap.username input {
-      padding-left: 0;
+    .input-wrap input:focus~.icon {
+      color: var(--black);
+      transform: scale(1.08);
     }
 
-    /* Botón grande con gradiente y selado interior */
+    /* Botón */
     .btn-login {
-      margin-top: 6px;
+      margin-top: 8px;
       width: 100%;
       max-width: 420px;
-      height: 58px;
-      border-radius: 40px;
+      height: 54px;
+      border-radius: 14px;
       border: none;
       cursor: pointer;
+      font-family: inherit;
       font-weight: 700;
-      font-size: 18px;
-      letter-spacing: 0.6px;
-      background: linear-gradient(180deg, var(--orange-2), var(--orange-1));
-      color: white;
+      font-size: 16.5px;
+      letter-spacing: .4px;
+      color: var(--white);
+      background: linear-gradient(160deg, #2a2622, var(--black));
       box-shadow:
-        0 12px 30px rgba(217, 106, 57, 0.22),
-        inset 0 2px 0 rgba(255, 255, 255, 0.08),
-        inset 0 -8px 24px rgba(0, 0, 0, 0.25);
-      transition: transform .18s ease, box-shadow .18s ease;
-    }
-
-    .btn-login:active {
-      transform: translateY(1px) scale(.998);
+        0 12px 28px rgba(22, 19, 16, .28),
+        inset 0 2px 0 rgba(255, 255, 255, .12),
+        inset 0 -8px 20px rgba(0, 0, 0, .3);
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
     .btn-login:hover {
       transform: translateY(-3px);
-      box-shadow: 0 18px 40px rgba(217, 106, 57, 0.28);
+      box-shadow: 0 18px 38px rgba(22, 19, 16, .34);
+      filter: brightness(1.15);
     }
 
-    .meta {
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 14px;
+    .btn-login:active {
+      transform: translateY(0) scale(.995);
     }
 
-    .meta a {
-      color: var(--orange-1);
-      font-weight: 600;
-      text-decoration: none;
-      margin-left: 6px
+    .btn-login i {
+      font-size: 15px;
+      transition: transform .25s ease;
     }
 
-    .register-link {
-      text-align: center;
-      margin-top: 16px;
-      color: var(--muted);
-      font-size: 14px;
+    .btn-login:hover i {
+      transform: translateX(3px);
     }
 
-    .register-link a {
-      color: var(--orange-2);
-      font-weight: 600;
-      text-decoration: none;
-      transition: color 0.3s;
-    }
-
-    .register-link a:hover {
-      color: var(--orange-1);
-      text-decoration: underline;
-    }
-
-    /* SECCION DERECHA - WELCOME */
+    /* ============ Sección derecha: bienvenida ============ */
     .right {
       flex: 1;
-      background: linear-gradient(135deg, #7a3516 0%, #b95a2a 30%, #ff8f4d 100%);
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+      padding: 56px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 64px;
-      position: relative;
-      color: white;
+      color: var(--white);
+      background:
+        radial-gradient(700px 420px at 110% -10%, rgba(255, 255, 255, .08) 0%, rgba(255, 255, 255, 0) 60%),
+        linear-gradient(160deg, #2a2622 0%, var(--black) 60%, #0d0b09 100%);
     }
 
-    /* Diagonal cut to mimic image */
-    .right::before {
-      content: "";
+    /* círculos decorativos flotantes */
+    .blob {
       position: absolute;
-      left: -10%;
-      top: 0;
-      bottom: 0;
-      width: 60%;
-      background: linear-gradient(135deg, rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.03));
-      transform: skewX(-18deg);
-      opacity: 0.2;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .06);
       pointer-events: none;
+      animation: flotar 9s ease-in-out infinite;
+    }
+
+    .blob.b1 {
+      width: 220px;
+      height: 220px;
+      top: -60px;
+      right: -50px;
+    }
+
+    .blob.b2 {
+      width: 150px;
+      height: 150px;
+      bottom: -40px;
+      left: -30px;
+      animation-delay: -4s;
+      animation-duration: 11s;
+    }
+
+    .blob.b3 {
+      width: 70px;
+      height: 70px;
+      top: 22%;
+      left: 12%;
+      animation-delay: -2s;
+      animation-duration: 8s;
+      background: rgba(255, 255, 255, .1);
+    }
+
+    @keyframes flotar {
+
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+      }
+
+      50% {
+        transform: translateY(-16px) scale(1.05);
+      }
     }
 
     .welcome-inner {
-      text-align: right;
-      max-width: 360px;
-      margin-right: 8%;
+      position: relative;
+      z-index: 1;
+      max-width: 380px;
+      animation: welcomeIn .6s cubic-bezier(.2, 0, 0, 1) .3s both;
+    }
+
+    @keyframes welcomeIn {
+      from {
+        opacity: 0;
+        transform: translateX(24px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .welcome-inner .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, .85);
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid rgba(255, 255, 255, .18);
+      padding: 7px 14px;
+      border-radius: 999px;
+      margin-bottom: 22px;
+      backdrop-filter: blur(4px);
     }
 
     .welcome-inner h2 {
       font-family: 'Montserrat', sans-serif;
-      font-size: 48px;
-      margin-bottom: 18px;
-      line-height: 0.95;
-      letter-spacing: 1px;
+      font-size: 46px;
+      margin-bottom: 16px;
+      line-height: 1.02;
+      letter-spacing: .5px;
       font-weight: 800;
       text-transform: uppercase;
     }
 
-    .welcome-inner p {
-      color: rgba(255, 255, 255, 0.93);
-      font-size: 18px;
-      line-height: 1.6;
-      text-align: right;
-      max-width: 420px;
+    .welcome-inner h2 span {
+      color: #b8b2a8;
     }
 
-    /* small footer heart or dot (optional) */
-    .corner-dot {
-      position: absolute;
-      right: 18px;
-      bottom: 18px;
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
-      background: linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.02));
+    .welcome-inner>p {
+      color: rgba(255, 255, 255, .9);
+      font-size: 16.5px;
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+
+    .chips {
+      list-style: none;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
-      opacity: 0.9;
+      flex-wrap: wrap;
+      gap: 10px;
     }
 
-    /* RESPONSIVE: tablets and phones */
-    @media (max-width:1000px) {
-      .card {
-        max-width: 920px;
-        height: calc(100vh - 64px);
-        max-height: 720px;
+    .chips li {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--white);
+      background: rgba(255, 255, 255, .1);
+      border: 1px solid rgba(255, 255, 255, .18);
+      padding: 10px 15px;
+      border-radius: 12px;
+      backdrop-filter: blur(4px);
+      transition: transform .2s ease, background .2s ease;
+      opacity: 0;
+      animation: chipIn .45s cubic-bezier(.34, 1.3, .64, 1) both;
+    }
+
+    .chips li:hover {
+      transform: translateY(-3px);
+      background: rgba(255, 255, 255, .18);
+    }
+
+    .chips li i {
+      font-size: 14px;
+      color: #cfc9bf;
+    }
+
+    .chips li:nth-child(1) {
+      animation-delay: .55s;
+    }
+
+    .chips li:nth-child(2) {
+      animation-delay: .65s;
+    }
+
+    .chips li:nth-child(3) {
+      animation-delay: .75s;
+    }
+
+    .chips li:nth-child(4) {
+      animation-delay: .85s;
+    }
+
+    @keyframes chipIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(.92);
       }
 
-      .right {
-        padding: 48px
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* ============ Responsive ============ */
+    @media (max-width:980px) {
+      .card {
+        min-height: min(640px, calc(100vh - 40px));
       }
 
       .left {
-        padding: 40px
+        padding: 40px 36px;
+      }
+
+      .right {
+        padding: 40px 32px;
       }
 
       .welcome-inner h2 {
-        font-size: 42px
+        font-size: 36px;
       }
     }
 
-    /* Stack vertically on small screens like iPhone 12 Pro */
-    @media (max-width:420px) {
+    /* Móvil: tarjeta centrada, hero compacto arriba y formulario cerca */
+    @media (max-width:760px) {
+      body {
+        padding: 14px;
+      }
+
       .card {
-        flex-direction: column-reverse;
-        height: calc(100vh - 24px);
-        max-height: 1000px;
-        border-radius: 14px;
-      }
-
-      .left,
-      .right {
+        flex-direction: column;
         min-height: 0;
-        width: 100%;
-      }
-
-      .left {
-        padding: 24px 20px;
-        order: 1;
-        display: flex;
-        justify-content: flex-start;
-        align-items: flex-start;
+        max-width: 430px;
+        border-radius: 18px;
       }
 
       .right {
-        padding: 22px 20px;
-        order: 0;
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-
-      h1.logo {
-        font-size: 34px;
-        margin-bottom: 18px
-      }
-
-      form.login-form {
-        max-width: 100%
+        flex: 0 0 auto;
+        padding: 22px 22px 20px;
+        justify-content: flex-start;
       }
 
       .welcome-inner {
-        text-align: center;
-        margin: 0 auto;
+        max-width: 100%;
+      }
+
+      .welcome-inner .eyebrow {
+        margin-bottom: 10px;
+        padding: 5px 11px;
+        font-size: 10.5px;
       }
 
       .welcome-inner h2 {
-        font-size: 32px
+        font-size: 25px;
+        margin-bottom: 8px;
       }
 
-      .welcome-inner p {
+      .welcome-inner>p {
+        font-size: 13.5px;
+        line-height: 1.5;
+        margin-bottom: 0;
+      }
+
+      .chips {
+        display: none;
+      }
+
+      .blob.b3 {
+        display: none;
+      }
+
+      .left {
+        flex: 1;
+        padding: 22px 22px 28px;
+        justify-content: flex-start;
+      }
+
+      .brand {
+        margin-bottom: 18px;
+        gap: 12px;
+      }
+
+      .brand-mark {
+        width: 44px;
+        height: 44px;
+        font-size: 17px;
+        border-radius: 13px;
+      }
+
+      .brand-text h1 {
+        font-size: 21px;
+      }
+
+      .brand-text p {
+        font-size: 12.5px;
+      }
+
+      form.login-form {
+        max-width: 100%;
+        gap: 16px;
+      }
+
+      .input-wrap input {
+        padding: 13px 42px 10px 0;
         font-size: 15px;
-        text-align: center;
-      }
-
-      .btn-login {
-        height: 54px
       }
 
       .input-wrap label {
-        top: 14px;
+        top: 18px;
+        font-size: 14.5px;
       }
 
       .input-wrap .icon {
-        top: 12px
+        top: 13px;
       }
 
-      .card::after {
-        inset: 4px
+      .btn-login {
+        max-width: 100%;
+        height: 50px;
+        margin-top: 2px;
       }
     }
 
-    /* iPhone 12 Pro specific tweaks for safe-area */
+    /* Seguro de iPhone */
     @supports(padding: env(safe-area-inset-bottom)) {
       body {
-        padding-bottom: calc(20px + env(safe-area-inset-bottom));
-      }
-
-      .card {
-        margin-bottom: env(safe-area-inset-bottom);
+        padding-bottom: calc(14px + env(safe-area-inset-bottom));
       }
     }
 
-    /* Small animations */
-    .fade-up {
-      transform: translateY(20px);
-      opacity: 0;
-      animation: fadeUp .6s forwards;
-    }
+    /* Accesibilidad: sin animación si el usuario lo pide */
+    @media (prefers-reduced-motion: reduce) {
 
-    @keyframes fadeUp {
-      to {
-        transform: none;
-        opacity: 1
+      .card,
+      .card-trazo rect,
+      .fx,
+      .brand-mark,
+      .welcome-inner,
+      .chips li,
+      .blob {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
       }
     }
   </style>
@@ -435,17 +650,27 @@
 </head>
 
 <body>
-  <div class="card" role="main" aria-label="Login card">
-    <!-- LEFT - LOGIN -->
+  <div class="card" role="main" aria-label="Inicio de sesión">
+    <!-- Trazo animado del borde (se ajusta con JS al tamaño real) -->
+    <svg class="card-trazo" aria-hidden="true" focusable="false">
+      <rect x="1" y="1" rx="21" ry="21" width="10" height="10" pathLength="1"></rect>
+    </svg>
+
+    <!-- IZQUIERDA - LOGIN -->
     <section class="left">
-      <h1 class="logo">Inicio de sesión</h1>
+      <div class="brand fx" style="animation-delay:.15s">
+        <div class="brand-mark" aria-hidden="true">JC</div>
+        <div class="brand-text">
+          <h1>Iniciar sesión</h1>
+          <p>Gestión de ventas e inventario</p>
+        </div>
+      </div>
 
       <form class="login-form" id="loginForm" autocomplete="on" novalidate>
-        <div class="input-wrap username fade-up">
+        <div class="input-wrap username fx" style="animation-delay:.28s">
           <input id="username" name="username" type="text" placeholder=" " required autocomplete="username" />
           <label for="username">Usuario</label>
           <div class="icon" aria-hidden="true">
-            <!-- person svg -->
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM3 21a9 9 0 0 1 18 0" stroke="currentColor"
                 stroke-opacity="0.9" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
@@ -453,12 +678,11 @@
           </div>
         </div>
 
-        <div class="input-wrap password fade-up" style="animation-delay:.05s">
+        <div class="input-wrap password fx" style="animation-delay:.38s">
           <input id="password" name="password" type="password" placeholder=" " required
             autocomplete="current-password" />
           <label for="password">Contraseña</label>
           <div class="icon" aria-hidden="true">
-            <!-- lock svg -->
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-opacity="0.9"
                 stroke-width="1.4"></rect>
@@ -468,23 +692,53 @@
           </div>
         </div>
 
-        <button class="btn-login fade-up" type="submit" style="animation-delay:.1s">Iniciar Sesión</button>
-
+        <button class="btn-login fx" type="submit" style="animation-delay:.5s">
+          Iniciar Sesión <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </button>
       </form>
     </section>
 
-    <!-- RIGHT - WELCOME -->
+    <!-- DERECHA - BIENVENIDA -->
     <aside class="right">
-      <div class="welcome-inner fade-up" style="animation-delay:.12s">
-        <h2>BIENVENIDO<br>A JC-C!</h2>
-        <p>Un programa donde vas a poder llevar tu inventario, registrar ventas, facturar electronicamente, y mucho
-          más...</p>
-      </div>
+      <div class="blob b1" aria-hidden="true"></div>
+      <div class="blob b2" aria-hidden="true"></div>
+      <div class="blob b3" aria-hidden="true"></div>
 
-      <!-- decorative dot bottom-right (matching image) -->
-      <div class="corner-dot" aria-hidden="true" style="right:18px;bottom:18px"></div>
+      <div class="welcome-inner">
+        <span class="eyebrow"><i class="fas fa-leaf" aria-hidden="true"></i> JC-C</span>
+        <h2>BIENVENIDO<br>A <span>JC-C!</span></h2>
+        <p>Un programa donde vas a poder llevar tu inventario, registrar ventas, facturar electrónicamente, y mucho
+          más...</p>
+        <ul class="chips">
+          <li><i class="fas fa-boxes" aria-hidden="true"></i> Inventario</li>
+          <li><i class="fas fa-cash-register" aria-hidden="true"></i> Ventas</li>
+          <li><i class="fas fa-file-invoice" aria-hidden="true"></i> Facturación electrónica</li>
+          <li><i class="fas fa-calculator" aria-hidden="true"></i> Liquidaciones</li>
+        </ul>
+      </div>
     </aside>
   </div>
+
+  <script>
+    // Ajustar el rectángulo del trazo al tamaño real de la tarjeta
+    (function () {
+      var card = document.querySelector('.card');
+      var svg = document.querySelector('.card-trazo');
+      var rect = svg && svg.querySelector('rect');
+      if (!card || !rect) return;
+      function medir() {
+        var r = card.getBoundingClientRect();
+        var w = Math.max(10, Math.round(r.width) - 2);
+        var h = Math.max(10, Math.round(r.height) - 2);
+        svg.setAttribute('viewBox', '0 0 ' + Math.round(r.width) + ' ' + Math.round(r.height));
+        rect.setAttribute('width', w);
+        rect.setAttribute('height', h);
+      }
+      medir();
+      if ('ResizeObserver' in window) new ResizeObserver(medir).observe(card);
+      else window.addEventListener('resize', medir);
+    })();
+  </script>
 
   <script src="utils/notifications.js" type="module"></script>
   <script type="module" src="login.js">

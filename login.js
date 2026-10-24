@@ -24,7 +24,8 @@ function mostrarModalBloqueo() {
     // Crear modal
     const modal = document.createElement('div');
     modal.style.cssText = `
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(160deg, #26221c 0%, #161310 100%);
+        border: 1px solid rgba(231, 221, 201, 0.18);
         border-radius: 24px;
         padding: 40px;
         max-width: 500px;
@@ -72,8 +73,8 @@ function mostrarModalBloqueo() {
         </p>
         
         <button id="contactarSoporteBtn" style="
-            background: white;
-            color: #667eea;
+            background: linear-gradient(160deg, #3f9e70, #245f46);
+            color: white;
             border: none;
             border-radius: 16px;
             padding: 18px 40px;
@@ -81,7 +82,7 @@ function mostrarModalBloqueo() {
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 8px 24px rgba(47, 125, 91, 0.35);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -127,8 +128,8 @@ function mostrarModalBloqueo() {
 
         #contactarSoporteBtn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
-            background: #f8f9fa;
+            box-shadow: 0 12px 32px rgba(47, 125, 91, 0.45);
+            filter: brightness(1.06);
         }
 
         #contactarSoporteBtn:active {

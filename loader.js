@@ -87,7 +87,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        background-color: rgb(46, 45, 45);
+        background-color: #f6f5f3;
         z-index: 9999;
       }
       
@@ -150,7 +150,7 @@
       .loading-text {
         margin-top: 40px;
         font-size: 18px;
-        color:rgb(255, 255, 255);
+        color: #26221c;
         font-weight: bold;
         text-align: center;
         opacity: 0;
