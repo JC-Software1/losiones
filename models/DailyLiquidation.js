@@ -27,13 +27,17 @@ payments: {
     total: { type: Number, default: 0 },
     totalInitialPayments: { type: Number, default: 0 },  // ✅ NUEVO CAMPO
     afterCommission: { type: Number, default: 0 },
-    commissionPercentage: { type: Number, default: 0 }
+    commissionPercentage: { type: Number, default: 0 },
+    efectivo: { type: Number, default: 0 },
+    transferencia: { type: Number, default: 0 }
 },
     sales: {
         count: { type: Number, default: 0 },
         total: { type: Number, default: 0 },
         afterCommission: { type: Number, default: 0 },
-        commissionPercentage: { type: Number, default: 0 }
+        commissionPercentage: { type: Number, default: 0 },
+        efectivo: { type: Number, default: 0 },
+        transferencia: { type: Number, default: 0 }
     },
     totalIncome: {
         type: Number,
@@ -58,12 +62,14 @@ payments: {
     liquidatedSales: [{
         saleId: mongoose.Schema.Types.ObjectId,
         clientName: String,
-        amount: Number
+        amount: Number,
+        metodoPago: { type: String, enum: ["efectivo", "transferencia"], default: "efectivo" }
     }],
     liquidatedPayments: [{
         saleId: mongoose.Schema.Types.ObjectId,
         clientName: String,
-        amount: Number
+        amount: Number,
+        metodoPago: { type: String, enum: ["efectivo", "transferencia"], default: "efectivo" }
     }],
     liquidatedProducts: [{
         productId: mongoose.Schema.Types.ObjectId,

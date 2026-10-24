@@ -456,6 +456,18 @@
                 <div class="stat-value" id="bestDay">-</div>
                 <div class="stat-label">Mejor Día</div>
             </div>
+
+            <div class="stat-card success">
+                <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="stat-value" id="totalCashPayments">$0</div>
+                <div class="stat-label">Abonos en Efectivo</div>
+            </div>
+
+            <div class="stat-card primary">
+                <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
+                <div class="stat-value" id="totalTransferPayments">$0</div>
+                <div class="stat-label">Abonos en Transferencia</div>
+            </div>
         </div>
 
         <!-- Filtros -->
@@ -596,6 +608,22 @@
             const totalInitialPayments = liquidations.reduce((sum, l) => sum + (l.payments.totalInitialPayments || 0), 0);
             document.getElementById("totalInitialPayments").textContent = `$${totalInitialPayments.toLocaleString('es-CO')}`;
 
+            // 💵 Abonos por método de pago (las liquidaciones viejas sin dato van a efectivo)
+            let totalEfectivo = 0;
+            let totalTransferencia = 0;
+            liquidations.forEach(l => {
+                const totalLiq = l.payments.total || 0;
+                const ef = l.payments.efectivo || 0;
+                const tr = l.payments.transferencia || 0;
+                const legacy = Math.max(0, totalLiq - ef - tr);
+                totalEfectivo += ef + legacy;
+                totalTransferencia += tr;
+            });
+            const elCash = document.getElementById("totalCashPayments");
+            const elTransfer = document.getElementById("totalTransferPayments");
+            if (elCash) elCash.textContent = `$${totalEfectivo.toLocaleString('es-CO')}`;
+            if (elTransfer) elTransfer.textContent = `$${totalTransferencia.toLocaleString('es-CO')}`;
+
             // 🔥 NUEVO: Calcular total de Caja Efectivo
             const totalCashInHand = liquidations.reduce((sum, liq) => {
                 const expensesAmount = liq.expenses?.totalAmount || 0;
@@ -638,6 +666,10 @@
                 // 🔥 NUEVO: Calcular Caja Efectivo (Abonos - Gastos)
                 const expensesAmount = liq.expenses?.totalAmount || 0;
                 const cashInHand = Math.round(liq.payments.total - expensesAmount);
+
+                // 💵 Abonos por método en esta liquidación
+                const liqEfectivo = (liq.payments.efectivo || 0) + Math.max(0, liq.payments.total - (liq.payments.efectivo || 0) - (liq.payments.transferencia || 0));
+                const liqTransferencia = liq.payments.transferencia || 0;
 
                 return `
         <div class="liquidation-card">
@@ -684,6 +716,13 @@
                 <div><i class="fas fa-shopping-cart"></i> ${liq.sales.count} ventas</div>
                 <div><i class="fas fa-boxes"></i> ${liq.inventory.productCount} productos</div>
                 <div><i class="fas fa-receipt"></i> ${liq.expenses?.count || 0} gastos</div>
+            </div>
+
+            <div style="margin-top: 10px; padding: 10px 12px; background: var(--beige-100, #f2ece0); border-radius: 10px; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                <span><i class="fas fa-money-bill-wave" style="color: #3f9e70;"></i> Efectivo:
+                    <strong>$${liqEfectivo.toLocaleString('es-CO')}</strong></span>
+                <span><i class="fas fa-exchange-alt"></i> Transferencia:
+                    <strong>$${liqTransferencia.toLocaleString('es-CO')}</strong></span>
             </div>
 
             ${liq.notes ? `<div class="notes-preview"><strong>Notas:</strong> ${liq.notes}</div>` : ''}

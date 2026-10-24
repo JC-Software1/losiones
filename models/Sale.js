@@ -13,6 +13,11 @@ const PaymentSchema = new mongoose.Schema({
     liquidatedDay: {
         type: Boolean,
         default: false
+    },
+    metodoPago: {
+        type: String,
+        enum: ["efectivo", "transferencia"],
+        default: "efectivo"
     }
 });
 
@@ -56,7 +61,8 @@ const SaleSchema = new mongoose.Schema({
     paidAmount: { type: Number, default: 0 },
     remainingBalance: { type: Number, default: 0 },
     facturacionType: { type: String, enum: ['ninguna', 'pos', 'electronica', 'ambas'], default: 'ninguna' },
-    facturacionEmail: { type: String, default: '' }
+    facturacionEmail: { type: String, default: '' },
+    metodoPago: { type: String, enum: ["efectivo", "transferencia"], default: "efectivo" }
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

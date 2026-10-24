@@ -115,11 +115,26 @@ function displayPendingData() {
 
     const { sales, payments, inventory, clientTracking } = pendingData;
 
+    // helper de badge por método de pago
+    const badgeMetodo = (m) => {
+        const esTransferencia = m === 'transferencia';
+        return `<span class="badge-metodo ${esTransferencia ? 'transferencia' : 'efectivo'}">
+                    <i class="fas fa-${esTransferencia ? 'exchange-alt' : 'money-bill-wave'}"></i>
+                    ${esTransferencia ? 'Transferencia' : 'Efectivo'}
+                </span>`;
+    };
+
     // Abonos
     document.getElementById("paymentsCount").textContent = payments.count;
     document.getElementById("paymentsTotal").textContent = `$${payments.total.toLocaleString('es-CO')}`;
     // ✅ NUEVO: Mostrar total de señas
     document.getElementById("initialPaymentsTotal").textContent = `$${(payments.totalInitialPayments || 0).toLocaleString('es-CO')}`;
+
+    // 💵 Abonos por método de pago
+    const elPaymentsCash = document.getElementById("paymentsCash");
+    const elPaymentsTransfer = document.getElementById("paymentsTransfer");
+    if (elPaymentsCash) elPaymentsCash.textContent = `$${(payments.efectivo || 0).toLocaleString('es-CO')}`;
+    if (elPaymentsTransfer) elPaymentsTransfer.textContent = `$${(payments.transferencia || 0).toLocaleString('es-CO')}`;
 
     // Detalles de abonos
     // Detalles de abonos
@@ -130,7 +145,7 @@ function displayPendingData() {
 
         return `
         <div class="detail-item">
-            <span>${p.clientName}${badge}</span>
+            <span>${p.clientName}${badge} ${badgeMetodo(p.metodoPago)}</span>
             <strong>$${p.amount.toLocaleString('es-CO')}</strong>
         </div>
     `;
@@ -141,10 +156,16 @@ function displayPendingData() {
     document.getElementById("salesCount").textContent = sales.count;
     document.getElementById("salesTotal").textContent = `$${sales.total.toLocaleString('es-CO')}`;
 
+    // 💵 Ventas por método de pago
+    const elSalesCash = document.getElementById("salesCash");
+    const elSalesTransfer = document.getElementById("salesTransfer");
+    if (elSalesCash) elSalesCash.textContent = `$${(sales.efectivo || 0).toLocaleString('es-CO')}`;
+    if (elSalesTransfer) elSalesTransfer.textContent = `$${(sales.transferencia || 0).toLocaleString('es-CO')}`;
+
     // Detalles de ventas
     const salesDetailsHTML = sales.data.map(s => `
         <div class="detail-item">
-            <span>${s.clientName} - ${s.productName}</span>
+            <span>${s.clientName} - ${s.productName} ${badgeMetodo(s.metodoPago)}</span>
             <strong>$${s.price.toLocaleString('es-CO')}</strong>
         </div>
     `).join('');

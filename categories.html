@@ -1680,8 +1680,8 @@
                   <div class="sa-list">
                     <div class="dropdown-search-wrapper">
                       <input type="text" id="productSearchInput" placeholder="Buscar producto..." class="dropdown-search">
-                      <button type="button" id="btnBarcodeScanner" class="btn-camera" title="Escanear código QR">
-                        <i class="fas fa-qrcode"></i>
+                      <button type="button" id="btnQuickAddProduct" class="btn-camera" title="Agregar producto rápido">
+                        <i class="fas fa-plus"></i>
                       </button>
                     </div>
                     <div id="productDropdownList" role="listbox"></div>
@@ -1712,6 +1712,14 @@
               <select id="paymentType" class="form-control" onchange="togglePaymentFields()" data-animado>
                 <option value="contado" selected>Contado</option>
                 <option value="cuotas">A Cuotas</option>
+              </select>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="metodoPago">Método de Cobro</label>
+              <select id="metodoPago" class="form-control" data-animado>
+                <option value="efectivo" selected>Efectivo</option>
+                <option value="transferencia">Transferencia</option>
               </select>
             </div>
 
@@ -1829,6 +1837,13 @@
       <label for="paymentDate">Fecha del Pago</label>
       <input type="date" id="paymentDate" required>
     </div>
+    <div class="form-group">
+      <label for="paymentMethod">Método de Pago</label>
+      <select id="paymentMethod" data-animado>
+        <option value="efectivo" selected>Efectivo</option>
+        <option value="transferencia">Transferencia</option>
+      </select>
+    </div>
     <div class="ma-acciones">
       <button type="button" class="ma-boton sec" id="cancelPayment">
         <i class="fas fa-times"></i> Cancelar
@@ -1847,6 +1862,31 @@
     <div class="ma-acciones">
       <button type="button" class="ma-boton" id="confirmDays">
         <i class="fas fa-check"></i> Establecer días
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Modal de producto rápido -->
+  <dialog id="quickProductModal" data-modal-animado data-persistente>
+    <button class="ma-x" type="button" data-modal-cerrar aria-label="Cerrar"></button>
+    <h2><i class="fas fa-plus-circle"></i> Producto rápido</h2>
+    <p class="ma-subtitulo">Se creará con stock 1 y quedará seleccionado en la venta.</p>
+    <div class="form-group">
+      <label for="quickProductName">Nombre del producto *</label>
+      <input type="text" id="quickProductName" placeholder="Ej: Camiseta BASTONI" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label for="quickProductSalePrice">Precio de venta *</label>
+      <input type="number" id="quickProductSalePrice" placeholder="0" min="0" step="100">
+    </div>
+    <div class="form-group">
+      <label for="quickProductCostPrice">Precio de costo <span class="ma-opcional">(opcional)</span></label>
+      <input type="number" id="quickProductCostPrice" placeholder="0" min="0" step="100">
+    </div>
+    <div class="ma-acciones">
+      <button type="button" class="ma-boton sec" data-modal-cerrar>Cancelar</button>
+      <button type="button" class="ma-boton" id="btnSaveQuickProduct">
+        <i class="fas fa-check"></i> Guardar
       </button>
     </div>
   </dialog>

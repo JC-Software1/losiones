@@ -3,6 +3,12 @@ const auth = require("../middleware/auth");
 const { checkPermission } = require("../middleware/checkPermissions");
 const Sale = require("../models/Sale");
 const matiasApi = require("../services/matiasApi");
+
+// Normaliza el método de pago (efectivo | transferencia)
+const normalizarMetodoPago = (m) =>
+    (typeof m === "string" && ["efectivo", "transferencia"].includes(m.toLowerCase()))
+        ? m.toLowerCase()
+        : "efectivo";
 const router = express.Router();
 
 
@@ -95,7 +101,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             remainingBalance,
             products,  // ✅ NUEVO: array de productos con cantidades
             facturacionType, // ✅ MODO DE FACTURACION
-            facturacionEmail
+            facturacionEmail,
+            metodoPago
         } = req.body;
 
         // ✅ REGLA: Nombre obligatorio solo para cuotas
@@ -180,7 +187,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             products: products,  // ✅ GUARDAR productos con cantidades
             productIds: productIdsToMarkSold,  // ✅ IDs de productos vendidos completamente
             facturacionType: facturacionType || 'ninguna',
-            facturacionEmail: facturacionEmail || ''
+            facturacionEmail: facturacionEmail || '',
+            metodoPago: normalizarMetodoPago(metodoPago)
         });
 
         if (advancePayment > 0) {
@@ -190,7 +198,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             sale.payments.push({
                 amount: advancePayment,
                 date: new Date(saleDate),
-                liquidatedDay: false
+                liquidatedDay: false,
+                metodoPago: normalizarMetodoPago(metodoPago)
             });
 
             if (advancePayment >= price) {
@@ -205,7 +214,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             sale.payments.push({
                 amount: price,
                 date: new Date(saleDate),
-                liquidatedDay: false
+                liquidatedDay: false,
+                metodoPago: normalizarMetodoPago(metodoPago)
             });
             sale.settled = true;
             sale.settledDate = new Date();
@@ -257,7 +267,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             remainingBalance,
             products,  // ✅ NUEVO: array de productos con cantidades
             facturacionType,
-            facturacionEmail
+            facturacionEmail,
+            metodoPago
         } = req.body;
 
         // ✅ REGLA: Nombre obligatorio solo para cuotas
@@ -333,7 +344,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             products: products,  // ✅ GUARDAR productos con cantidades
             productIds: productIdsToMarkSold,  // ✅ IDs de productos vendidos completamente
             facturacionType: facturacionType || 'ninguna',
-            facturacionEmail: facturacionEmail || ''
+            facturacionEmail: facturacionEmail || '',
+            metodoPago: normalizarMetodoPago(metodoPago)
         });
 
         if (advancePayment > 0) {
@@ -343,7 +355,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             sale.payments.push({
                 amount: advancePayment,
                 date: new Date(saleDate),
-                liquidatedDay: false
+                liquidatedDay: false,
+                metodoPago: normalizarMetodoPago(metodoPago)
             });
 
             if (advancePayment >= price) {
@@ -357,7 +370,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             sale.payments.push({
                 amount: price,
                 date: new Date(saleDate),
-                liquidatedDay: false
+                liquidatedDay: false,
+                metodoPago: normalizarMetodoPago(metodoPago)
             });
             sale.settled = true;
             sale.settledDate = new Date();
@@ -619,7 +633,7 @@ router.put("/:id", auth, checkPermission('editarVentas'), async (req, res) => {
 
 // Agregar abono
 router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, res) => {
-    const { amount, date, force } = req.body;
+    const { amount, date, force, metodoPago } = req.body;
 
     if (!amount || amount <= 0) {
         return res.status(400).json({ error: "El monto del abono debe ser mayor a cero" });
@@ -657,7 +671,8 @@ router.post("/:id/payment", auth, checkPermission('agregarAbonos'), async (req, 
         sale.payments.push({
             amount,
             date: paymentDate,
-            liquidatedDay: false
+            liquidatedDay: false,
+            metodoPago: normalizarMetodoPago(metodoPago)
         });
 
         const totalPaid = sale.payments.reduce((sum, payment) => sum + payment.amount, 0);

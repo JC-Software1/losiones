@@ -625,7 +625,8 @@ async function saveSale() {
         // ✅ Productos con cantidades
         products: productsWithQty,
         facturacionType: facturacionType,
-        facturacionEmail: facturacionEmail
+        facturacionEmail: facturacionEmail,
+        metodoPago: (document.getElementById('metodoPago')?.value || 'efectivo')
     };
 
     // ---------- Log para depurar ----------
@@ -650,6 +651,11 @@ async function saveSale() {
 
         // Limpiar todo
         form.reset();
+        const metodoPagoSelect = document.getElementById('metodoPago');
+        if (metodoPagoSelect) {
+            metodoPagoSelect.value = 'efectivo';
+            metodoPagoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
         inputDate.value = new Date().toISOString().split('T')[0];
         selectedProducts = [];
         renderSelectedProducts();
@@ -766,7 +772,8 @@ async function addPayment(force = false) {
 
     try {
         const token = getToken();
-        const response = await apiFetch(`/sales/${id}/payment`, "POST", { amount, date, force }, token);
+        const metodoPago = document.getElementById("paymentMethod")?.value || "efectivo";
+        const response = await apiFetch(`/sales/${id}/payment`, "POST", { amount, date, force, metodoPago }, token);
         const formattedAmount = amount.toLocaleString('es-CO');
         showNotification(`Abono de $${formattedAmount} registrado correctamente.`, "success");
 
@@ -842,6 +849,12 @@ function openPaymentModal(saleId) {
     else modal?.showModal?.();
     document.getElementById('paymentAmount').value = sale?.paymentPerInstallment || '';
     document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+    // Reiniciar método de pago a efectivo (y avisar al select animado)
+    const paymentMethodSelect = document.getElementById('paymentMethod');
+    if (paymentMethodSelect) {
+        paymentMethodSelect.value = 'efectivo';
+        paymentMethodSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     modal.dataset.saleId = saleId;
 }
 
@@ -1719,10 +1732,10 @@ let scanCount = 0;
 let availableCameras = [];
 let currentCameraIndex = 0;
 
-// Abrir modal y arrancar cámara
-btnCamera.addEventListener('click', startScanner);
-btnStopScan.addEventListener('click', stopScanner);
-btnFlipCamera.addEventListener('click', flipCamera);
+// Abrir modal y arrancar cámara (el botón puede ya no existir en el dropdown)
+if (btnCamera) btnCamera.addEventListener('click', startScanner);
+if (btnStopScan) btnStopScan.addEventListener('click', stopScanner);
+if (btnFlipCamera) btnFlipCamera.addEventListener('click', flipCamera);
 
 async function startScanner() {
     modalScan.classList.remove('hidden');
@@ -2796,3 +2809,102 @@ setInterval(() => {
         console.log('🔄 Sesión de administrador renovada');
     }
 }, 5 * 60 * 1000); // Cada 5 minutos
+
+/* =========================================================
+   PRODUCTO RÁPIDO (+) — crear y seleccionar en un paso
+   ========================================================= */
+const btnQuickAddProduct = document.getElementById('btnQuickAddProduct');
+const quickProductModal = document.getElementById('quickProductModal');
+
+function openQuickProductModal() {
+    const dropdown = document.getElementById('productDropdown');
+    if (dropdown && dropdown._saCerrar) dropdown._saCerrar(false);
+
+    const nameInput = document.getElementById('quickProductName');
+    const saleInput = document.getElementById('quickProductSalePrice');
+    const costInput = document.getElementById('quickProductCostPrice');
+    if (nameInput) nameInput.value = '';
+    if (saleInput) saleInput.value = '';
+    if (costInput) costInput.value = '';
+
+    if (window.ModalAnimado) window.ModalAnimado.abrir('quickProductModal');
+    else quickProductModal?.showModal?.();
+
+    setTimeout(() => nameInput?.focus(), 350);
+}
+
+async function saveQuickProduct() {
+    const nameInput = document.getElementById('quickProductName');
+    const saleInput = document.getElementById('quickProductSalePrice');
+    const costInput = document.getElementById('quickProductCostPrice');
+
+    const name = (nameInput?.value || '').trim();
+    const salePrice = parseFloat(saleInput?.value);
+    const costRaw = (costInput?.value || '').trim();
+    const costPrice = costRaw === '' ? 0 : parseFloat(costRaw);
+
+    if (!name) {
+        showNotification('El nombre del producto es obligatorio.', 'warning');
+        nameInput?.focus();
+        return;
+    }
+    if (isNaN(salePrice) || salePrice <= 0) {
+        showNotification('El precio de venta es obligatorio.', 'warning');
+        saleInput?.focus();
+        return;
+    }
+    if (costRaw !== '' && (isNaN(costPrice) || costPrice < 0)) {
+        showNotification('El precio de costo no es válido.', 'warning');
+        costInput?.focus();
+        return;
+    }
+
+    try {
+        const token = getToken();
+
+        const adminMode = sessionStorage.getItem('adminMode') === 'true';
+        const vendedorId = sessionStorage.getItem('vendedorId');
+        let endpoint = '/products/new';
+        if (adminMode && vendedorId) {
+            endpoint = `/products/vendedor/${vendedorId}/new`;
+        }
+
+        const product = await apiFetch(endpoint, 'POST', {
+            name,
+            costPrice,
+            salePrice,
+            stock: 1,
+            category: '',
+            brand: '',
+            size: '',
+            barcode: null
+        }, token);
+
+        if (window.ModalAnimado) window.ModalAnimado.cerrar('quickProductModal');
+        else quickProductModal?.close?.();
+
+        showNotification(`Producto "${name}" creado (stock: 1).`, 'success');
+
+        // Seleccionarlo automáticamente en la venta
+        selectProduct(product, 1);
+        loadProductsForDropdown();
+    } catch (error) {
+        console.error('Error al crear producto rápido:', error);
+        showNotification('No se pudo crear el producto: ' + error.message, 'error');
+    }
+}
+
+if (btnQuickAddProduct) btnQuickAddProduct.addEventListener('click', openQuickProductModal);
+document.getElementById('btnSaveQuickProduct')?.addEventListener('click', saveQuickProduct);
+
+// Enter en los campos obligatorios guarda directo
+['quickProductName', 'quickProductSalePrice', 'quickProductCostPrice'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveQuickProduct();
+        }
+    });
+});

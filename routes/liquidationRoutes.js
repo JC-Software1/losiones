@@ -33,7 +33,7 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
         const sales = await Sale.find({
             user: vendedorId,
             liquidatedDay: false
-        }).lean().select('_id clientName productName price advancePayment payments');
+        }).lean().select('_id clientName productName price advancePayment payments metodoPago');
 
         const products = await Product.find({
             user: vendedorId,
@@ -52,6 +52,8 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
         let paymentsData = [];
         let totalPayments = 0;
         let totalInitialPayments = 0;
+        let totalEfectivo = 0;
+        let totalTransferencia = 0;
         const clientsWhoPaidToday = new Set();
 
         allActiveSales.forEach(sale => {
@@ -69,13 +71,18 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
                 totalPayments += payment.amount;
                 clientsWhoPaidToday.add(sale.clientName);
 
+                const metodo = payment.metodoPago === 'transferencia' ? 'transferencia' : 'efectivo';
+                if (metodo === 'transferencia') totalTransferencia += payment.amount;
+                else totalEfectivo += payment.amount;
+
                 paymentsData.push({
                     saleId: sale._id,
                     clientName: sale.clientName,
                     amount: payment.amount,
                     date: payment.date,
                     paymentId: payment._id,
-                    isInitialPayment: isFirstPayment
+                    isInitialPayment: isFirstPayment,
+                    metodoPago: metodo
                 });
             });
         });
@@ -96,8 +103,12 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
             _id: s._id,
             clientName: s.clientName,
             productName: s.productName,
-            price: s.price
+            price: s.price,
+            metodoPago: s.metodoPago === 'transferencia' ? 'transferencia' : 'efectivo'
         }));
+
+        const salesEfectivo = salesData.filter(s => s.metodoPago === 'efectivo').reduce((sum, s) => sum + s.price, 0);
+        const salesTransferencia = salesData.filter(s => s.metodoPago === 'transferencia').reduce((sum, s) => sum + s.price, 0);
 
         const productsData = products.map(p => ({
             _id: p._id,
@@ -118,12 +129,16 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
             sales: {
                 count: sales.length,
                 total: totalSales,
+                efectivo: salesEfectivo,
+                transferencia: salesTransferencia,
                 data: salesData
             },
             payments: {
                 count: paymentsData.length,
                 total: totalPayments,
                 totalInitialPayments: totalInitialPayments,
+                efectivo: totalEfectivo,
+                transferencia: totalTransferencia,
                 data: paymentsData
             },
             inventory: {
@@ -177,7 +192,7 @@ router.get("/pending", auth, async (req, res) => {
         const sales = await Sale.find({
             user: userId,
             liquidatedDay: false
-        }).lean().select('_id clientName productName price advancePayment payments');
+        }).lean().select('_id clientName productName price advancePayment payments metodoPago');
 
         const products = await Product.find({
             user: userId,
@@ -196,6 +211,8 @@ router.get("/pending", auth, async (req, res) => {
         let paymentsData = [];
         let totalPayments = 0;
         let totalInitialPayments = 0;
+        let totalEfectivo = 0;
+        let totalTransferencia = 0;
         const clientsWhoPaidToday = new Set();
 
         allActiveSales.forEach(sale => {
@@ -213,13 +230,18 @@ router.get("/pending", auth, async (req, res) => {
                 totalPayments += payment.amount;
                 clientsWhoPaidToday.add(sale.clientName);
 
+                const metodo = payment.metodoPago === 'transferencia' ? 'transferencia' : 'efectivo';
+                if (metodo === 'transferencia') totalTransferencia += payment.amount;
+                else totalEfectivo += payment.amount;
+
                 paymentsData.push({
                     saleId: sale._id,
                     clientName: sale.clientName,
                     amount: payment.amount,
                     date: payment.date,
                     paymentId: payment._id,
-                    isInitialPayment: isFirstPayment
+                    isInitialPayment: isFirstPayment,
+                    metodoPago: metodo
                 });
             });
         });
@@ -240,8 +262,12 @@ router.get("/pending", auth, async (req, res) => {
             _id: s._id,
             clientName: s.clientName,
             productName: s.productName,
-            price: s.price
+            price: s.price,
+            metodoPago: s.metodoPago === 'transferencia' ? 'transferencia' : 'efectivo'
         }));
+
+        const salesEfectivo = salesData.filter(s => s.metodoPago === 'efectivo').reduce((sum, s) => sum + s.price, 0);
+        const salesTransferencia = salesData.filter(s => s.metodoPago === 'transferencia').reduce((sum, s) => sum + s.price, 0);
 
         const productsData = products.map(p => ({
             _id: p._id,
@@ -262,12 +288,16 @@ router.get("/pending", auth, async (req, res) => {
             sales: {
                 count: sales.length,
                 total: totalSales,
+                efectivo: salesEfectivo,
+                transferencia: salesTransferencia,
                 data: salesData
             },
             payments: {
                 count: paymentsData.length,
                 total: totalPayments,
                 totalInitialPayments: totalInitialPayments,
+                efectivo: totalEfectivo,
+                transferencia: totalTransferencia,
                 data: paymentsData
             },
             inventory: {
@@ -303,7 +333,7 @@ router.post("/new", auth, async (req, res) => {
         const sales = await Sale.find({
             user: userId,
             liquidatedDay: false
-        }).lean().select('_id clientName price advancePayment payments');
+        }).lean().select('_id clientName price advancePayment payments metodoPago');
 
         const products = await Product.find({
             user: userId,
@@ -323,6 +353,8 @@ router.post("/new", auth, async (req, res) => {
         let paymentUpdates = [];
         let totalPayments = 0;
         let totalInitialPayments = 0;
+        let totalEfectivo = 0;
+        let totalTransferencia = 0;
 
         allActiveSales.forEach(sale => {
             if (!sale.payments) return;
@@ -337,12 +369,16 @@ router.post("/new", auth, async (req, res) => {
                 }
 
                 totalPayments += payment.amount;
+                const metodo = payment.metodoPago === 'transferencia' ? 'transferencia' : 'efectivo';
+                if (metodo === 'transferencia') totalTransferencia += payment.amount;
+                else totalEfectivo += payment.amount;
                 paymentsData.push({
                     saleId: sale._id,
                     clientName: sale.clientName,
                     amount: payment.amount,
                     date: payment.date,
-                    paymentId: payment._id
+                    paymentId: payment._id,
+                    metodoPago: metodo
                 });
                 paymentUpdates.push({
                     saleId: sale._id,
@@ -376,13 +412,17 @@ router.post("/new", auth, async (req, res) => {
                 total: totalPayments,
                 totalInitialPayments: totalInitialPayments,
                 afterCommission: paymentsAfterCommission,
-                commissionPercentage: paymentsCommission
+                commissionPercentage: paymentsCommission,
+                efectivo: totalEfectivo,
+                transferencia: totalTransferencia
             },
             sales: {
                 count: sales.length,
                 total: totalSales,
                 afterCommission: salesAfterCommission,
-                commissionPercentage: salesCommission
+                commissionPercentage: salesCommission,
+                efectivo: sales.filter(s => s.metodoPago !== 'transferencia').reduce((sum, s) => sum + s.price, 0),
+                transferencia: sales.filter(s => s.metodoPago === 'transferencia').reduce((sum, s) => sum + s.price, 0)
             },
             totalIncome,
             inventory: {
@@ -397,7 +437,8 @@ router.post("/new", auth, async (req, res) => {
             liquidatedSales: sales.map(s => ({
                 saleId: s._id,
                 clientName: s.clientName,
-                amount: s.price
+                amount: s.price,
+                metodoPago: s.metodoPago === 'transferencia' ? 'transferencia' : 'efectivo'
             })),
             liquidatedPayments: paymentsData,
             liquidatedProducts: products.map(p => ({
@@ -476,7 +517,7 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
         const sales = await Sale.find({
             user: vendedorId,
             liquidatedDay: false
-        }).lean().select('_id clientName price advancePayment payments');
+        }).lean().select('_id clientName price advancePayment payments metodoPago');
 
         const products = await Product.find({
             user: vendedorId,
@@ -496,6 +537,8 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
         let paymentUpdates = [];
         let totalPayments = 0;
         let totalInitialPayments = 0;
+        let totalEfectivo = 0;
+        let totalTransferencia = 0;
 
         allActiveSales.forEach(sale => {
             if (!sale.payments) return;
@@ -510,12 +553,16 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
                 }
 
                 totalPayments += payment.amount;
+                const metodo = payment.metodoPago === 'transferencia' ? 'transferencia' : 'efectivo';
+                if (metodo === 'transferencia') totalTransferencia += payment.amount;
+                else totalEfectivo += payment.amount;
                 paymentsData.push({
                     saleId: sale._id,
                     clientName: sale.clientName,
                     amount: payment.amount,
                     date: payment.date,
-                    paymentId: payment._id
+                    paymentId: payment._id,
+                    metodoPago: metodo
                 });
                 paymentUpdates.push({
                     saleId: sale._id,
@@ -549,13 +596,17 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
                 total: totalPayments,
                 totalInitialPayments: totalInitialPayments,
                 afterCommission: paymentsAfterCommission,
-                commissionPercentage: paymentsCommission
+                commissionPercentage: paymentsCommission,
+                efectivo: totalEfectivo,
+                transferencia: totalTransferencia
             },
             sales: {
                 count: sales.length,
                 total: totalSales,
                 afterCommission: salesAfterCommission,
-                commissionPercentage: salesCommission
+                commissionPercentage: salesCommission,
+                efectivo: sales.filter(s => s.metodoPago !== 'transferencia').reduce((sum, s) => sum + s.price, 0),
+                transferencia: sales.filter(s => s.metodoPago === 'transferencia').reduce((sum, s) => sum + s.price, 0)
             },
             totalIncome,
             inventory: {
@@ -570,7 +621,8 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
             liquidatedSales: sales.map(s => ({
                 saleId: s._id,
                 clientName: s.clientName,
-                amount: s.price
+                amount: s.price,
+                metodoPago: s.metodoPago === 'transferencia' ? 'transferencia' : 'efectivo'
             })),
             liquidatedPayments: paymentsData,
             liquidatedProducts: products.map(p => ({

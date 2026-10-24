@@ -186,6 +186,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? `<div class="status-badge" style="background: var(--green-700); color: #fff; margin-top: 4px;">Seña/Pago Inicial</div>`
             : '';
 
+        // 💵 Badge con el método de pago
+        const esTransferencia = payment.metodoPago === 'transferencia';
+        const metodoBadge = `
+            <div class="status-badge" style="background: ${esTransferencia ? '#26221c' : '#3f9e70'}; color: #fff; margin-top: 4px;">
+                <i class="fas fa-${esTransferencia ? 'exchange-alt' : 'money-bill-wave'}"></i>
+                ${esTransferencia ? 'Transferencia' : 'Efectivo'}
+            </div>`;
+
         let settlementInfo = '';
         if (payment.settlementDate) {
             const settlementDate = new Date(payment.settlementDate).toLocaleDateString('es-CO', {
@@ -212,6 +220,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <div class="debt-amount">$${payment.amount.toLocaleString('es-CO')}</div>
                 <div class="status-badge ${statusClass}">${payment.isCompleted ? 'Completado' : 'Pendiente'}</div>
                 ${initialPaymentBadge}
+                ${metodoBadge}
             </div>
         </div>
 
@@ -235,6 +244,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <div class="detail-group">
                     <span class="detail-label">Modalidad de pago:</span>
                     <span class="detail-value">${payment.installments}</span>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-group">
+                    <span class="detail-label">Método de pago:</span>
+                    <span class="detail-value">
+                        <i class="fas fa-${esTransferencia ? 'exchange-alt' : 'money-bill-wave'}"></i>
+                        ${esTransferencia ? 'Transferencia' : 'Efectivo'}
+                    </span>
                 </div>
             </div>
 
@@ -291,6 +310,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         averagePaymentElement.textContent = `$${stats.averageAmount.toLocaleString('es-CO')}`;
         initialPaymentsElement.textContent = `$${stats.totalInitialPayments.toLocaleString('es-CO')}`;
 
+        const cashElement = document.getElementById('cashPayments');
+        const transferElement = document.getElementById('transferPayments');
+        if (cashElement) cashElement.textContent = `$${stats.totalEfectivo.toLocaleString('es-CO')}`;
+        if (transferElement) transferElement.textContent = `$${stats.totalTransferencia.toLocaleString('es-CO')}`;
+
         console.log('✅ Estadísticas actualizadas - Total mostrado:', stats.totalAmount);
     }
 
@@ -301,6 +325,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
         const averageAmount = payments.length > 0 ? totalAmount / payments.length : 0;
+
+        // 💵 Totales por método de pago
+        const totalEfectivo = payments
+            .filter(p => p.metodoPago !== 'transferencia')
+            .reduce((sum, p) => sum + p.amount, 0);
+        const totalTransferencia = payments
+            .filter(p => p.metodoPago === 'transferencia')
+            .reduce((sum, p) => sum + p.amount, 0);
 
         // 🔥 Calcular pagos iniciales solo de las ventas que tienen pagos filtrados
         const saleIds = [...new Set(payments.map(p => p.saleId))];
@@ -315,6 +347,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             count: payments.length,
             averageAmount: Math.round(averageAmount),
             totalInitialPayments: Math.round(totalInitialPayments),
+            totalEfectivo: Math.round(totalEfectivo),
+            totalTransferencia: Math.round(totalTransferencia)
         };
     }
 
