@@ -8,8 +8,8 @@ const ProductSchema = new mongoose.Schema({
     soldDate: { type: Date, default: null },
     soldTo: { type: String, default: null },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    category: { type: String, required: true, trim: true },
-    brand: { type: String, required: true, trim: true },
+    category: { type: String, required: false, default: '', trim: true },
+    brand: { type: String, required: false, default: '', trim: true },
     size: { type: String, default: null, trim: true },
     barcode: { type: String, default: null, trim: true }, // Nuevo campo para código de fábrica
     liquidatedDay: { type: Boolean, default: false },
