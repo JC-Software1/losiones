@@ -163,7 +163,7 @@ function mostrarModalBloqueo() {
 async function verificarBloqueosCompletos(username) {
     try {
         // Verificar si el usuario principal está bloqueado
-        const responsePrincipal = await fetch('https://losiones-fjt0.onrender.com/api/auth/verificar-bloqueo', {
+        const responsePrincipal = await fetch('https://losiones-1.onrender.com/api/auth/verificar-bloqueo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username })
@@ -176,7 +176,7 @@ async function verificarBloqueosCompletos(username) {
         }
 
         // Verificar si su administrador está bloqueado
-        const responseAdmin = await fetch(`https://losiones-fjt0.onrender.com/api/auth/verificar-admin-bloqueado/${username}`, {
+        const responseAdmin = await fetch(`https://losiones-1.onrender.com/api/auth/verificar-admin-bloqueado/${username}`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         });

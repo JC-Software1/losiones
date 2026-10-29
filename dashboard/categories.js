@@ -2823,9 +2823,11 @@ function openQuickProductModal() {
     const nameInput = document.getElementById('quickProductName');
     const saleInput = document.getElementById('quickProductSalePrice');
     const costInput = document.getElementById('quickProductCostPrice');
+    const stockInput = document.getElementById('quickProductStock');
     if (nameInput) nameInput.value = '';
     if (saleInput) saleInput.value = '';
     if (costInput) costInput.value = '';
+    if (stockInput) stockInput.value = '';
 
     if (window.ModalAnimado) window.ModalAnimado.abrir('quickProductModal');
     else quickProductModal?.showModal?.();
@@ -2837,11 +2839,15 @@ async function saveQuickProduct() {
     const nameInput = document.getElementById('quickProductName');
     const saleInput = document.getElementById('quickProductSalePrice');
     const costInput = document.getElementById('quickProductCostPrice');
+    const stockInput = document.getElementById('quickProductStock');
 
     const name = (nameInput?.value || '').trim();
     const salePrice = parseFloat(saleInput?.value);
     const costRaw = (costInput?.value || '').trim();
     const costPrice = costRaw === '' ? 0 : parseFloat(costRaw);
+    // 💡 Cantidad opcional: vacío = 1
+    const stockRaw = (stockInput?.value || '').trim();
+    const stock = stockRaw === '' ? 1 : parseInt(stockRaw, 10);
 
     if (!name) {
         showNotification('El nombre del producto es obligatorio.', 'warning');
@@ -2856,6 +2862,11 @@ async function saveQuickProduct() {
     if (costRaw !== '' && (isNaN(costPrice) || costPrice < 0)) {
         showNotification('El precio de costo no es válido.', 'warning');
         costInput?.focus();
+        return;
+    }
+    if (stockRaw !== '' && (isNaN(stock) || stock < 1)) {
+        showNotification('La cantidad debe ser un número mayor o igual a 1.', 'warning');
+        stockInput?.focus();
         return;
     }
 
@@ -2873,7 +2884,7 @@ async function saveQuickProduct() {
             name,
             costPrice,
             salePrice,
-            stock: 1,
+            stock,
             category: '',
             brand: '',
             size: '',
@@ -2883,10 +2894,10 @@ async function saveQuickProduct() {
         if (window.ModalAnimado) window.ModalAnimado.cerrar('quickProductModal');
         else quickProductModal?.close?.();
 
-        showNotification(`Producto "${name}" creado (stock: 1).`, 'success');
+        showNotification(`Producto "${name}" creado (cantidad: ${stock}).`, 'success');
 
-        // Seleccionarlo automáticamente en la venta
-        selectProduct(product, 1);
+        // Seleccionarlo automáticamente en la venta con esa cantidad
+        selectProduct(product, stock);
         loadProductsForDropdown();
     } catch (error) {
         console.error('Error al crear producto rápido:', error);
@@ -2898,7 +2909,7 @@ if (btnQuickAddProduct) btnQuickAddProduct.addEventListener('click', openQuickPr
 document.getElementById('btnSaveQuickProduct')?.addEventListener('click', saveQuickProduct);
 
 // Enter en los campos obligatorios guarda directo
-['quickProductName', 'quickProductSalePrice', 'quickProductCostPrice'].forEach(id => {
+['quickProductName', 'quickProductSalePrice', 'quickProductCostPrice', 'quickProductStock'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('keydown', (e) => {

@@ -368,7 +368,7 @@ requireAuth();
 async function verificarVencimiento() {
     try {
         const token = getToken();
-        const res = await fetch(`https://losiones-fjt0.onrender.com/api/auth/verificar-vencimiento`, {
+        const res = await fetch(`https://losiones-1.onrender.com/api/auth/verificar-vencimiento`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
         const response = await res.json();

@@ -4,7 +4,7 @@
  * for all barbería pages.
  */
 
-const API_BASE = "https://losiones-fjt0.onrender.com/api";
+const API_BASE = "https://losiones-1.onrender.com/api";
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
