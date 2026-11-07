@@ -14,24 +14,45 @@ const router = express.Router();
 // Cuando una clave alcanza el límite (429/403/etc.), pasa a la siguiente
 // ─────────────────────────────────────────────────────
 
+const FALLBACK_KEYS = [
+    "AIzaSyDlDb2SSVyxBONwNcVjc7bhz0QPqcB4cVI",
+    "AIzaSyAyJx4tqOpouMe6xM26FWZ5FSx5YYw5Xj0",
+    "AIzaSyDWbv5MnbNBceXGabw_CJtqYnd94W266dA",
+    "AIzaSyCL41myNt2aGzgXQrkcTNt1xzvUWOydPZc",
+    "AIzaSyCsfJDvYCEtMZ6ubh2vYt2dlqbNNiZqILI",
+    "AIzaSyBK6Gq8nCmTVgq-tmIajiFOJEUqhUo_TMg",
+    "AIzaSyBc9Cw7Dw2CCktnppmO3cQ2ZN-U9sWMcUs",
+    "AIzaSyDCUWkbONcard-8ea6GXemsFnAnQlYxfbo",
+    "AIzaSyC9EL5hbDoT2WKUIkpGsPT5oUZcPcQ7l0o",
+    "AIzaSyCVUndVje6Cnos8DwgMVjSZ5KHd6KkEEdI",
+    "AIzaSyBvAKhUB0V9fmNjUAw2lGa3Yv3FJWWWH6w",
+    "AIzaSyCYJrpmFlblwgurmLJGd3O7c4G-2vW26Gk",
+    "AIzaSyD0jBma--dQsQAdY8q9ymyeNt4mZyQjQo8",
+    "AIzaSyDNq-i7kWlmSIZEHL5wMzAj-ab1z5kn0lI",
+    "AIzaSyAMnknXivoQkkUAkvAiuczEY5bal_QqVT0"
+];
+
 function getApiKeys() {
     const raw = (process.env.IA || "").trim();
-    if (!raw) return [];
+    if (!raw) return FALLBACK_KEYS;
 
     // Si es JSON array
     if (raw.startsWith("[") && raw.endsWith("]")) {
         try {
-            return JSON.parse(raw).map(k => String(k).trim()).filter(Boolean);
+            const parsed = JSON.parse(raw).map(k => String(k).trim()).filter(Boolean);
+            if (parsed.length > 0) return parsed;
         } catch (e) {
             // Seguir con split
         }
     }
 
     // Dividir por comas, punto y coma, o saltos de línea
-    return raw
+    const split = raw
         .split(/[,;\n]+/)
         .map(k => k.trim())
         .filter(k => k.length > 5);
+
+    return split.length > 0 ? split : FALLBACK_KEYS;
 }
 
 // Índice de la clave actual en memoria
@@ -132,7 +153,7 @@ async function callGemini(messages, retries = 0) {
     const currentKey = keys[currentKeyIndex % keys.length];
     
     // Modelos a probar en orden
-    const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+    const models = ["gemini-2.5-flash", "gemini-3.5-flash-lite"];
     
     // Construir contenido para Gemini
     const contents = [
@@ -155,7 +176,7 @@ async function callGemini(messages, retries = 0) {
                         parts: [{ text: SYSTEM_INSTRUCTION }]
                     },
                     generationConfig: {
-                        temperature: 0.6,
+                        temperature: 0.5,
                         maxOutputTokens: 1024,
                     }
                 },
@@ -175,17 +196,13 @@ async function callGemini(messages, retries = 0) {
             const errorMsg = error.response?.data?.error?.message || error.message;
 
             console.warn(`[JC-IA] Error con clave #${(currentKeyIndex % keys.length) + 1} (${model}): [${status}] ${errorMsg}`);
-
-            // Si es límite de cuota (429), clave inválida (400 con API_KEY_INVALID), o permiso (403), rotar clave
-            if (status === 429 || status === 403 || (status === 400 && String(errorMsg).includes("API_KEY"))) {
-                console.log(`[JC-IA] 🔄 Rotando clave de IA (${currentKeyIndex + 1} -> ${(currentKeyIndex + 1) % keys.length + 1})...`);
-                currentKeyIndex = (currentKeyIndex + 1) % keys.length;
-                return callGemini(messages, retries + 1);
-            }
         }
     }
 
-    throw lastError || new Error("Error desconocido al consultar Gemini");
+    // Si fallaron los modelos con esta clave, rotar a la siguiente clave automáticamente
+    console.log(`[JC-IA] 🔄 Rotando clave de IA (${(currentKeyIndex % keys.length) + 1} -> ${((currentKeyIndex + 1) % keys.length) + 1})...`);
+    currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+    return callGemini(messages, retries + 1);
 }
 
 // ─── RUTA: POST /api/ia/chat ───

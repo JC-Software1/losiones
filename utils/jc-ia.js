@@ -1,5 +1,6 @@
 import { apiFetch } from "./api.js";
 import { getToken } from "./auth.js";
+import { showNotification } from "./notifications.js";
 
 // ═══════════════════════════════════════════════════════════════
 // JC-IA: Asistente Inteligente de Inventario (Voz y Texto)
@@ -115,35 +116,40 @@ function setupSpeechRecognition() {
             const interimBox = document.getElementById("iaInterimBox");
             const input = document.getElementById("iaInput");
 
-            if (interimBox) {
-                if (interimTranscript) {
+            if (interimTranscript) {
+                clearTimeout(speechSilenceTimer);
+                if (interimBox) {
                     interimBox.textContent = `Escuchando: "${interimTranscript}"`;
                     interimBox.classList.add("visible");
-                } else {
-                    interimBox.classList.remove("visible");
                 }
+            } else if (interimBox && !finalTranscript) {
+                interimBox.classList.remove("visible");
             }
 
             if (finalTranscript) {
+                if (interimBox) interimBox.classList.remove("visible");
                 if (input) {
                     input.value = (input.value ? input.value + " " : "") + finalTranscript.trim();
                 }
 
-                // Si detecta una frase final completa, dar una pequeña pausa y enviar automáticamente
+                // Pausa natural (1.6s) para auto-enviar mensaje
                 clearTimeout(speechSilenceTimer);
                 speechSilenceTimer = setTimeout(() => {
                     if (input && input.value.trim() && !isProcessing) {
                         sendCurrentMessage();
                     }
-                }, 1400);
+                }, 1600);
             }
         };
 
         recognition.onerror = (event) => {
+            if (event.error === "aborted" || event.error === "no-speech") {
+                return;
+            }
             console.warn("[JC-IA] Error en reconocimiento de voz:", event.error);
             if (event.error === "not-allowed") {
                 updateListeningUI(false, "Permiso de micrófono denegado");
-            } else if (event.error !== "no-speech") {
+            } else {
                 updateListeningUI(false, "Micrófono en pausa");
             }
         };
@@ -187,13 +193,14 @@ function toggleSpeechListening() {
 }
 
 function startSpeechListening() {
-    if (!recognition || isProcessing) return;
+    if (!recognition || isProcessing || isSpeechListening) return;
     try {
         isSpeechListening = true;
         recognition.start();
     } catch (e) {
-        // Podría estar ya iniciado
-        console.log("[JC-IA] Info Speech start:", e.message);
+        if (!String(e.message).includes("already started")) {
+            console.log("[JC-IA] Info Speech start:", e.message);
+        }
     }
 }
 
@@ -398,6 +405,10 @@ async function executeProductsCreation(products) {
         } catch (err) {
             console.error("[JC-IA] Error guardando producto:", p.name, err);
         }
+    }
+
+    if (successCount > 0) {
+        showNotification(`¡${successCount} producto(s) creado(s) con éxito en tu inventario!`, "success");
     }
 
     // Refrescar productos en la vista principal
