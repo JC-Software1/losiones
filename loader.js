@@ -207,7 +207,7 @@
   // Función para verificar si una request es del bot keepAlive
   function isBotRequest(url, body) {
     // Verificar si la URL contiene el endpoint de tu API
-    if (url && url.includes('losiones-1.onrender.com/api')) {
+    if (url && url.includes('losiones-fjt0.onrender.com/api')) {
       
       // Si es un POST a /auth/login, verificar si es el bot
       if (url.includes('/auth/login')) {
