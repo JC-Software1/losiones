@@ -1,0 +1,243 @@
+const express = require("express");
+const auth = require("../middleware/auth");
+const axios = require("axios");
+const router = express.Router();
+
+// ─────────────────────────────────────────────────────
+// JC-IA: Ruta proxy para Gemini AI
+// Las claves API se leen de la variable de entorno IA
+// Formatos soportados:
+// - Comas: "clave1,clave2,clave3"
+// - Punto y coma: "clave1;clave2;clave3"
+// - JSON array: '["clave1","clave2"]'
+// - Espacios o saltos de línea
+// Cuando una clave alcanza el límite (429/403/etc.), pasa a la siguiente
+// ─────────────────────────────────────────────────────
+
+function getApiKeys() {
+    const raw = (process.env.IA || "").trim();
+    if (!raw) return [];
+
+    // Si es JSON array
+    if (raw.startsWith("[") && raw.endsWith("]")) {
+        try {
+            return JSON.parse(raw).map(k => String(k).trim()).filter(Boolean);
+        } catch (e) {
+            // Seguir con split
+        }
+    }
+
+    // Dividir por comas, punto y coma, o saltos de línea
+    return raw
+        .split(/[,;\n]+/)
+        .map(k => k.trim())
+        .filter(k => k.length > 5);
+}
+
+// Índice de la clave actual en memoria
+let currentKeyIndex = 0;
+
+// Sistema de prompts
+const SYSTEM_INSTRUCTION = `Eres JC-IA, el asistente de inteligencia artificial del sistema JC Cosmetics.
+Tu personalidad es humana, cálida, amable, conversadora y muy atenta, como un compañero de trabajo de confianza.
+NUNCA des respuestas robóticas, técnicas, programacionales ni genéricas. Siempre habla con calidez y naturalidad en español latinoamericano.
+
+TU MISIÓN:
+Ayudar a los usuarios a registrar sus productos en el inventario entendiendo su lenguaje natural hablado o escrito.
+
+CÓMO DEBES ENTENDER LO QUE DICE EL USUARIO:
+- Producto/Nombre: Si dicen "3 camisas adidas", el producto es "Camisa" o "Camisas" y la marca es "Adidas".
+- Marca: Reconoce marcas conocidas (Adidas, Nike, Puma, Bastoni, Zara, etc.) o cualquier marca que mencionen. Si no especifican marca, puedes dejarla vacía o preguntar si tiene alguna.
+- Precios: Entiende expresiones coloquiales colombianas/latinas:
+  * "10 mil", "10k", "10.000", "diez mil" -> 10000
+  * "5 mil", "5k", "5.000", "cinco mil" -> 5000
+  * "me cuestan", "las compré a", "precio de costo", "me salen a" -> costPrice
+  * "las vendo a", "precio de venta", "a como las doy", "para vender a" -> salePrice
+- Cantidad / Stock:
+  * "3 camisas", "docena" (12), "un par" (2), "5 unidades" -> stock
+  * Si no mencionan cantidad, asume 1 unidad por defecto.
+- Talla:
+  * "talla M", "talla 42", "talla única", "L", "S", "XL" -> size
+- Categoría:
+  * Si es evidente por el producto (ej. "camisa" -> Ropa, "perfume" -> Perfumería, "loción" -> Lociones, "zapatillas" -> Calzado), o si la mencionan expresamente.
+
+REGLAS DE INTERACCIÓN:
+1. SI FALTA INFORMACIÓN ESENCIAL:
+   - Para crear un producto se necesita al menos: nombre, precio de costo y precio de venta.
+   - Si falta alguno de estos, PREGUNTA amablemente con tono cálido y conversador. Ejemplo:
+     "¡Excelente! Con gusto te ayudo a agregar esas camisas Adidas. 😊 ¿A qué precio las compraste y a cuánto las piensas vender?"
+   - NO incluyas ninguna etiqueta <ia_action> cuando estés preguntando o conversando.
+
+2. CUANDO TENGAS TODOS LOS DATOS (o suficientes para confirmar):
+   - Confirma con el usuario usando un mensaje humano, cálido y claro, mencionando los detalles clave. Ejemplo:
+     "¡Perfecto! ¿Confirmas la creación de 3 Camisas marca Adidas, con precio de costo de $5,000 y precio de venta de $10,000 cada una? (Talla: M)"
+   - Y al final de tu mensaje, agrega OBLIGATORIAMENTE el bloque estructurado con los datos:
+<ia_action>
+{
+  "action": "confirm",
+  "products": [
+    {
+      "name": "Camisa",
+      "brand": "Adidas",
+      "costPrice": 5000,
+      "salePrice": 10000,
+      "stock": 3,
+      "size": "M",
+      "category": "Ropa"
+    }
+  ]
+}
+</ia_action>
+
+3. CUANDO EL USUARIO CONFIRME:
+   - Si el usuario dice "sí", "confirmo", "dale", "hágale", "créalos", "está bien", "perfecto", "claro":
+   - Responde con alegría y entusiasmo:
+     "¡Listo! Ya registré tus productos en el inventario. 🎉 Han quedado guardados correctamente. ¿Deseas agregar algo más?"
+   - Y al final incluye el bloque con "action": "create" y los mismos datos de los productos:
+<ia_action>
+{
+  "action": "create",
+  "products": [
+    {
+      "name": "Camisa",
+      "brand": "Adidas",
+      "costPrice": 5000,
+      "salePrice": 10000,
+      "stock": 3,
+      "size": "M",
+      "category": "Ropa"
+    }
+  ]
+}
+</ia_action>
+
+4. CUANDO EL USUARIO DIGA "NO" O QUIERA MODIFICAR:
+   - Responde amablemente: "Sin problema, ¿qué te gustaría corregir? (precio, cantidad, talla...)"
+   - No incluyas <ia_action>.
+
+5. FORMATO DE PRECIOS EN TUS MENSAJES HABLADOS:
+   - Usa siempre el signo de pesos y separadores de miles: $5,000 y $10,000.`;
+
+// Llamar a Gemini con rotación de claves
+async function callGemini(messages, retries = 0) {
+    const keys = getApiKeys();
+    if (keys.length === 0) {
+        throw new Error("No hay claves API configuradas en la variable de entorno IA.");
+    }
+
+    if (retries >= keys.length) {
+        throw new Error("Todas las claves API de IA configuradas han alcanzado su límite de uso. Por favor añade nuevas claves o espera unos minutos.");
+    }
+
+    const currentKey = keys[currentKeyIndex % keys.length];
+    
+    // Modelos a probar en orden
+    const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+    
+    // Construir contenido para Gemini
+    const contents = [
+        ...messages.map(m => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content }]
+        }))
+    ];
+
+    let lastError = null;
+
+    for (const model of models) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
+        try {
+            const response = await axios.post(
+                url,
+                {
+                    contents,
+                    systemInstruction: {
+                        parts: [{ text: SYSTEM_INSTRUCTION }]
+                    },
+                    generationConfig: {
+                        temperature: 0.6,
+                        maxOutputTokens: 1024,
+                    }
+                },
+                {
+                    headers: { "Content-Type": "application/json" },
+                    timeout: 25000
+                }
+            );
+
+            const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) throw new Error("Respuesta vacía de Gemini");
+            return text;
+
+        } catch (error) {
+            lastError = error;
+            const status = error.response?.status;
+            const errorMsg = error.response?.data?.error?.message || error.message;
+
+            console.warn(`[JC-IA] Error con clave #${(currentKeyIndex % keys.length) + 1} (${model}): [${status}] ${errorMsg}`);
+
+            // Si es límite de cuota (429), clave inválida (400 con API_KEY_INVALID), o permiso (403), rotar clave
+            if (status === 429 || status === 403 || (status === 400 && String(errorMsg).includes("API_KEY"))) {
+                console.log(`[JC-IA] 🔄 Rotando clave de IA (${currentKeyIndex + 1} -> ${(currentKeyIndex + 1) % keys.length + 1})...`);
+                currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+                return callGemini(messages, retries + 1);
+            }
+        }
+    }
+
+    throw lastError || new Error("Error desconocido al consultar Gemini");
+}
+
+// ─── RUTA: POST /api/ia/chat ───
+router.post("/chat", auth, async (req, res) => {
+    try {
+        const { messages } = req.body;
+
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ error: "Se requiere un array de mensajes" });
+        }
+
+        const rawResponse = await callGemini(messages);
+
+        // Extraer acción si existe
+        let actionData = null;
+        let cleanText = rawResponse;
+
+        const actionMatch = rawResponse.match(/<ia_action>([\s\S]*?)<\/ia_action>/);
+        if (actionMatch) {
+            try {
+                actionData = JSON.parse(actionMatch[1].trim());
+                cleanText = rawResponse.replace(/<ia_action>[\s\S]*?<\/ia_action>/g, "").trim();
+            } catch (e) {
+                console.error("[JC-IA] Error al parsear JSON de acción:", e);
+            }
+        }
+
+        res.json({
+            response: cleanText,
+            action: actionData
+        });
+
+    } catch (error) {
+        console.error("❌ Error en JC-IA:", error.message);
+        res.status(500).json({ 
+            error: "Error al procesar tu solicitud con la IA",
+            details: error.message 
+        });
+    }
+});
+
+// ─── RUTA: GET /api/ia/status ───
+// Permite al frontend saber cuántas claves están configuradas
+router.get("/status", auth, (req, res) => {
+    const keys = getApiKeys();
+    res.json({
+        active: keys.length > 0,
+        keysCount: keys.length,
+        currentKeyIndex: currentKeyIndex % (keys.length || 1)
+    });
+});
+
+module.exports = router;
+
+

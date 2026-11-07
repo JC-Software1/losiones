@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/notifications.css">
     <link rel="stylesheet" href="css/navigation.css">
     <link rel="stylesheet" href="css/app-theme.css">
+    <link rel="stylesheet" href="css/jc-ia.css">
   <link rel="stylesheet" href="css/transicion-zoom.css">
   <script src="utils/transicion-zoom.js"></script>
 </head>
@@ -28,6 +29,11 @@
                 <h1>Administrar Productos</h1>
                 <p>Gestiona el catálogo completo de productos disponibles</p>
             </div>
+            <button type="button" class="btn-ia-header" id="btnOpenJCIA" title="Abrir asistente de voz JC-IA">
+                <i class="fas fa-microphone-lines"></i>
+                <span>Agregar con JC-IA</span>
+                <span class="ia-badge">IA ✨</span>
+            </button>
         </header>
 
         <!-- ---------- ESTADÍSTICAS DE PRODUCTOS ---------- -->
@@ -58,6 +64,24 @@
         <!-- ---------- FORMULARIO ---------- -->
         <div class="form-container">
             <h2 id="formTitle"><i class="fas fa-plus-circle"></i> Agregar Nuevo Producto</h2>
+
+            <button type="button" class="btn-ia-banner" id="btnJCIAForm">
+                <div class="btn-ia-banner-left">
+                    <div class="btn-ia-banner-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div style="text-align: left;">
+                        <strong>¿Prefieres hablar en lugar de escribir?</strong>
+                        <div style="font-size: 13px; color: #527964; margin-top: 2px;">
+                            Dile a <strong>JC-IA</strong> tus productos (ej: «3 camisas Adidas, costo 5 mil, venta 10 mil») y los agrega al instante.
+                        </div>
+                    </div>
+                </div>
+                <div style="font-weight: 700; color: #2f7d5b; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                    <span>Hablar con IA</span> <i class="fas fa-arrow-right"></i>
+                </div>
+            </button>
+
             <form id="productForm">
                 <input type="hidden" id="productId" value="" />
 
@@ -310,6 +334,69 @@
             </div>
         </div>
     </dialog>
+    <!-- ══════════════════════════════════════════════════════════
+         MODAL JC-IA (Asistente de Voz y Texto)
+         ══════════════════════════════════════════════════════════ -->
+    <div id="iaModal" class="ia-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="iaModalTitle">
+        <div class="ia-modal-card">
+            <!-- Header -->
+            <div class="ia-modal-header">
+                <div class="ia-header-info">
+                    <div class="ia-header-avatar">
+                        <i class="fas fa-robot"></i>
+                        <div class="ia-status-dot listening" id="iaStatusDot"></div>
+                    </div>
+                    <div>
+                        <h2 class="ia-header-title" id="iaModalTitle">
+                            JC-IA te está escuchando
+                        </h2>
+                        <p class="ia-header-subtitle">
+                            <i class="fas fa-sparkles"></i> Asistente inteligente de inventario
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="ia-close-btn" data-ia-close aria-label="Cerrar modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Banner de estado de escucha / ondas de sonido -->
+            <div class="ia-listening-banner" id="iaListeningBanner">
+                <div class="ia-listening-status">
+                    <div class="ia-sound-waves">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <span id="iaListeningStatusText">JC-IA te está escuchando... ¡Habla ahora!</span>
+                </div>
+                <button type="button" class="ia-toggle-mic-btn" id="iaToggleMicBanner">
+                    <i class="fas fa-microphone"></i> Micrófono
+                </button>
+            </div>
+
+            <!-- Transcripción en vivo de la voz -->
+            <div id="iaInterimBox" class="ia-interim-box"></div>
+
+            <!-- Chat / Conversación con animación de escritura -->
+            <div class="ia-chat-messages" id="iaChatMessages"></div>
+
+            <!-- Footer / Entrada de voz y texto -->
+            <div class="ia-modal-footer">
+                <div class="ia-input-wrapper">
+                    <button type="button" class="ia-btn-mic active" id="iaMicBtn" title="Activar/pausar micrófono">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <input type="text" id="iaInput" class="ia-text-input" placeholder="Habla o escribe (ej: 3 camisas adidas, costo 5 mil, venta 10 mil)..." autocomplete="off" />
+                    <button type="button" class="ia-btn-send" id="iaSendBtn" title="Enviar mensaje">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="ia-helper-hint">
+                    <i class="fas fa-info-circle"></i> Puedes hablar con tu voz o escribir. JC-IA te pedirá confirmación antes de crear los productos.
+                </div>
+            </div>
+        </div>
+    </div>
+
 <script src="utils/barcodeScanner.js"></script>
     <script src="utils/notifications.js" type="module"></script>
     <script src="utils/navigation.js" type="module"></script>

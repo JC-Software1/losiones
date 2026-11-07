@@ -1,5 +1,6 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import { initJCIA } from "./utils/jc-ia.js";
 
 // DOM elements
 const form = document.getElementById("productForm");
@@ -138,6 +139,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadProducts();
         showLowStockAlert(); // ✅ Mostrar alerta de stock bajo
         setupEventListeners();
+
+        // ✅ Inicializar asistente de IA por voz y texto JC-IA
+        initJCIA(() => {
+            loadProducts();
+        });
 
         // ✅ Escuchar escaneo global
         window.addEventListener('barcodeScanned', (e) => {
