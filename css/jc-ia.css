@@ -522,6 +522,28 @@
     transform: translateY(-1px);
 }
 
+.ia-btn-other {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 14px;
+    background: #eef6f1;
+    color: #245f46;
+    border: 1px solid #dcece3;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ia-btn-other:hover {
+    background: #dcece3;
+    transform: translateY(-1px);
+}
+
 .ia-btn-cancel {
     flex: 1;
     display: inline-flex;

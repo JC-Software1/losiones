@@ -475,16 +475,19 @@ function showConfirmationCard(messageText, products) {
     });
     bubble.appendChild(cardsContainer);
 
-    // Botones de acción rápida (Sí / No)
+    // Botones de acción rápida (Sí / Agregar otro / Modificar)
     const actionsDiv = document.createElement("div");
     actionsDiv.className = "ia-confirm-actions";
     actionsDiv.style.display = "none";
     actionsDiv.innerHTML = `
         <button type="button" class="ia-btn-confirm" id="btnIaConfirmYes">
-            <i class="fas fa-check-circle"></i> Sí, crear producto
+            <i class="fas fa-check-circle"></i> ${products.length > 1 ? `Sí, crear los ${products.length} productos` : 'Sí, crear producto'}
+        </button>
+        <button type="button" class="ia-btn-other" id="btnIaConfirmOther">
+            <i class="fas fa-plus"></i> Agregar otro
         </button>
         <button type="button" class="ia-btn-cancel" id="btnIaConfirmNo">
-            <i class="fas fa-times-circle"></i> No, modificar
+            <i class="fas fa-times-circle"></i> Modificar
         </button>
     `;
     bubble.appendChild(actionsDiv);
@@ -502,6 +505,7 @@ function showConfirmationCard(messageText, products) {
 
         // Conectar botones
         const btnYes = actionsDiv.querySelector("#btnIaConfirmYes");
+        const btnOther = actionsDiv.querySelector("#btnIaConfirmOther");
         const btnNo = actionsDiv.querySelector("#btnIaConfirmNo");
 
         if (btnYes) {
@@ -509,6 +513,15 @@ function showConfirmationCard(messageText, products) {
                 actionsDiv.remove();
                 const input = document.getElementById("iaInput");
                 if (input) input.value = "Sí, confirmo la creación";
+                sendCurrentMessage();
+            });
+        }
+
+        if (btnOther) {
+            btnOther.addEventListener("click", () => {
+                actionsDiv.remove();
+                const input = document.getElementById("iaInput");
+                if (input) input.value = "Quiero agregar otro producto";
                 sendCurrentMessage();
             });
         }
