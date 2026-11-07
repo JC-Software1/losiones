@@ -14,6 +14,17 @@ let refreshProductsCallback = null;// Callback para recargar tabla
 let speechSilenceTimer = null;     // Temporizador para auto-enviar al parar de hablar
 let isProcessing = false;          // Bandera de procesamiento activo
 
+// Limpiar cualquier residuo de JSON o etiquetas para que nunca se muestren en el chat
+function cleanVisibleText(text) {
+    if (!text) return "";
+    return text
+        .replace(/<ia_action>[\s\S]*?(?:<\/ia_action>|$)/gi, "")
+        .replace(/```(?:json)?\s*\{[\s\S]*?\}\s*```/gi, "")
+        .replace(/```[\s\S]*/gi, "")
+        .replace(/\{[\s\r\n]*"action"\s*:[\s\S]*/gi, "")
+        .trim();
+}
+
 // ─── Inicializar el Asistente JC-IA ───
 export function initJCIA(onProductsCreated) {
     refreshProductsCallback = onProductsCreated;
@@ -330,7 +341,7 @@ async function sendCurrentMessage() {
 
         removeTypingIndicator(typingId);
 
-        const aiResponseText = data.response || "No pude generar una respuesta.";
+        const aiResponseText = cleanVisibleText(data.response) || "No pude generar una respuesta.";
         const actionData = data.action;
 
         // Agregar al historial de IA
@@ -365,8 +376,15 @@ async function sendCurrentMessage() {
     } catch (error) {
         removeTypingIndicator(typingId);
         console.error("[JC-IA] Error en llamada API:", error);
+        const errMsg = error && error.message ? error.message : "";
+        const isKeyIssue = errMsg.includes("claves") || errMsg.includes("Gemini") || errMsg.includes("leaked") || errMsg.includes("límite");
+
+        const displayMsg = isKeyIssue
+            ? `⚠️ ${errMsg}`
+            : "😅 Disculpa, tuve un pequeño tropiezo de conexión con la IA. ¿Me repites lo que deseas registrar?";
+
         addIAMessage(
-            "😅 Disculpa, tuve un pequeño tropiezo de conexión. ¿Me repites lo que deseas registrar?",
+            displayMsg,
             "ia",
             true,
             () => startSpeechListening()

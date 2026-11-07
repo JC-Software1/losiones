@@ -133,7 +133,12 @@ Los usuarios suelen dictar varios productos usando "otro", "otro producto", "ade
    - No incluyas <ia_action>.
 
 7. FORMATO DE PRECIOS EN TUS MENSAJES HABLADOS:
-   - Usa siempre el signo de pesos y separadores de miles: $5,000 y $10,000.`;
+   - Usa siempre el signo de pesos y separadores de miles: $5,000 y $10,000.
+
+8. PROHIBIDO MOSTRAR JSON EN TU TEXTO:
+   - El texto que lee el usuario debe ser 100% conversacional, humano y cálido.
+   - NUNCA pongas código JSON, llaves { } o comillas de código en tu texto conversacional.
+   - El bloque de datos estructurados va ÚNICAMENTE al final de todo, estrictamente dentro de <ia_action> y </ia_action>.`;
 
 // Llamar a Gemini con rotación de claves
 async function callGemini(messages, retries = 0) {
@@ -173,7 +178,7 @@ async function callGemini(messages, retries = 0) {
                     },
                     generationConfig: {
                         temperature: 0.5,
-                        maxOutputTokens: 1024,
+                        maxOutputTokens: 3072,
                     }
                 },
                 {
@@ -201,6 +206,92 @@ async function callGemini(messages, retries = 0) {
     return callGemini(messages, retries + 1);
 }
 
+// ─── Utilidades para extracción limpia de JSON ───
+function repairJson(s) {
+    if (!s) return null;
+    s = s.trim();
+    try { return JSON.parse(s); } catch (e) {}
+
+    s = s.replace(/,\s*$/, "").replace(/,\s*"[^"]*":?\s*$/, "");
+
+    const stack = [];
+    let inString = false;
+    let escape = false;
+
+    for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (ch === "\\" && inString) {
+            escape = !escape;
+            continue;
+        }
+        if (ch === "\"" && !escape) {
+            inString = !inString;
+        }
+        escape = false;
+
+        if (!inString) {
+            if (ch === "{" || ch === "[") {
+                stack.push(ch);
+            } else if (ch === "}") {
+                if (stack[stack.length - 1] === "{") stack.pop();
+            } else if (ch === "]") {
+                if (stack[stack.length - 1] === "[") stack.pop();
+            }
+        }
+    }
+
+    if (inString) s += "\"";
+
+    while (stack.length > 0) {
+        const last = stack.pop();
+        if (last === "{") s += "}";
+        if (last === "[") s += "]";
+    }
+
+    try {
+        return JSON.parse(s);
+    } catch (err) {
+        return null;
+    }
+}
+
+function extractActionAndClean(raw) {
+    if (!raw) return { cleanText: "", actionData: null };
+    let cleanText = raw;
+    let actionData = null;
+
+    // 1. Si viene con etiqueta <ia_action>...</ia_action> o <ia_action>... (sin cerrar)
+    const tagMatch = raw.match(/<ia_action>([\s\S]*?)(?:<\/ia_action>|$)/i);
+    if (tagMatch) {
+        cleanText = raw.replace(/<ia_action>[\s\S]*?(?:<\/ia_action>|$)/gi, "").trim();
+        actionData = repairJson(tagMatch[1]);
+    } else {
+        // 2. Si vino con bloque markdown ```json ... ```
+        const mdMatch = raw.match(/```(?:json)?\s*(\{[\s\S]*?"action"[\s\S]*?\})\s*```/i);
+        if (mdMatch) {
+            cleanText = raw.replace(/```(?:json)?\s*\{[\s\S]*?"action"[\s\S]*?\}\s*```/gi, "").trim();
+            actionData = repairJson(mdMatch[1]);
+        } else {
+            // 3. Si vino como JSON crudo con "action": ...
+            const jsonMatch = raw.match(/(\{[\s\r\n]*"action"[\s\S]*)/i);
+            if (jsonMatch) {
+                cleanText = raw.replace(/(\{[\s\r\n]*"action"[\s\S]*)/i, "").trim();
+                actionData = repairJson(jsonMatch[1]);
+            }
+        }
+    }
+
+    // Doble limpieza de cualquier residuo de etiquetas o llaves huérfanas
+    cleanText = cleanText
+        .replace(/<ia_action>[\s\S]*/gi, "")
+        .replace(/<\/ia_action>/gi, "")
+        .replace(/```[\s\S]*/gi, "")
+        .replace(/\{[\s\r\n]*"action"\s*:[\s\S]*/gi, "")
+        .trim();
+
+    return { cleanText, actionData };
+}
+
 // ─── RUTA: POST /api/ia/chat ───
 router.post("/chat", auth, async (req, res) => {
     try {
@@ -211,20 +302,7 @@ router.post("/chat", auth, async (req, res) => {
         }
 
         const rawResponse = await callGemini(messages);
-
-        // Extraer acción si existe
-        let actionData = null;
-        let cleanText = rawResponse;
-
-        const actionMatch = rawResponse.match(/<ia_action>([\s\S]*?)<\/ia_action>/);
-        if (actionMatch) {
-            try {
-                actionData = JSON.parse(actionMatch[1].trim());
-                cleanText = rawResponse.replace(/<ia_action>[\s\S]*?<\/ia_action>/g, "").trim();
-            } catch (e) {
-                console.error("[JC-IA] Error al parsear JSON de acción:", e);
-            }
-        }
+        const { cleanText, actionData } = extractActionAndClean(rawResponse);
 
         res.json({
             response: cleanText,
@@ -233,8 +311,17 @@ router.post("/chat", auth, async (req, res) => {
 
     } catch (error) {
         console.error("❌ Error en JC-IA:", error.message);
+        const isKeyRevoked = String(error.message).includes("leaked") || 
+                             String(error.message).includes("PERMISSION_DENIED") ||
+                             String(error.message).includes("alcanzado su límite") ||
+                             String(error.message).includes("claves");
+
+        const msg = isKeyRevoked
+            ? "Las claves de Gemini fueron inhabilitadas por Google (leaked) o están agotadas. Por favor añade claves nuevas en la variable IA de Render."
+            : (error.message || "Error al procesar tu solicitud con la IA");
+
         res.status(500).json({ 
-            error: "Error al procesar tu solicitud con la IA",
+            error: msg,
             details: error.message 
         });
     }
