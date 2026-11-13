@@ -16,4 +16,9 @@ const ProductSchema = new mongoose.Schema({
     stock: { type: Number, default: 1, min: 0 } // Nuevo campo
 }, { timestamps: true });
 
+// Índices para optimizar listados, paginación alfabética y filtros
+ProductSchema.index({ user: 1, name: 1 });
+ProductSchema.index({ name: 1 });
+ProductSchema.index({ sold: 1, stock: 1 });
+
 module.exports = mongoose.model("Product", ProductSchema);

@@ -1,5 +1,6 @@
 import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
+import { setupInfiniteScroll } from "./utils/infiniteScroll.js";
 import { initJCIA } from "./utils/jc-ia.js";
 
 // DOM elements
@@ -25,6 +26,10 @@ const inputBarcode = document.getElementById("productBarcode");
 // Variables globales
 let products = [];
 let filteredProducts = [];
+let currentPage = 1;
+let hasMoreData = true;
+let isLoadingMore = false;
+let observerInstance = null;
 
 
 // Función para verificar permiso y ocultar/mostrar costos
@@ -174,34 +179,114 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 });
 
-// ✅ Función para cargar productos
-async function loadProducts() {
+// ✅ Función para cargar productos (con paginación infinita)
+async function loadProducts(reset = true) {
     try {
         const token = getToken();
-        let endpoint = "/products";
+        if (reset) {
+            currentPage = 1;
+            hasMoreData = true;
+            productsList.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
+        }
 
-        // Detectar modo admin
+        let baseUrl = "/products";
         const adminMode = sessionStorage.getItem('adminMode') === 'true';
         const vendedorId = sessionStorage.getItem('vendedorId');
 
         if (adminMode && vendedorId) {
-            endpoint = `/products/vendedor/${vendedorId}`;
+            baseUrl = `/products/vendedor/${vendedorId}`;
         }
-        const data = await apiFetch(endpoint, "GET", null, token);
 
-        // Guardar todos los productos.
-        // El usuario pide que NO desaparezcan cuando se agotan.
-        // ✅ Ordenar alfabéticamente por nombre
-        products = data.sort((a, b) => a.name.localeCompare(b.name));
+        const search = searchInput ? searchInput.value.trim() : "";
+        let url = `${baseUrl}?page=${currentPage}&limit=20`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+        const res = await apiFetch(url, "GET", null, token);
+        const items = res.items || [];
+        hasMoreData = res.hasMore;
+
+        if (reset) {
+            products = items;
+        } else {
+            products = [...products, ...items];
+        }
         filteredProducts = [...products];
 
-        displayProducts(filteredProducts);
-        updateStatistics(filteredProducts);
+        if (reset && products.length === 0) {
+            productsList.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <h3>No hay productos registrados</h3>
+                    <p>Agrega productos usando el formulario o JC-IA.</p>
+                </div>
+            `;
+        } else {
+            displayProducts(filteredProducts, reset);
+
+            if (res.stats && reset) {
+                updateStatisticsFromServer(res.stats);
+            } else if (reset) {
+                updateStatistics(filteredProducts);
+            }
+
+            ensureSentinel();
+        }
 
     } catch (error) {
         console.error("Error al cargar productos:", error);
-        showError("No se pudieron cargar los productos");
+        if (reset) {
+            productsList.innerHTML = `<div class="empty-state"><p>Error al cargar el catálogo</p></div>`;
+        }
     }
+}
+
+function ensureSentinel() {
+    let sentinel = document.getElementById("scrollSentinel");
+    if (!sentinel) {
+        sentinel = document.createElement("div");
+        sentinel.id = "scrollSentinel";
+        sentinel.className = "scroll-sentinel";
+        sentinel.innerHTML = `
+            <div class="scroll-spinner"></div>
+            <div class="scroll-end-msg ${hasMoreData ? '' : 'visible'}">
+                ${hasMoreData ? '' : 'No hay más productos'}
+            </div>
+        `;
+        productsList.parentNode.appendChild(sentinel);
+    } else {
+        const msg = sentinel.querySelector(".scroll-end-msg");
+        if (msg) {
+            msg.textContent = hasMoreData ? '' : 'No hay más productos';
+            msg.classList.toggle('visible', !hasMoreData);
+        }
+    }
+
+    if (!observerInstance) {
+        observerInstance = setupInfiniteScroll({
+            container: productsList,
+            sentinel,
+            fetchMore: async () => {
+                if (!hasMoreData || isLoadingMore) return;
+                currentPage++;
+                sentinel.classList.add("loading");
+                await loadProducts(false);
+                sentinel.classList.remove("loading");
+            },
+            hasMore: () => hasMoreData,
+            getLoading: () => isLoadingMore,
+            setLoading: (v) => { isLoadingMore = v; }
+        });
+    }
+}
+
+function updateStatisticsFromServer(stats) {
+    const totalProductsEl = document.getElementById("totalProducts");
+    const avgMarginEl = document.getElementById("avgMargin");
+    const totalInventoryValueEl = document.getElementById("totalInventoryValue");
+
+    if (totalProductsEl) totalProductsEl.textContent = stats.totalStock || stats.count || 0;
+    if (avgMarginEl) avgMarginEl.textContent = `${Math.round(stats.avgMargin || 0)}%`;
+    if (totalInventoryValueEl) totalInventoryValueEl.textContent = `$${Math.round(stats.totalCostValue || 0).toLocaleString('es-CO')}`;
 }
 
 // ✅ Función para configurar event listeners
@@ -248,11 +333,13 @@ function setupEventListeners() {
 
 // Modificar displayProducts para ocultar costos si no tiene permiso
 // Modificar displayProducts para que sea idéntico al de inventario
-function displayProducts(productsList) {
+function displayProducts(productsListToRender, reset = false) {
     const productsContainer = document.getElementById("productsList");
-    productsContainer.innerHTML = "";
+    if (reset) {
+        productsContainer.innerHTML = "";
+    }
 
-    if (productsList.length === 0) {
+    if (productsListToRender.length === 0 && reset) {
         productsContainer.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-box-open"></i>
@@ -262,9 +349,13 @@ function displayProducts(productsList) {
         return;
     }
 
-    productsList.forEach((product, index) => {
+    const startIndex = reset ? 0 : productsContainer.children.length;
+    const newItems = productsListToRender.slice(startIndex);
+
+    newItems.forEach((product, index) => {
         const productCard = document.createElement("div");
-        productCard.classList.add("product-card");
+        productCard.classList.add("product-card", "fade-in-up");
+        productCard.style.animationDelay = `${(index % 20) * 0.03}s`;
 
         // Verificar stock
         const stock = product.stock !== undefined ? product.stock : 0;
@@ -459,14 +550,7 @@ function showLowStockAlert() {
 
 // Aplicar filtros
 function applyFilters() {
-    const searchText = searchInput.value.toLowerCase().trim();
-
-    filteredProducts = products.filter(product => {
-        return searchText === "" || product.name.toLowerCase().includes(searchText);
-    });
-
-    displayProducts(filteredProducts);
-    updateStatistics(filteredProducts);
+    loadProducts(true);
 }
 
 // Calcular margen en tiempo real

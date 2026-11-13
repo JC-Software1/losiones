@@ -76,4 +76,9 @@ SaleSchema.virtual('totalPaid').get(function() {
 // ❌ ELIMINAR ESTE MIDDLEWARE - ESTABA SOBRESCRIBIENDO EL VALOR
 // SaleSchema.pre('save', function(next) { ... });
 
+// Índices para optimizar listados, paginación y búsqueda
+SaleSchema.index({ user: 1, settled: 1, settledDate: -1 });
+SaleSchema.index({ settled: 1, settledDate: -1 });
+SaleSchema.index({ saleDate: -1 });
+
 module.exports = mongoose.model("Sale", SaleSchema);

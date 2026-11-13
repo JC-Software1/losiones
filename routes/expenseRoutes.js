@@ -2,6 +2,7 @@ const express = require("express");
 const auth = require("../middleware/auth");
 const { checkPermission } = require("../middleware/checkPermissions");
 const Expense = require("../models/Expense");
+const { getPaginationParams, paginatedResponse } = require("../helpers/pagination");
 const router = express.Router();
 
 // ✅ FUNCIÓN AUXILIAR: Buscar gastos con permisos admin
@@ -73,7 +74,7 @@ router.get("/vendedor/:vendedorId", auth, async (req, res) => {
     }
 });
 
-// Obtener todos los gastos
+// Obtener todos los gastos (con paginación opt-in ?page=)
 router.get("/", auth, checkPermission('verGastos'), async (req, res) => {
     try {
         // SIN filtro de liquidatedDay - mostrar TODOS los gastos
@@ -81,8 +82,39 @@ router.get("/", auth, checkPermission('verGastos'), async (req, res) => {
             ? { user: req.user.linkedVendedor || req.user.id } 
             : {};
         
-        const expenses = await Expense.find(query).sort({ date: -1 });
-        res.json(expenses);
+        const pagination = getPaginationParams(req);
+
+        // Sin ?page= → respuesta tradicional (array plano)
+        if (!pagination.paginated) {
+            const expenses = await Expense.find(query).sort({ date: -1 });
+            return res.json(expenses);
+        }
+
+        const [items, total, statsAgg] = await Promise.all([
+            Expense.find(query)
+                .sort({ date: -1, _id: -1 })
+                .skip(pagination.skip)
+                .limit(pagination.limit),
+            Expense.countDocuments(query),
+            pagination.page === 1
+                ? Expense.aggregate([
+                    { $match: query },
+                    {
+                        $group: {
+                            _id: null,
+                            totalAmount: { $sum: "$totalAmount" },
+                            count: { $sum: 1 }
+                        }
+                    }
+                ])
+                : Promise.resolve(null)
+        ]);
+
+        const stats = statsAgg
+            ? { totalAmount: statsAgg[0].totalAmount, count: statsAgg[0].count }
+            : null;
+
+        res.json(paginatedResponse(items, total, pagination, stats));
     } catch (error) {
         console.error("Error al obtener gastos:", error);
         res.status(500).json({ error: "Error al obtener gastos" });
@@ -209,6 +241,21 @@ router.get("/total", auth, checkPermission('verGastos'), async (req, res) => {
     } catch (error) {
         console.error("Error al calcular total:", error);
         res.status(500).json({ error: "Error al calcular total de gastos" });
+    }
+});
+
+// Obtener un gasto por ID (para editar sin recargar la lista completa)
+// Debe ir después de las rutas estáticas (/total, /by-date/...) para no sombrearlas
+router.get("/:id", auth, checkPermission('verGastos'), async (req, res) => {
+    try {
+        const expense = await findExpenseWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
+        if (!expense) {
+            return res.status(404).json({ error: "Gasto no encontrado" });
+        }
+        res.json(expense);
+    } catch (error) {
+        console.error("Error al obtener gasto:", error);
+        res.status(500).json({ error: "Error al obtener el gasto" });
     }
 });
 

@@ -222,7 +222,7 @@
       }
       
       // Si es un POST a /sales/new, verificar si el cliente es "BOT CLIENT"
-      if (url.includes('/sales/new')) {
+      if (typeof url === 'string' && url.includes('/sales/new')) {
         try {
           const parsedBody = typeof body === 'string' ? JSON.parse(body) : body;
           if (parsedBody && parsedBody.clientName === 'BOT CLIENT') {
@@ -270,10 +270,11 @@
     // Interceptar fetch para mostrar/ocultar el loader automáticamente
     const originalFetch = window.fetch;
     window.fetch = function(url, options = {}) {
-      
-      // Verificar si es una request del bot
-      if (isBotRequest(url, options.body)) {
-        // Si es del bot, no mostrar loader y llamar fetch original
+      const urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : '');
+      const isPaginated = /[?&]page=/.test(urlStr);
+
+      // Verificar si es una request del bot o una carga paginada (scroll infinito / filtros)
+      if (isPaginated || isBotRequest(url, options.body)) {
         return originalFetch.apply(this, arguments);
       }
       

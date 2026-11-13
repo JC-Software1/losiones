@@ -42,4 +42,8 @@ ExpenseSchema.pre('save', function(next) {
     next();
 });
 
+// Índices para ordenación por fecha y filtros por usuario
+ExpenseSchema.index({ user: 1, date: -1 });
+ExpenseSchema.index({ date: -1 });
+
 module.exports = mongoose.model("Expense", ExpenseSchema);

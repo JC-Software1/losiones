@@ -3,6 +3,12 @@ const auth = require("../middleware/auth");
 const { checkPermission } = require("../middleware/checkPermissions");
 const Sale = require("../models/Sale");
 const matiasApi = require("../services/matiasApi");
+const {
+    getPaginationParams,
+    paginatedResponse,
+    searchCondition,
+    dateRangeCondition
+} = require("../helpers/pagination");
 
 // Normaliza el método de pago (efectivo | transferencia)
 const normalizarMetodoPago = (m) =>
@@ -69,19 +75,245 @@ router.get("/all", auth, checkPermission('verVentas'), async (req, res) => {
 });
 
 // Obtener ventas liquidadas
+// Soporta paginación opt-in: ?page=&limit=&search=&dateFrom=&dateTo=&monthFrom=&monthTo=
 router.get("/settled", auth, checkPermission('verVentas'), async (req, res) => {
     try {
-        const query = (req.user.tipo === 1 || req.user.linkedVendedor) 
+        const baseQuery = (req.user.tipo === 1 || req.user.linkedVendedor)
             ? { user: req.user.linkedVendedor || req.user.id, settled: true }
             : { settled: true };
 
-        const sales = await Sale.find(query).sort({ settledDate: -1 });
-        res.json(sales);
+        const pagination = getPaginationParams(req);
+
+        // Sin ?page= → respuesta tradicional (array plano)
+        if (!pagination.paginated) {
+            const sales = await Sale.find(baseQuery).sort({ settledDate: -1 });
+            return res.json(sales);
+        }
+
+        const query = {
+            ...baseQuery,
+            ...searchCondition(req.query.search, ["clientName", "productName"]),
+            ...dateRangeCondition("settledDate", req.query.dateFrom, req.query.dateTo)
+        };
+
+        // Facet: página + total; en página 1 se agregan las estadísticas
+        const facet = {
+            items: [
+                { $skip: pagination.skip },
+                { $limit: pagination.limit }
+            ],
+            total: [{ $count: "count" }]
+        };
+
+        if (pagination.page === 1) {
+            facet.totals = [
+                {
+                    $group: {
+                        _id: null,
+                        count: { $sum: 1 },
+                        totalLiquidated: { $sum: "$price" },
+                        avgDaysRaw: {
+                            $avg: {
+                                // Redondeo por venta, igual que el frontend (Math.round por venta)
+                                $round: {
+                                    $divide: [
+                                        { $subtract: ["$settledDate", "$saleDate"] },
+                                        86400000
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            ];
+
+            if (req.query.monthFrom && req.query.monthTo) {
+                facet.thisMonth = [
+                    {
+                        $match: {
+                            settledDate: {
+                                $gte: new Date(req.query.monthFrom),
+                                $lt: new Date(req.query.monthTo)
+                            }
+                        }
+                    },
+                    { $group: { _id: null, total: { $sum: "$price" } } }
+                ];
+            }
+        }
+
+        const [result] = await Sale.aggregate([
+            { $match: query },
+            { $sort: { settledDate: -1, _id: -1 } },
+            { $facet: facet }
+        ]);
+
+        const items = result?.items || [];
+        const total = result?.total?.[0]?.count || 0;
+
+        let stats = null;
+        if (pagination.page === 1) {
+            const totals = result?.totals?.[0] || {};
+            const thisMonth = result?.thisMonth?.[0] || {};
+            stats = {
+                totalLiquidated: totals.totalLiquidated || 0,
+                count: totals.count || 0,
+                avgDays: Math.round(totals.avgDaysRaw || 0),
+                thisMonth: thisMonth.total || 0
+            };
+        }
+
+        res.json(paginatedResponse(items, total, pagination, stats));
     } catch (error) {
         console.error("Error al obtener ventas liquidadas:", error);
         res.status(500).json({ error: "Error al obtener ventas liquidadas" });
     }
 });
+
+// ========================================
+// ABONOS (paginados sobre payments embebidos)
+// ========================================
+
+// Obtener abonos paginados con búsqueda global y estadísticas
+// GET /sales/payments?page=1&limit=20&search=&dateFrom=&dateTo=
+router.get("/payments", auth, checkPermission('verVentas'), async (req, res) => {
+    try {
+        const baseQuery = (req.user.tipo === 1 || req.user.linkedVendedor)
+            ? { user: req.user.linkedVendedor || req.user.id }
+            : {};
+
+        const pagination = getPaginationParams(req);
+
+        // Condición sobre la venta (campos accesibles tras el $unwind)
+        const saleMatch = {
+            ...searchCondition(req.query.search, ["clientName", "productName", "clientAddress"]),
+            ...dateRangeCondition("payments.date", req.query.dateFrom, req.query.dateTo)
+        };
+
+        const pipeline = [
+            { $match: baseQuery },
+            // Total pagado de la venta (se calcula antes del unwind)
+            { $addFields: { _totalPaid: { $sum: "$payments.amount" } } },
+            { $unwind: { path: "$payments", includeArrayIndex: "_paymentIndex" } },
+            { $match: saleMatch },
+            { $sort: { "payments.date": -1, _id: -1 } }
+        ];
+
+        const facet = {
+            items: [
+                { $skip: pagination.skip },
+                { $limit: pagination.limit },
+                { $project: paymentProjection }
+            ],
+            total: [{ $count: "count" }]
+        };
+
+        if (pagination.page === 1) {
+            facet.totals = [
+                {
+                    $group: {
+                        _id: null,
+                        count: { $sum: 1 },
+                        totalAmount: { $sum: "$payments.amount" },
+                        totalEfectivo: {
+                            $sum: {
+                                $cond: [
+                                    { $ne: [{ $ifNull: ["$payments.metodoPago", "efectivo"] }, "transferencia"] },
+                                    "$payments.amount",
+                                    0
+                                ]
+                            }
+                        },
+                        totalTransferencia: {
+                            $sum: {
+                                $cond: [
+                                    { $eq: [{ $ifNull: ["$payments.metodoPago", ""] }, "transferencia"] },
+                                    "$payments.amount",
+                                    0
+                                ]
+                            }
+                        }
+                    }
+                }
+            ];
+            // Suma de anticipo de las ventas que tienen al menos un abono filtrado
+            facet.initialPayments = [
+                {
+                    $group: {
+                        _id: "$_id",
+                        advancePayment: { $first: { $ifNull: ["$advancePayment", 0] } }
+                    }
+                },
+                { $group: { _id: null, total: { $sum: "$advancePayment" } } }
+            ];
+        }
+
+        const [result] = await Sale.aggregate([
+            ...pipeline,
+            { $facet: facet }
+        ]);
+
+        const items = result?.items || [];
+        const total = result?.total?.[0]?.count || 0;
+
+        let stats = null;
+        if (pagination.page === 1) {
+            const totals = result?.totals?.[0] || {};
+            const initial = result?.initialPayments?.[0] || {};
+            const count = totals.count || 0;
+            const totalAmount = totals.totalAmount || 0;
+
+            stats = {
+                totalAmount,
+                count,
+                averageAmount: count > 0 ? Math.round(totalAmount / count) : 0,
+                totalInitialPayments: initial.total || 0,
+                totalEfectivo: totals.totalEfectivo || 0,
+                totalTransferencia: totals.totalTransferencia || 0
+            };
+        }
+
+        res.json(paginatedResponse(items, total, pagination, stats));
+    } catch (error) {
+        console.error("Error al obtener abonos:", error);
+        res.status(500).json({ error: "Error al obtener abonos" });
+    }
+});
+
+// Proyección de cada abono (mismos campos que generaba extractAllPayments)
+const paymentProjection = {
+    _id: "$payments._id",
+    amount: "$payments.amount",
+    date: "$payments.date",
+    liquidatedDay: "$payments.liquidatedDay",
+    metodoPago: "$payments.metodoPago",
+    clientName: 1,
+    clientAddress: 1,
+    productName: 1,
+    saleId: "$_id",
+    saleDate: 1,
+    totalPrice: "$price",
+    totalPaid: "$_totalPaid",
+    remainingAmount: { $max: [0, { $subtract: ["$price", "$_totalPaid"] }] },
+    progressPercentage: {
+        $cond: [
+            { $gt: ["$price", 0] },
+            { $min: [100, { $multiply: [{ $divide: ["$_totalPaid", "$price"] }, 100] }] },
+            0
+        ]
+    },
+    isCompleted: { $gte: ["$_totalPaid", "$price"] },
+    isSettled: { $ifNull: ["$settled", false] },
+    settlementDate: "$settledDate",
+    installments: { $ifNull: ["$installments", "No especificado"] },
+    isInitialPayment: {
+        $and: [
+            { $eq: ["$_paymentIndex", 0] },
+            { $gt: [{ $ifNull: ["$advancePayment", 0] }, 0] },
+            { $eq: ["$payments.amount", { $ifNull: ["$advancePayment", 0] }] }
+        ]
+    }
+};
 
 // Crear nueva venta
 // Crear nueva venta

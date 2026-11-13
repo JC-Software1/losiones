@@ -93,4 +93,8 @@ payments: {
     }
 }, { timestamps: true });
 
+// Índices para ordenación por fecha de liquidación
+DailyLiquidationSchema.index({ user: 1, liquidationDate: -1 });
+DailyLiquidationSchema.index({ liquidationDate: -1 });
+
 module.exports = mongoose.model("DailyLiquidation", DailyLiquidationSchema);

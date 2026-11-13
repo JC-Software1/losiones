@@ -4,6 +4,11 @@ const Sale = require("../models/Sale");
 const Product = require("../models/Product");
 const DailyLiquidation = require("../models/DailyLiquidation");
 const Expense = require("../models/Expense");
+const {
+    getPaginationParams,
+    paginatedResponse,
+    escapeRegex
+} = require("../helpers/pagination");
 const router = express.Router();
 
 async function getSalesForLiquidation(userId) {
@@ -165,7 +170,7 @@ router.get("/vendedor/:vendedorId/pending", auth, async (req, res) => {
     }
 });
 
-// RUTA PARA ADMINS: Historial de liquidaciones de un vendedor
+// RUTA PARA ADMINS: Historial de liquidaciones de un vendedor (con paginación opt-in)
 router.get("/vendedor/:vendedorId/history", auth, async (req, res) => {
     try {
         const { vendedorId } = req.params;
@@ -174,10 +179,20 @@ router.get("/vendedor/:vendedorId/history", auth, async (req, res) => {
             return res.status(403).json({ error: 'No tienes permisos' });
         }
 
-        const liquidations = await DailyLiquidation.find({ user: vendedorId })
-            .sort({ liquidationDate: -1 });
+        const baseQuery = { user: vendedorId };
+        const pagination = getPaginationParams(req);
 
-        res.json(liquidations);
+        if (!pagination.paginated) {
+            const liquidations = await DailyLiquidation.find(baseQuery)
+                .sort({ liquidationDate: -1 });
+            return res.json(liquidations);
+        }
+
+        const [result] = await DailyLiquidation.aggregate(
+            buildHistoryPipeline(baseQuery, req)
+        );
+
+        res.json(extractHistoryResponse(result, pagination));
     } catch (error) {
         console.error("Error al obtener historial del vendedor:", error);
         res.status(500).json({ error: "Error al obtener historial" });
@@ -688,17 +703,142 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
     }
 });
 
-// Obtener historial de liquidaciones
+// ===== Helpers de paginación para historial de liquidaciones =====
+// Expresiones de agregación que replican los cálculos del frontend
+const LIQ = {
+    totalPayments: { $ifNull: ["$payments.total", 0] },
+    initialPayments: { $ifNull: ["$payments.totalInitialPayments", 0] },
+    efectivo: { $ifNull: ["$payments.efectivo", 0] },
+    transferencia: { $ifNull: ["$payments.transferencia", 0] },
+    commission: { $ifNull: ["$payments.commissionPercentage", 0] },
+    expensesAmount: { $ifNull: ["$expenses.totalAmount", 0] }
+};
+// Ingreso real = pagos regulares menos comisión + abonos iniciales (redondeado por liquidación)
+const regularPayments = { $subtract: [LIQ.totalPayments, LIQ.initialPayments] };
+const commissionAmount = {
+    $round: [{ $multiply: [regularPayments, { $divide: [LIQ.commission, 100] }] }]
+};
+const realIncomeExpr = {
+    $round: [{ $add: [{ $subtract: [regularPayments, commissionAmount] }, LIQ.initialPayments] }]
+};
+// Efectivo: lo marcado como efectivo + el remanente sin clasificar (legacy)
+const unclassified = { $subtract: [LIQ.totalPayments, LIQ.efectivo, LIQ.transferencia] };
+const efectivoTotalExpr = {
+    $add: [LIQ.efectivo, { $cond: [{ $gt: [unclassified, 0] }, unclassified, 0] }]
+};
+
+// Construye la pipeline de /history con stats globales (sin filtros de búsqueda/fecha)
+function buildHistoryPipeline(baseQuery, req) {
+    const pagination = getPaginationParams(req);
+    const facet = {
+        items: [{ $sort: { liquidationDate: -1, _id: -1 } }],
+        total: [{ $count: "count" }]
+    };
+
+    // Filtros de búsqueda/fecha solo afectan a items y total, NO a las estadísticas
+    const filterMatch = [];
+    if (req.query.search) {
+        filterMatch.push({ notes: { $regex: escapeRegex(req.query.search), $options: "i" } });
+    }
+    if (req.query.date) {
+        // Día exacto en UTC, igual que el filtro del frontend (toISOString)
+        const start = new Date(`${req.query.date}T00:00:00.000Z`);
+        const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+        if (!isNaN(start)) {
+            filterMatch.push({ liquidationDate: { $gte: start, $lt: end } });
+        }
+    }
+    if (filterMatch.length) {
+        facet.items.unshift({ $match: { $and: filterMatch } });
+        facet.total.unshift({ $match: { $and: filterMatch } });
+    }
+
+    if (pagination.paginated) {
+        facet.items.push({ $skip: pagination.skip }, { $limit: pagination.limit });
+    }
+
+    if (!pagination.paginated || pagination.page === 1) {
+        // Estadísticas globales sobre TODAS las liquidaciones del usuario
+        facet.stats = [
+            {
+                $group: {
+                    _id: null,
+                    count: { $sum: 1 },
+                    totalExpenses: { $sum: "$totalExpenses" },
+                    totalPayments: { $sum: LIQ.totalPayments },
+                    totalInitialPayments: { $sum: LIQ.initialPayments },
+                    totalEfectivo: { $sum: efectivoTotalExpr },
+                    totalTransferencia: { $sum: LIQ.transferencia },
+                    totalCashInHand: {
+                        $sum: { $subtract: [LIQ.totalPayments, LIQ.expensesAmount] }
+                    },
+                    totalIncome: { $sum: realIncomeExpr }
+                }
+            }
+        ];
+        // Caja actual = liquidación más reciente
+        facet.currentCash = [
+            { $sort: { liquidationDate: -1, _id: -1 } },
+            { $limit: 1 },
+            { $project: { finalCash: 1 } }
+        ];
+        // Mejor día = mayor caja final (empates → la más reciente)
+        facet.bestDay = [
+            { $sort: { finalCash: -1, liquidationDate: -1, _id: -1 } },
+            { $limit: 1 },
+            { $project: { date: "$liquidationDate", finalCash: 1 } }
+        ];
+    }
+
+    return [{ $match: baseQuery }, { $facet: facet }];
+}
+
+function extractHistoryResponse(result, pagination) {
+    const items = result?.items || [];
+    const total = result?.total?.[0]?.count || 0;
+
+    let stats = null;
+    if (!pagination.paginated || pagination.page === 1) {
+        const s = result?.stats?.[0];
+        if (s && s.count > 0) {
+            stats = {
+                count: s.count,
+                currentCash: result?.currentCash?.[0]?.finalCash || 0,
+                totalIncome: s.totalIncome || 0,
+                totalExpenses: s.totalExpenses || 0,
+                totalPayments: s.totalPayments || 0,
+                totalInitialPayments: s.totalInitialPayments || 0,
+                totalEfectivo: s.totalEfectivo || 0,
+                totalTransferencia: s.totalTransferencia || 0,
+                totalCashInHand: s.totalCashInHand || 0,
+                bestDay: result?.bestDay?.[0] || null
+            };
+        }
+    }
+
+    return paginatedResponse(items, total, pagination, stats);
+}
+
+// Obtener historial de liquidaciones (con paginación opt-in ?page=)
 router.get("/history", auth, async (req, res) => {
     try {
         const query = (req.user.tipo === 2 || req.user.tipo === 3)
             ? (req.user.linkedVendedor ? { user: req.user.linkedVendedor } : {})
             : { user: req.user.id };
 
-        const liquidations = await DailyLiquidation.find(query)
-            .sort({ liquidationDate: -1 });
+        const pagination = getPaginationParams(req);
 
-        res.json(liquidations);
+        if (!pagination.paginated) {
+            const liquidations = await DailyLiquidation.find(query)
+                .sort({ liquidationDate: -1 });
+            return res.json(liquidations);
+        }
+
+        const [result] = await DailyLiquidation.aggregate(
+            buildHistoryPipeline(query, req)
+        );
+
+        res.json(extractHistoryResponse(result, pagination));
     } catch (error) {
         console.error("Error al obtener historial:", error);
         res.status(500).json({ error: "Error al obtener historial" });
