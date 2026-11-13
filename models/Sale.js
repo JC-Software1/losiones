@@ -62,7 +62,8 @@ const SaleSchema = new mongoose.Schema({
     remainingBalance: { type: Number, default: 0 },
     facturacionType: { type: String, enum: ['ninguna', 'pos', 'electronica', 'ambas'], default: 'ninguna' },
     facturacionEmail: { type: String, default: '' },
-    metodoPago: { type: String, enum: ["efectivo", "transferencia"], default: "efectivo" }
+    metodoPago: { type: String, enum: ["efectivo", "transferencia"], default: "efectivo" },
+    agenteCredicitio: { type: Boolean, default: false }
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

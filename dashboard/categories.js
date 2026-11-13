@@ -261,6 +261,11 @@ async function loadSales(query = "", filterDay = "") {
                 ? `<p><i class="fas fa-calendar-check"></i> ${freq} – ${daysText}${statusBadge}</p>`
                 : '';
 
+            // ✅ NUEVO: Badge para agente crediticio
+            const agenteBadge = sale.agenteCredicitio 
+                ? `<div style="display:inline-block; background:#9b59b6; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;">💳 CRÉDITO</div>`
+                : '';
+
             card.innerHTML = `
 
             
@@ -275,8 +280,14 @@ async function loadSales(query = "", filterDay = "") {
 <div class="sale-amount">
   <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
   <div class="progress-text">${paymentPercentage.toFixed(0)}% pagado</div>
-  <!-- ⭐ NUEVO: valor de cada cuota -->
+  ${agenteBadge}
+  <!-- ⭐ NUEVO: valor de cada cuota o info de crédito -->
 ${(() => {
+                    if (sale.agenteCredicitio) {
+                        return `<div style="margin-top:6px;font-size:13px;color:#9b59b6;font-weight:600">
+            Deuda sin cuotas definidas
+        </div>`;
+                    }
                     const installmentValue = sale.paymentPerInstallment ||
                         Math.ceil((sale.price - (sale.advancePayment || 0)) / (parseInt(sale.installments) || 1));
                     return `<div style="margin-top:6px;font-size:13px;color:#7f8c8d">
@@ -552,11 +563,30 @@ async function saveSale() {
         document.getElementById("facturacionEmail").focus();
         return;
     }
-    // ✅ REGLA: Si es a cuotas, el nombre es obligatorio
-    if (paymentType === 'cuotas' && !clientName) {
+    
+    // ✅ NUEVO: Verificar si es agente crediticio
+    const agenteCredicitio = document.getElementById('agenteCredicitio')?.value === 'si';
+    
+    // ✅ REGLA: Si es a cuotas, el nombre es obligatorio (a menos que sea agente crediticio)
+    if (paymentType === 'cuotas' && !clientName && !agenteCredicitio) {
         showNotification("⚠ El nombre del cliente es obligatorio para ventas a cuotas.", "warning");
         inputClient.focus();
         return;
+    }
+
+    // ✅ REGLA: Si es a cuotas sin agente crediticio, cuotas y plan son obligatorios
+    if (paymentType === 'cuotas' && !agenteCredicitio) {
+        if (!installments || installments.trim() === '' || installments === 'Sin cuotas') {
+            showNotification("⚠ El número de cuotas es obligatorio.", "warning");
+            document.getElementById('installments').focus();
+            return;
+        }
+        const paymentPlanSelect = document.getElementById('paymentPlanType');
+        if (!paymentPlanSelect?.value) {
+            showNotification("⚠ El plan de pago es obligatorio.", "warning");
+            paymentPlanSelect?.focus();
+            return;
+        }
     }
 
     // ✅ REGLA: Si no hay nombre, poner el nombre por defecto
@@ -567,16 +597,22 @@ async function saveSale() {
         return;
     }
 
-    // Extraer número de cuotas (permite decimales con 2 dígitos: 4,44 → 4.44)
-    const cuotasMatch = installments.match(/^\d+(?:[.,]\d{1,2})?/);
-    const numberOfInstallments = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 1;
+    // Extraer número de cuotas (permite decimales con 2 dígitos: 4,44 → 4.44) - solo si no es agente
+    let numberOfInstallments = 1;
+    if (!agenteCredicitio) {
+        const cuotasMatch = installments.match(/^\d+(?:[.,]\d{1,2})?/);
+        numberOfInstallments = cuotasMatch ? parseFloat(cuotasMatch[0].replace(',', '.')) : 1;
+    }
 
-    // ✅ CORREGIDO: Priorizar el valor manual del usuario
+    // ✅ CORREGIDO: Priorizar el valor manual del usuario (solo si no es agente)
     const manualInstallmentAmount = parseFloat(document.getElementById('installmentAmount').value);
     const remaining = price - advance;
 
     let paymentPerInstallment;
-    if (manualInstallmentAmount > 0) {
+    if (agenteCredicitio) {
+        // Si es agente crediticio, no calcular cuotas automáticamente
+        paymentPerInstallment = 0;
+    } else if (manualInstallmentAmount > 0) {
         // Si el usuario ingresó un valor manualmente, calcular cuotas CON DECIMALES
         const exactCuotas = remaining / manualInstallmentAmount;
         paymentPerInstallment = manualInstallmentAmount;
@@ -587,6 +623,7 @@ async function saveSale() {
         // Si no, calcular automáticamente
         paymentPerInstallment = numberOfInstallments <= 0 ? 0 : Math.ceil(remaining / numberOfInstallments);
     }
+    
     // ---------- Construcción del objeto limpio ----------
     const isContado = paymentType === 'contado';
 
@@ -607,21 +644,26 @@ async function saveSale() {
         saleDate,
         price,
         paymentType,
-        installments,
-        advancePayment: advance,
+        installments: agenteCredicitio ? "Crédito" : installments,
+        advancePayment: agenteCredicitio ? 0 : advance,
         clientAddress: address,
-        numberOfInstallments,        // ⭐ NUEVO
+        numberOfInstallments: agenteCredicitio ? 0 : numberOfInstallments,        // ⭐ NUEVO
         paymentPerInstallment,       // ⭐ NUEVO
-        // ✅ NUEVO: Guardar plan de pago en campos separados
-        ...(collectPaymentPlan() || {
+        agenteCredicitio,            // ✅ NUEVO CAMPO
+        // ✅ NUEVO: Guardar plan de pago en campos separados (solo si no es agente)
+        ...(agenteCredicitio ? {
+            paymentFrequency: '',
+            paymentDays: [],
+            paymentDaysText: ''
+        } : (collectPaymentPlan() || {
             paymentFrequency: 'mensual',
             paymentDays: [],
             paymentDaysText: ''
-        }),
-        paymentDays: selectedPaymentPlan.days.join(', '), // "Miércoles, Viernes"
-        // ✅ Si es contado, marcar como totalmente pagado
-        paidAmount: isContado ? price : advance,
-        remainingBalance: isContado ? 0 : (price - advance),
+        })),
+        paymentDays: agenteCredicitio ? '' : selectedPaymentPlan.days.join(', '), // "Miércoles, Viernes"
+        // ✅ Si es contado o agente crediticio (deuda completa), marcar según corresponda
+        paidAmount: isContado ? price : (agenteCredicitio ? 0 : advance),
+        remainingBalance: isContado ? 0 : (agenteCredicitio ? price : (price - advance)),
         // ✅ Productos con cantidades
         products: productsWithQty,
         facturacionType: facturacionType,
@@ -954,10 +996,11 @@ window.togglePaymentFields = function () {
         const totalPrice = parseFloat(priceInput.value) || 0;
         advancePaymentInput.value = totalPrice;
 
-        // Limpiar cuotas
+        // Limpiar cuotas y agente
         document.getElementById('installments').value = '';
         document.getElementById('installmentAmount').value = '';
         document.getElementById('paymentPlanType').value = '';
+        document.getElementById('agenteCredicitio').value = 'no';
     } else {
         // Mostrar campos de crédito
         creditFields.forEach(field => {
@@ -966,6 +1009,47 @@ window.togglePaymentFields = function () {
 
         // Limpiar pago inicial
         advancePaymentInput.value = '';
+        
+        // Verificar estado del agente crediticio
+        toggleAgenteFields();
+    }
+};
+
+// ✅ Función para manejar campos cuando es agente crediticio
+window.toggleAgenteFields = function () {
+    const agenteSelect = document.getElementById('agenteCredicitio');
+    if (!agenteSelect) return;
+    
+    const esAgente = agenteSelect.value === 'si';
+    const installmentsInput = document.getElementById('installments');
+    const paymentPlanSelect = document.getElementById('paymentPlanType');
+    const paymentDaysContainer = document.getElementById('paymentDaysContainer');
+    const installmentAmountInput = document.getElementById('installmentAmount');
+    
+    if (esAgente) {
+        // Cuando es agente crediticio: cuotas y plan NO son obligatorios
+        if (installmentsInput) {
+            installmentsInput.removeAttribute('required');
+            installmentsInput.placeholder = 'Opcional (agente crediticio)';
+        }
+        if (paymentPlanSelect) {
+            paymentPlanSelect.removeAttribute('required');
+        }
+        if (paymentDaysContainer) {
+            paymentDaysContainer.style.display = 'none';
+        }
+        if (installmentAmountInput) {
+            installmentAmountInput.placeholder = 'Opcional (agente crediticio)';
+        }
+    } else {
+        // Cuando NO es agente: restaurar comportamiento normal
+        if (installmentsInput) {
+            installmentsInput.setAttribute('required', 'required');
+            installmentsInput.placeholder = 'Ej: 12 o 4.5';
+        }
+        if (paymentPlanSelect) {
+            paymentPlanSelect.setAttribute('required', 'required');
+        }
     }
 };
 
