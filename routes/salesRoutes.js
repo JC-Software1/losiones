@@ -334,8 +334,17 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             products,  // ✅ NUEVO: array de productos con cantidades
             facturacionType, // ✅ MODO DE FACTURACION
             facturacionEmail,
-            metodoPago
+            metodoPago,
+            clientRef // 📡 ID de sincronización offline
         } = req.body;
+
+        // 📡 Idempotencia offline: si esta venta ya fue creada (reintento de sync), devolverla sin repetir
+        if (clientRef) {
+            const existing = await Sale.findOne({ clientRef, user: req.user.id });
+            if (existing) {
+                return res.json(existing);
+            }
+        }
 
         // ✅ REGLA: Nombre obligatorio solo para cuotas
         if (paymentType === 'cuotas' && !clientName) {
@@ -420,7 +429,9 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             productIds: productIdsToMarkSold,  // ✅ IDs de productos vendidos completamente
             facturacionType: facturacionType || 'ninguna',
             facturacionEmail: facturacionEmail || '',
-            metodoPago: normalizarMetodoPago(metodoPago)
+            metodoPago: normalizarMetodoPago(metodoPago),
+            agenteCredicitio: req.body.agenteCredicitio || false,
+            clientRef: clientRef || null
         });
 
         if (advancePayment > 0) {
@@ -500,12 +511,21 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             products,  // ✅ NUEVO: array de productos con cantidades
             facturacionType,
             facturacionEmail,
-            metodoPago
+            metodoPago,
+            clientRef // 📡 ID de sincronización offline
         } = req.body;
+
+        // 📡 Idempotencia offline: si esta venta ya fue creada (reintento de sync), devolverla sin repetir
+        if (clientRef) {
+            const existing = await Sale.findOne({ clientRef, user: vendedorId });
+            if (existing) {
+                return res.json(existing);
+            }
+        }
 
         // ✅ REGLA: Nombre obligatorio solo para cuotas
         if (paymentType === 'cuotas' && !clientName) {
-            return res.status(400).json({ error: "El nombre del cliente es obligatorio para ventas a cuotas" });
+            return res.status(400).json({ error: 'El nombre del cliente es obligatorio para ventas a cuotas' });
         }
 
         const finalClientName = clientName || `venta de ${productName}`;
@@ -577,7 +597,9 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             productIds: productIdsToMarkSold,  // ✅ IDs de productos vendidos completamente
             facturacionType: facturacionType || 'ninguna',
             facturacionEmail: facturacionEmail || '',
-            metodoPago: normalizarMetodoPago(metodoPago)
+            metodoPago: normalizarMetodoPago(metodoPago),
+            agenteCredicitio: req.body.agenteCredicitio || false,
+            clientRef: clientRef || null
         });
 
         if (advancePayment > 0) {

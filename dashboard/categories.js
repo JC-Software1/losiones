@@ -2,6 +2,16 @@
 import { apiFetch } from "../utils/api.js";
 import { getToken } from "../utils/auth.js";
 import { generatePOS } from "../utils/invoiceGenerator.js";
+import {
+    addOfflineSale,
+    removeOfflineSale,
+    getLocalSalesForDisplay,
+    isNetworkError,
+    newClientRef,
+    applyOfflineStock,
+    fetchWithCache,
+    initOffline
+} from "../utils/offline.js";
 import "../keepAlive.js";
 
 /* ---------- referencias DOM (sin cambios) ---------- */
@@ -174,10 +184,18 @@ async function loadSales(query = "", filterDay = "") {
             console.log('🔍 Modo admin activado - Buscando ventas del vendedor:', vendedorIdAdmin);
         }
 
-        const sales = await apiFetch(endpoint, 'GET', null, token);
-        console.log('📊 Ventas obtenidas:', sales.length);
+        // 📡 Con fallback a caché si no hay red
+        const { data: serverSales, offline: salesOffline } = await fetchWithCache(endpoint, 'sales', token);
+        // Ventas locales pendientes de sincronizar (van primero en la lista)
+        const localSales = getLocalSalesForDisplay();
+        const sales = [...localSales, ...serverSales];
+        console.log('📊 Ventas obtenidas:', sales.length, salesOffline ? '(offline: usando caché local)' : '');
 
         list.innerHTML = '';
+
+        const offlineBanner = salesOffline
+            ? `<div style="background:#fff3cd;color:#856404;padding:10px 14px;border-radius:8px;border-left:4px solid #ffc107;font-size:13px;margin-bottom:10px;"><i class="fas fa-wifi"></i> <strong>Sin conexión:</strong> mostrando datos locales. Las ventas nuevas se sincronizarán automáticamente al volver la conexión.</div>`
+            : '';
 
         const filteredSales = sales.filter(sale => {
             // Excluir liquidadas
@@ -215,8 +233,12 @@ async function loadSales(query = "", filterDay = "") {
             const message = filterDay
                 ? `<div class="empty-state"><i class="fas fa-calendar-times"></i><h3>No hay préstamos para el día ${filterDay}</h3><p>No se encontraron ventas con pagos programados o atrasados para este día</p></div>`
                 : `<div class="empty-state"><i class="fas fa-inbox"></i><h3>No se encontraron ventas activas</h3><p>${adminMode === 'true' ? 'Este vendedor no tiene ventas activas' : 'No tienes ventas activas. Las ventas liquidadas se encuentran en la sección "Liquidados"'}</p></div>`;
-            list.innerHTML = message;
+            list.innerHTML = offlineBanner + message;
             return;
+        }
+
+        if (salesOffline) {
+            list.insertAdjacentHTML('afterbegin', offlineBanner);
         }
 
         filteredSales.forEach(sale => {
@@ -266,6 +288,11 @@ async function loadSales(query = "", filterDay = "") {
                 ? `<div style="display:inline-block; background:#9b59b6; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;">💳 CRÉDITO</div>`
                 : '';
 
+            // 📡 Badge para ventas locales (offline, pendientes de sincronizar)
+            const localBadge = sale._local
+                ? `<div style="display:inline-block; background:${sale._syncStatus === 'error' ? '#e74c3c' : '#e67e22'}; color:white; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;" title="${sale._syncError ? String(sale._syncError).replace(/"/g, '&quot;') : 'Guardada localmente · pendiente de sincronizar'}">${sale._syncStatus === 'error' ? '⚠️ ERROR SYNC' : '📥 LOCAL'}</div>`
+                : '';
+
             card.innerHTML = `
 
             
@@ -281,6 +308,7 @@ async function loadSales(query = "", filterDay = "") {
   <div class="debt-amount">$${remainingDebt.toLocaleString('es-CO')}</div>
   <div class="progress-text">${paymentPercentage.toFixed(0)}% pagado</div>
   ${agenteBadge}
+  ${localBadge}
   <!-- ⭐ NUEVO: valor de cada cuota o info de crédito -->
 ${(() => {
                     if (sale.agenteCredicitio) {
@@ -308,9 +336,25 @@ ${(() => {
             `;
 
             card.querySelector('.btn-info').onclick = () => viewSaleDetails(sale);
-            card.querySelector('.btn-edit').onclick = () => editSale(sale);
-            card.querySelector('.btn-pay').onclick = () => openPaymentModal(sale._id);
-            card.querySelector('.btn-delete').onclick = () => deleteSale(sale._id);
+
+            if (sale._local) {
+                // 📡 Venta local (offline): acciones limitadas hasta que se sincronice
+                const localId = String(sale._id).replace('local_', '');
+                card.querySelector('.btn-edit').onclick = () =>
+                    showNotification('⏳ Venta local: aún no sincronizada. Podrás editarla cuando vuelva la conexión.', 'warning');
+                card.querySelector('.btn-pay').onclick = () =>
+                    showNotification('⏳ Venta local: podrás abonar cuando se sincronice con el servidor.', 'warning');
+                card.querySelector('.btn-delete').onclick = async () => {
+                    if (!await showConfirm('¿Eliminar esta venta local (aún no sincronizada)?')) return;
+                    removeOfflineSale(localId);
+                    showNotification('Venta local eliminada.', 'success');
+                    await loadSales(query, filterDay);
+                };
+            } else {
+                card.querySelector('.btn-edit').onclick = () => editSale(sale);
+                card.querySelector('.btn-pay').onclick = () => openPaymentModal(sale._id);
+                card.querySelector('.btn-delete').onclick = () => deleteSale(sale._id);
+            }
 
             list.appendChild(card);
         });
@@ -504,7 +548,8 @@ async function editSale(sale) {
 async function loadProductsForSelect() {
     try {
         const token = getToken();
-        const products = await apiFetch("/products", "GET", null, token);
+        const { data } = await fetchWithCache("/products", "products", token);
+        const products = applyOfflineStock(data); // 📡 descuenta ventas locales aún no sincronizadas
         const select = document.getElementById("productName");
 
         select.innerHTML = '<option value="">Selecciona un producto</option>';
@@ -671,11 +716,16 @@ async function saveSale() {
         metodoPago: (document.getElementById('metodoPago')?.value || 'efectivo')
     };
 
+    // 📡 clientRef para sincronización offline idempotente (evita duplicados)
+    saleData.clientRef = newClientRef();
+
     // ---------- Log para depurar ----------
     console.log("📤 JSON final enviado:", JSON.stringify(saleData, null, 2));
 
     // ---------- Copia para el recibo ----------
     const receiptData = { ...saleData, clientName: finalClientName, products: [...selectedProducts] };
+
+    let endpoint = '/sales/new';
 
     try {
         const token = getToken();
@@ -683,46 +733,67 @@ async function saveSale() {
         /* 🔥 NUEVO: elegir endpoint según modo admin 🔥 */
         const adminMode = sessionStorage.getItem('adminMode') === 'true';
         const vendedorId = sessionStorage.getItem('vendedorId');
-        let endpoint = '/sales/new';
         if (adminMode && vendedorId) {
             endpoint = `/sales/vendedor/${vendedorId}/new`; // crea COMO ese vendedor
+        }
+
+        // 📡 Sin conexión: guardar directo en la cola local
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            const offlineErr = new Error('Sin conexión');
+            offlineErr.offline = true;
+            throw offlineErr;
         }
 
         await apiFetch(endpoint, 'POST', saleData, token);
         showNotification('Venta guardada correctamente.', 'success');
 
-        // Limpiar todo
-        form.reset();
-        const metodoPagoSelect = document.getElementById('metodoPago');
-        if (metodoPagoSelect) {
-            metodoPagoSelect.value = 'efectivo';
-            metodoPagoSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        inputDate.value = new Date().toISOString().split('T')[0];
-        selectedProducts = [];
-        renderSelectedProducts();
-        updateTotalPrice();
-
-        // ✅ NUEVO: Limpiar selección de días
-        selectedPaymentPlan = { type: '', days: [] };
-        paymentPlanType.value = '';
-        paymentDaysContainer.style.display = 'none';
-        updateSelectedDaysDisplay();
-
-        // Recargar y mostrar recibo
-        await loadSales();
-        await loadProductsForDropdown();
-
-        try {
-            showReceiptModal(receiptData);
-        } catch (err) {
-            console.error('Error al mostrar receipt:', err);
-            showNotification('Venta guardada, pero hubo un error al generar el recibo.', 'warning');
-        }
+        await finalizeSaleSaved(receiptData, false);
 
     } catch (error) {
-        console.error('Error al guardar la venta:', error.message);
-        showNotification('No se pudo guardar la venta: ' + error.message, 'error');
+        if (error.offline || isNetworkError(error)) {
+            // 📡 Guardar localmente → se sincronizará sola al volver la conexión
+            addOfflineSale(saleData, endpoint);
+            showNotification('📴 Venta guardada localmente (sin conexión). Se sincronizará automáticamente.', 'success');
+            await finalizeSaleSaved(receiptData, true);
+        } else {
+            console.error('Error al guardar la venta:', error.message);
+            showNotification('No se pudo guardar la venta: ' + error.message, 'error');
+        }
+    }
+}
+
+/* ---------- limpiar formulario + recargar (compartido online/offline) ---------- */
+async function finalizeSaleSaved(receiptData, isLocal) {
+    // Limpiar todo
+    form.reset();
+    const metodoPagoSelect = document.getElementById('metodoPago');
+    if (metodoPagoSelect) {
+        metodoPagoSelect.value = 'efectivo';
+        metodoPagoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    inputDate.value = new Date().toISOString().split('T')[0];
+    selectedProducts = [];
+    renderSelectedProducts();
+    updateTotalPrice();
+
+    // ✅ NUEVO: Limpiar selección de días
+    selectedPaymentPlan = { type: '', days: [] };
+    paymentPlanType.value = '';
+    paymentDaysContainer.style.display = 'none';
+    updateSelectedDaysDisplay();
+
+    // Recargar listas y mostrar recibo
+    await loadSales();
+    await loadProductsForDropdown();
+    await loadProductsForSelect();
+
+    try {
+        showReceiptModal(receiptData);
+    } catch (err) {
+        console.error('Error al mostrar receipt:', err);
+        showNotification(isLocal
+            ? 'Venta guardada localmente, pero hubo un error al generar el recibo.'
+            : 'Venta guardada, pero hubo un error al generar el recibo.', 'warning');
     }
 }
 
@@ -1101,6 +1172,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     loadProductsForDropdown();
 
+    // 📡 Inicializar modo offline: badge de estado + sync automático al volver la conexión
+    initOffline({
+        onSynced: async () => {
+            await loadSales(searchInput.value.trim(), dayFilterInput ? dayFilterInput.value : '');
+            await loadProductsForDropdown();
+            await loadProductsForSelect();
+        }
+    });
+
     // ✅ Asegurar que el formulario carga con el estado correcto (Contado por defecto)
     if (typeof window.togglePaymentFields === 'function') {
         window.togglePaymentFields();
@@ -1159,7 +1239,8 @@ async function loadProductsForDropdown() {
             endpoint = `/products/vendedor/${vendedorId}`; // Solo productos de ese vendedor
         }
 
-        const products = await apiFetch(endpoint, "GET", null, token);
+        const { data } = await fetchWithCache(endpoint, "products", token);
+        const products = applyOfflineStock(data); // 📡 descuenta ventas locales aún no sincronizadas
         const panel = document.getElementById("productDropdownPanel");
         const searchInput = document.getElementById("productSearchInput");
         const listContainer = document.getElementById("productDropdownList");

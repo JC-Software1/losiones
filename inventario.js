@@ -1,4 +1,5 @@
 import { apiFetch } from "./utils/api.js";
+import { applyOfflineStock, fetchWithCache } from "./utils/offline.js";
 import { getToken } from "./utils/auth.js";
 import "./authCheck.js";
 
@@ -76,7 +77,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function loadProducts() {
     try {
         const token = getToken();
-        const products = await apiFetch("/products", "GET", null, token);
+        const { data } = await fetchWithCache("/products", "products", token);
+        const products = applyOfflineStock(data); // 📡 descuenta ventas locales aún no sincronizadas
 
         // ✅ El usuario pide que si un producto no tiene stock, no aparezca en inventario
         // ✅ Ordenar alfabéticamente por nombre

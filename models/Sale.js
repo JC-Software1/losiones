@@ -63,7 +63,9 @@ const SaleSchema = new mongoose.Schema({
     facturacionType: { type: String, enum: ['ninguna', 'pos', 'electronica', 'ambas'], default: 'ninguna' },
     facturacionEmail: { type: String, default: '' },
     metodoPago: { type: String, enum: ["efectivo", "transferencia"], default: "efectivo" },
-    agenteCredicitio: { type: Boolean, default: false }
+    agenteCredicitio: { type: Boolean, default: false },
+    // ID generado por el cliente para sincronización offline (evita duplicados)
+    clientRef: { type: String, default: null }
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
@@ -81,5 +83,10 @@ SaleSchema.virtual('totalPaid').get(function() {
 SaleSchema.index({ user: 1, settled: 1, settledDate: -1 });
 SaleSchema.index({ settled: 1, settledDate: -1 });
 SaleSchema.index({ saleDate: -1 });
+// Idempotencia offline: índice único parcial solo para docs con clientRef string
+SaleSchema.index(
+    { clientRef: 1 },
+    { unique: true, partialFilterExpression: { clientRef: { $type: "string" } } }
+);
 
 module.exports = mongoose.model("Sale", SaleSchema);

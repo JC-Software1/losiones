@@ -2,6 +2,7 @@ import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
 import { setupInfiniteScroll } from "./utils/infiniteScroll.js";
 import { initJCIA } from "./utils/jc-ia.js";
+import { applyOfflineStock, cacheProducts, getCachedProducts, isNetworkError } from "./utils/offline.js";
 
 // DOM elements
 const form = document.getElementById("productForm");
@@ -201,8 +202,20 @@ async function loadProducts(reset = true) {
         let url = `${baseUrl}?page=${currentPage}&limit=20`;
         if (search) url += `&search=${encodeURIComponent(search)}`;
 
-        const res = await apiFetch(url, "GET", null, token);
-        const items = res.items || [];
+        let res;
+        try {
+            res = await apiFetch(url, "GET", null, token);
+            // 📡 Guardar en caché para uso offline (merge por _id entre páginas)
+            cacheProducts(res.items || []);
+        } catch (err) {
+            if (!isNetworkError(err)) throw err;
+            // 📡 Sin conexión: usar caché local acumulada
+            console.warn("📡 Sin conexión: mostrando productos en caché");
+            res = { items: getCachedProducts(), hasMore: false };
+        }
+
+        // 📡 Descuenta ventas locales aún no sincronizadas del stock mostrado
+        const items = applyOfflineStock(res.items || []);
         hasMoreData = res.hasMore;
 
         if (reset) {
