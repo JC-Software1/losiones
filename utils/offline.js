@@ -9,6 +9,8 @@ import { apiFetch } from "./api.js";
 import { getToken } from "./auth.js";
 
 const PENDING_KEY = "offline_pending_sales";
+const PENDING_PRODUCTS_KEY = "offline_pending_products";
+const PRODUCT_ID_MAP_KEY = "offline_product_id_map";
 const STOCK_KEY = "offline_stock_adjustments";
 const SALES_CACHE_KEY = "offline_sales_cache";
 const PRODUCTS_CACHE_KEY = "offline_products_cache";
@@ -126,7 +128,124 @@ export function retryFailedSales() {
         i.status === "error" ? { ...i, status: "pending", error: null } : i
     );
     setPending(pending);
+    // También reintentar productos locales con error
+    setPendingProducts(getPendingProductsRaw().map(i =>
+        i.status === "error" ? { ...i, status: "pending", error: null } : i
+    ));
     return syncPendingSales();
+}
+
+/* ---------- cola de productos locales (producto rápido offline) ---------- */
+function getPendingProductsRaw() { return readJSON(PENDING_PRODUCTS_KEY, []); }
+
+function setPendingProducts(list) {
+    writeJSON(PENDING_PRODUCTS_KEY, list);
+    updateBadge();
+}
+
+export function getPendingProducts() { return getPendingProductsRaw(); }
+
+export function getPendingProductsCount() { return getPendingProductsRaw().length; }
+
+/** ¿Hay ventas O productos locales esperando sincronizar? */
+export function hasPendingItems() {
+    return getPending().length > 0 || getPendingProductsRaw().length > 0;
+}
+
+/**
+ * Guarda un producto creado sin conexión.
+ * @returns objeto producto con _id local (localp_...) listo para seleccionar en la venta
+ */
+export function addOfflineProduct(productData, endpoint) {
+    const localId = `localp_${newClientRef()}`;
+    const item = {
+        localId,
+        endpoint: endpoint || "/products/new",
+        productData: { ...productData },
+        status: "pending",
+        error: null,
+        createdAt: new Date().toISOString()
+    };
+    const list = getPendingProductsRaw();
+    list.push(item);
+    setPendingProducts(list);
+    return { ...productData, _id: localId, _localProduct: true };
+}
+
+export function removeOfflineProduct(localId) {
+    const list = getPendingProductsRaw();
+    const next = list.filter(i => i.localId !== localId);
+    if (next.length === list.length) return false;
+    setPendingProducts(next);
+    return true;
+}
+
+function getProductIdMap() { return readJSON(PRODUCT_ID_MAP_KEY, {}); }
+
+function markProductError(localId, message) {
+    setPendingProducts(getPendingProductsRaw().map(i =>
+        i.localId === localId ? { ...i, status: "error", error: message } : i
+    ));
+}
+
+function isLocalProductId(id) {
+    return String(id || "").startsWith("localp_");
+}
+
+/** Reemplaza los IDs locales de productos por sus IDs reales (tras sincronizar) */
+function resolveSaleProductIds(saleData) {
+    const map = getProductIdMap();
+    if (!saleData || !Array.isArray(saleData.products)) return saleData;
+    let changed = false;
+    const products = saleData.products.map(p => {
+        const real = map[p.productId];
+        if (real) {
+            changed = true;
+            return { ...p, productId: real };
+        }
+        return p;
+    });
+    return changed ? { ...saleData, products } : saleData;
+}
+
+function saleHasUnresolvedLocalProducts(saleData) {
+    const map = getProductIdMap();
+    return (saleData && saleData.products || []).some(p =>
+        isLocalProductId(p.productId) && !map[p.productId]
+    );
+}
+
+/**
+ * Sincroniza la cola de productos locales (antes que las ventas,
+ * para poder resolver los IDs de producto de cada venta).
+ */
+async function syncPendingProducts(token) {
+    const queue = getPendingProductsRaw().filter(i => i.status === "pending");
+    let synced = 0;
+    let failed = 0;
+    let networkLost = false;
+    const map = getProductIdMap();
+
+    for (const item of queue) {
+        try {
+            const created = await apiFetch(item.endpoint, "POST", item.productData, token);
+            if (created && created._id) {
+                map[item.localId] = created._id;
+                writeJSON(PRODUCT_ID_MAP_KEY, map);
+            }
+            setPendingProducts(getPendingProductsRaw().filter(i => i.localId !== item.localId));
+            synced++;
+        } catch (err) {
+            if (isNetworkError(err)) {
+                networkLost = true;
+                break;
+            }
+            markProductError(item.localId, String((err && err.message) || err));
+            failed++;
+        }
+    }
+
+    return { synced, failed, networkLost };
 }
 
 /* ---------- ajustes de stock locales ---------- */
@@ -210,14 +329,17 @@ export function getLocalSalesForDisplay() {
 
 /* ---------- sincronización ---------- */
 export async function syncPendingSales() {
-    if (_isSyncing) {
-        return { synced: 0, failed: 0, remaining: getPendingCount(), started: false };
-    }
+    const idleResult = {
+        synced: 0, failed: 0, productsSynced: 0, productsFailed: 0,
+        remaining: getPendingCount(), started: false
+    };
+    if (_isSyncing) return idleResult;
 
     const queue = getPending().filter(i => i.status === "pending");
+    const hasPendingProducts = getPendingProductsRaw().some(i => i.status === "pending");
     const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-    if (!queue.length || offline) {
-        return { synced: 0, failed: 0, remaining: getPendingCount(), started: false };
+    if ((!queue.length && !hasPendingProducts) || offline) {
+        return idleResult;
     }
 
     _isSyncing = true;
@@ -227,40 +349,59 @@ export async function syncPendingSales() {
     let failed = 0;
     const token = getToken();
 
-    for (const item of queue) {
-        try {
-            await apiFetch(item.endpoint, "POST", item.saleData, token);
-            removePendingItem(item.localId);
-            synced++;
-            if (typeof document !== "undefined") {
-                document.dispatchEvent(new CustomEvent("offline-sync-progress", {
-                    detail: { synced, total: queue.length }
-                }));
+    // 1️⃣ Productos locales PRIMERO (para poder resolver sus IDs en las ventas)
+    const prodResult = await syncPendingProducts(token);
+    let productsSynced = prodResult.synced;
+    let productsFailed = prodResult.failed;
+
+    // 2️⃣ Ventas locales
+    if (!prodResult.networkLost) {
+        for (const item of queue) {
+            try {
+                // Si algún producto de la venta sigue local (falló su creación), marcar error claro
+                if (saleHasUnresolvedLocalProducts(item.saleData)) {
+                    markPendingError(item.localId, "Producto local pendiente de sincronizar");
+                    failed++;
+                    continue;
+                }
+                const payload = resolveSaleProductIds(item.saleData);
+                await apiFetch(item.endpoint, "POST", payload, token);
+                removePendingItem(item.localId);
+                synced++;
+                if (typeof document !== "undefined") {
+                    document.dispatchEvent(new CustomEvent("offline-sync-progress", {
+                        detail: { synced, total: queue.length }
+                    }));
+                }
+            } catch (err) {
+                if (isNetworkError(err)) break; // se perdió la red: continuar con los que quedan en la próxima
+                markPendingError(item.localId, String((err && err.message) || err));
+                failed++;
             }
-        } catch (err) {
-            if (isNetworkError(err)) break; // se perdió la red: continuar con los que quedan en la próxima
-            markPendingError(item.localId, String((err && err.message) || err));
-            failed++;
         }
     }
 
     _isSyncing = false;
     const remaining = getPendingCount();
+    const productsRemaining = getPendingProductsRaw().length;
 
     // Si ya no queda NADA pendiente, el servidor es la fuente de verdad del stock
-    if (remaining === 0) {
+    if (remaining === 0 && productsRemaining === 0) {
         writeJSON(STOCK_KEY, {});
     }
 
     updateBadge();
 
-    const detail = { synced, failed, remaining };
+    const detail = { synced, failed, productsSynced, productsFailed, remaining };
     if (typeof document !== "undefined") {
         document.dispatchEvent(new CustomEvent("offline-sync-complete", { detail }));
     }
 
+    if (productsSynced > 0) notify(`✅ ${productsSynced} producto(s) rápido(s) creado(s) en el servidor`, "success");
     if (synced > 0) notify(`✅ ${synced} venta(s) sincronizada(s) con el servidor`, "success");
-    if (failed > 0) notify(`⚠️ ${failed} venta(s) con error al sincronizar. Toca el aviso para reintentar.`, "warning");
+    if (failed > 0 || productsFailed > 0) {
+        notify(`⚠️ ${failed + productsFailed} elemento(s) con error al sincronizar. Toca el aviso para reintentar.`, "warning");
+    }
 
     return { ...detail, started: true };
 }
@@ -282,11 +423,12 @@ function ensureBadge() {
             user-select: none; font-family: inherit;
         `;
         el.addEventListener("click", async () => {
-            const pending = getPending();
-            const hasErrors = pending.some(i => i.status === "error");
+            const all = [...getPending(), ...getPendingProductsRaw()];
+            const hasErrors = all.some(i => i.status === "error");
+            const hasWaiting = all.some(i => i.status === "pending");
             if (hasErrors) {
                 await retryFailedSales();
-            } else if (pending.length && typeof navigator !== "undefined" && navigator.onLine !== false) {
+            } else if (hasWaiting && typeof navigator !== "undefined" && navigator.onLine !== false) {
                 await syncPendingSales();
             }
         });
@@ -301,8 +443,10 @@ export function updateBadge() {
     if (!el) return;
 
     const pending = getPending();
-    const errors = pending.filter(i => i.status === "error").length;
-    const waiting = pending.filter(i => i.status === "pending").length;
+    const pendingProds = getPendingProductsRaw();
+    const errors = [...pending, ...pendingProds].filter(i => i.status === "error").length;
+    const waiting = [...pending, ...pendingProds].filter(i => i.status === "pending").length;
+    const total = errors + waiting;
     const offline = typeof navigator !== "undefined" && navigator.onLine === false;
 
     if (_isSyncing) {
@@ -310,13 +454,13 @@ export function updateBadge() {
         el.style.background = "#3498db";
         el.style.color = "#fff";
         el.style.cursor = "default";
-        el.innerHTML = `<span>🔄</span> Sincronizando ventas...`;
-    } else if (offline && pending.length) {
+        el.innerHTML = `<span>🔄</span> Sincronizando...`;
+    } else if (offline && total > 0) {
         el.style.display = "flex";
         el.style.background = "#e67e22";
         el.style.color = "#fff";
         el.style.cursor = "default";
-        el.innerHTML = `<span>📡</span> Sin conexión · ${pending.length} venta(s) local(es)`;
+        el.innerHTML = `<span>📡</span> Sin conexión · ${total} local(es)`;
     } else if (errors > 0) {
         el.style.display = "flex";
         el.style.background = "#e74c3c";
@@ -328,7 +472,7 @@ export function updateBadge() {
         el.style.background = "#f39c12";
         el.style.color = "#fff";
         el.style.cursor = "pointer";
-        el.innerHTML = `<span>⏳</span> ${waiting} venta(s) por sincronizar`;
+        el.innerHTML = `<span>⏳</span> ${waiting} por sincronizar`;
     } else {
         el.style.display = "none";
     }
@@ -340,32 +484,40 @@ export function initOffline({ onSynced } = {}) {
     if (_bound || typeof window === "undefined") return;
     _bound = true;
 
-    window.addEventListener("online", () => {
-        updateBadge();
-        notify("🌐 Conexión restaurada. Sincronizando ventas guardadas...", "info");
+    const runSync = () => {
         syncPendingSales()
             .then(result => {
-                if (result.synced > 0 && typeof onSynced === "function") onSynced(result);
+                if ((result.synced > 0 || result.productsSynced > 0) && typeof onSynced === "function") {
+                    onSynced(result);
+                }
             })
-            .catch(() => { /* se reintentará en el próximo online */ });
+            .catch(() => { /* se reintentará */ });
+    };
+
+    window.addEventListener("online", () => {
+        updateBadge();
+        notify("🌐 Conexión restaurada. Sincronizando lo guardado localmente...", "info");
+        runSync();
     });
 
     window.addEventListener("offline", () => {
         updateBadge();
-        notify("📡 Sin conexión. Las ventas se guardarán localmente.", "warning");
+        notify("📡 Sin conexión. Las ventas y productos se guardarán localmente.", "warning");
     });
 
     // Al cargar la página: si hay pendientes y hay red, sincronizar
-    if (getPendingCount() > 0) {
+    if (hasPendingItems()) {
         const online = typeof navigator === "undefined" || navigator.onLine !== false;
         if (online) {
-            setTimeout(() => {
-                syncPendingSales()
-                    .then(result => {
-                        if (result.synced > 0 && typeof onSynced === "function") onSynced(result);
-                    })
-                    .catch(() => { /* noop */ });
-            }, 1500);
+            setTimeout(runSync, 1500);
         }
     }
+
+    // Red de seguridad: reintentar mientras haya pendientes (cubre
+    // eventos "online" perdidos, suspensión del equipo, etc.)
+    setInterval(() => {
+        if (hasPendingItems() && typeof navigator !== "undefined" && navigator.onLine !== false && !_isSyncing) {
+            runSync();
+        }
+    }, 15000);
 }

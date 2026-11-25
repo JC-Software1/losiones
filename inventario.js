@@ -1,5 +1,5 @@
 import { apiFetch } from "./utils/api.js";
-import { applyOfflineStock, fetchWithCache } from "./utils/offline.js";
+import { applyOfflineStock, fetchWithCache, initOffline } from "./utils/offline.js";
 import { getToken } from "./utils/auth.js";
 import "./authCheck.js";
 
@@ -75,6 +75,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         showLowStockAlert(); // Alerta real de stock
         showLowMarginAlert(); // Alerta de márgenes
         setupEventListeners();
+
+        // 📡 Refrescar el inventario al volver la conexión o tras sincronizar
+        //    (sin recargar la página). Debounce para no duplicar cargas.
+        let _refreshTimer = null;
+        const scheduleRefresh = () => {
+            clearTimeout(_refreshTimer);
+            _refreshTimer = setTimeout(() => { loadProducts().catch(() => {}); }, 300);
+        };
+        window.addEventListener('online', scheduleRefresh);
+        document.addEventListener('offline-sync-complete', (e) => {
+            const d = (e && e.detail) || {};
+            if ((d.synced || 0) > 0 || (d.productsSynced || 0) > 0) scheduleRefresh();
+        });
+
+        // 📡 Badge de pendientes + sync automático desde esta página
+        initOffline();
 
     } catch (error) {
         console.error("Error al inicializar:", error);

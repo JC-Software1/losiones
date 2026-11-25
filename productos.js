@@ -2,7 +2,7 @@ import { apiFetch } from "./utils/api.js";
 import { getToken } from "./utils/auth.js";
 import { setupInfiniteScroll } from "./utils/infiniteScroll.js";
 import { initJCIA } from "./utils/jc-ia.js";
-import { applyOfflineStock, cacheProducts, getCachedProducts, isNetworkError } from "./utils/offline.js";
+import { applyOfflineStock, cacheProducts, getCachedProducts, isNetworkError, initOffline } from "./utils/offline.js";
 
 // DOM elements
 const form = document.getElementById("productForm");
@@ -154,6 +154,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadProducts();
         showLowStockAlert(); // ✅ Mostrar alerta de stock bajo
         setupEventListeners();
+
+        // 📡 Refrescar la lista al volver la conexión o tras sincronizar
+        //    (sin recargar la página). Debounce para no duplicar cargas.
+        let _refreshTimer = null;
+        const scheduleRefresh = () => {
+            clearTimeout(_refreshTimer);
+            _refreshTimer = setTimeout(() => { loadProducts(); }, 300);
+        };
+        window.addEventListener('online', scheduleRefresh);
+        document.addEventListener('offline-sync-complete', (e) => {
+            const d = (e && e.detail) || {};
+            if ((d.synced || 0) > 0 || (d.productsSynced || 0) > 0) scheduleRefresh();
+        });
+
+        // 📡 Badge de pendientes + sync automático desde esta página
+        initOffline();
 
         // ✅ Inicializar asistente de IA por voz y texto JC-IA
         initJCIA(() => {

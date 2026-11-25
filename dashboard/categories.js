@@ -4,6 +4,7 @@ import { getToken } from "../utils/auth.js";
 import { generatePOS } from "../utils/invoiceGenerator.js";
 import {
     addOfflineSale,
+    addOfflineProduct,
     removeOfflineSale,
     getLocalSalesForDisplay,
     isNetworkError,
@@ -1152,6 +1153,21 @@ btnAddPayment.addEventListener("click", async () => {
 });
 
 // Al cargar la página
+/* ---------- refresco automático al volver la conexión (sin recargar) ---------- */
+let _refreshTimer = null;
+function refreshVentasUI() {
+    clearTimeout(_refreshTimer);
+    _refreshTimer = setTimeout(async () => {
+        try {
+            await loadSales(searchInput.value.trim(), dayFilterInput ? dayFilterInput.value : '');
+            await loadProductsForDropdown();
+            await loadProductsForSelect();
+        } catch (e) {
+            console.error('Error al refrescar la lista de ventas:', e);
+        }
+    }, 300);
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     verificarModoAdmin();
 
@@ -1172,14 +1188,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     loadProductsForDropdown();
 
-    // 📡 Inicializar modo offline: badge de estado + sync automático al volver la conexión
-    initOffline({
-        onSynced: async () => {
-            await loadSales(searchInput.value.trim(), dayFilterInput ? dayFilterInput.value : '');
-            await loadProductsForDropdown();
-            await loadProductsForSelect();
-        }
+    // 📡 Refrescar la UI automáticamente: al volver la conexión o al
+    //    terminar una sincronización (desaparece el aviso offline y las
+    //    etiquetas 📥 LOCAL sin necesidad de recargar la página)
+    window.addEventListener('online', refreshVentasUI);
+    document.addEventListener('offline-sync-complete', (e) => {
+        const d = (e && e.detail) || {};
+        if ((d.synced || 0) > 0 || (d.productsSynced || 0) > 0) refreshVentasUI();
     });
+
+    // 📡 Inicializar modo offline: badge de estado + sync automático
+    initOffline();
 
     // ✅ Asegurar que el formulario carga con el estado correcto (Contado por defecto)
     if (typeof window.togglePaymentFields === 'function') {
@@ -3035,14 +3054,21 @@ async function saveQuickProduct() {
         return;
     }
 
+    let endpoint = '/products/new';
     try {
         const token = getToken();
 
         const adminMode = sessionStorage.getItem('adminMode') === 'true';
         const vendedorId = sessionStorage.getItem('vendedorId');
-        let endpoint = '/products/new';
         if (adminMode && vendedorId) {
             endpoint = `/products/vendedor/${vendedorId}/new`;
+        }
+
+        // 📡 Sin conexión: guardar el producto en la cola local
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            const offlineErr = new Error('Sin conexión');
+            offlineErr.offline = true;
+            throw offlineErr;
         }
 
         const product = await apiFetch(endpoint, 'POST', {
@@ -3066,6 +3092,29 @@ async function saveQuickProduct() {
         loadProductsForDropdown();
     } catch (error) {
         console.error('Error al crear producto rápido:', error);
+
+        // 📡 Sin red ("Load failed"/"Failed to fetch"): guardar localmente
+        if (error.offline || isNetworkError(error)) {
+            const localProduct = addOfflineProduct({
+                name,
+                costPrice,
+                salePrice,
+                stock,
+                category: '',
+                brand: '',
+                size: ''
+            }, endpoint);
+
+            if (window.ModalAnimado) window.ModalAnimado.cerrar('quickProductModal');
+            else quickProductModal?.close?.();
+
+            showNotification(`📴 Producto "${name}" guardado localmente. Se creará en el servidor al volver la conexión.`, 'success');
+
+            // Seleccionarlo en la venta de inmediato (con su ID local)
+            selectProduct(localProduct, stock);
+            return;
+        }
+
         showNotification('No se pudo crear el producto: ' + error.message, 'error');
     }
 }
