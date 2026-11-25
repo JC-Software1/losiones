@@ -32,15 +32,24 @@ async function verificarPermisoCostos() {
         const { permisosDetallados, tipo } = response;
 
         // Admins y jefes siempre ven costos
+        let allowed;
         if (tipo === 2 || tipo === 3) {
-            return true;
+            allowed = true;
+        } else {
+            // Vendedores: verificar permiso específico
+            allowed = permisosDetallados?.verCostosYGanancias !== false;
         }
-
-        // Vendedores: verificar permiso específico
-        return permisosDetallados?.verCostosYGanancias !== false;
+        // 📡 Guardar último permiso verificado para uso offline
+        try { localStorage.setItem('permisosCostos', JSON.stringify(allowed)); } catch (e) { /* noop */ }
+        return allowed;
 
     } catch (error) {
         console.error('Error al verificar permisos de costos:', error);
+        // 📡 Sin conexión: usar el último permiso verificado (si existe)
+        try {
+            const cached = localStorage.getItem('permisosCostos');
+            if (cached !== null) return JSON.parse(cached);
+        } catch (e) { /* noop */ }
         // Por defecto, ocultar en caso de error para mayor seguridad
         return false;
     }
