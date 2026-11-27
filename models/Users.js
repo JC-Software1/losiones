@@ -71,7 +71,14 @@ const UserSchema = new mongoose.Schema({
         razonSocial: { type: String, default: '' },
         email: { type: String, default: 'jcdev.software@gmail.com' },
         direccion: { type: String, default: 'Calle Principal' },
-        municipioId: { type: String, default: '149' }
+        municipioId: { type: String, default: '149' },
+        // Configuración de Impuestos Globales y Notas
+        defaultTaxType: { type: String, enum: ['IVA', 'INC', 'NINGUNO'], default: 'NINGUNO' },
+        defaultTaxPercent: { type: Number, default: 0 },
+        ncPrefix: { type: String, default: 'NC' },
+        ncCurrentNumber: { type: Number, default: 1 },
+        ndPrefix: { type: String, default: 'ND' },
+        ndCurrentNumber: { type: Number, default: 1 }
     }
 });
 

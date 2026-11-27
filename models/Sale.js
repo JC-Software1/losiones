@@ -62,10 +62,30 @@ const SaleSchema = new mongoose.Schema({
     remainingBalance: { type: Number, default: 0 },
     facturacionType: { type: String, enum: ['ninguna', 'pos', 'electronica', 'ambas'], default: 'ninguna' },
     facturacionEmail: { type: String, default: '' },
+    clienteCcNit: { type: String, default: '' },
+    retenciones: {
+        reteFuentePercent: { type: Number, default: 0 },
+        reteIvaPercent: { type: Number, default: 0 },
+        reteIcaPercent: { type: Number, default: 0 }
+    },
     metodoPago: { type: String, enum: ["efectivo", "transferencia"], default: "efectivo" },
     agenteCredicitio: { type: Boolean, default: false },
     // ID generado por el cliente para sincronización offline (evita duplicados)
-    clientRef: { type: String, default: null }
+    clientRef: { type: String, default: null },
+    // 🏛️ Datos de Facturación Electrónica DIAN / Matias API
+    dianCufe: { type: String, default: null },
+    dianDocumentNumber: { type: String, default: null },
+    dianStatus: { type: String, default: null }, // 'ACCEPTED', 'REJECTED', etc.
+    dianIsValid: { type: Boolean, default: false },
+    dianNotes: [{
+        type: { type: String, enum: ['NC', 'ND'] },
+        number: String,
+        cude: String,
+        reason: String,
+        amount: Number,
+        date: { type: Date, default: Date.now },
+        isValid: { type: Boolean, default: false }
+    }]
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

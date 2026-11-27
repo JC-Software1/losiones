@@ -14,6 +14,7 @@ const cashMovementRoutes = require("./routes/cashMovementRoutes");   // 1) impor
 const acueductoRoutes = require("./routes/acueductoRoutes");
 const barberiaRoutes = require("./routes/barberiaRoutes");
 const iaRoutes = require("./routes/iaRoutes");
+const payrollRoutes = require("./routes/payrollRoutes");
 
 
 
@@ -52,6 +53,7 @@ app.use("/api/expenses", expenseRoutes);
 app.use("/api/acueducto", acueductoRoutes);
 app.use("/api/barberia", barberiaRoutes);
 app.use("/api/ia", iaRoutes);
+app.use("/api/payroll", payrollRoutes);
 
 
 const PORT = process.env.PORT || 5000;

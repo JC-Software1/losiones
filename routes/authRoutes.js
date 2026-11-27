@@ -997,7 +997,7 @@ router.get("/config/matias", auth, async (req, res) => {
 
 router.put("/config/matias", auth, async (req, res) => {
   try {
-    const { activo, token, prefix, resolutionNumber, environment, from, to, currentNumber, nit, dv, razonSocial, email, direccion, municipioId } = req.body;
+    const { activo, token, prefix, resolutionNumber, environment, from, to, currentNumber, nit, dv, razonSocial, email, direccion, municipioId, defaultTaxType, defaultTaxPercent, ncPrefix, ncCurrentNumber, ndPrefix, ndCurrentNumber } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
@@ -1016,7 +1016,13 @@ router.put("/config/matias", auth, async (req, res) => {
       razonSocial: razonSocial || user.matiasConfig?.razonSocial || '',
       email: email || user.matiasConfig?.email || 'jcdev.software@gmail.com',
       direccion: direccion || user.matiasConfig?.direccion || 'Calle Principal',
-      municipioId: municipioId || user.matiasConfig?.municipioId || '149'
+      municipioId: municipioId || user.matiasConfig?.municipioId || '149',
+      defaultTaxType: defaultTaxType || user.matiasConfig?.defaultTaxType || 'NINGUNO',
+      defaultTaxPercent: defaultTaxPercent !== undefined ? defaultTaxPercent : (user.matiasConfig?.defaultTaxPercent !== undefined ? user.matiasConfig.defaultTaxPercent : 0),
+      ncPrefix: ncPrefix || user.matiasConfig?.ncPrefix || 'NC',
+      ncCurrentNumber: ncCurrentNumber || user.matiasConfig?.ncCurrentNumber || 1,
+      ndPrefix: ndPrefix || user.matiasConfig?.ndPrefix || 'ND',
+      ndCurrentNumber: ndCurrentNumber || user.matiasConfig?.ndCurrentNumber || 1
     };
     
     await user.save();

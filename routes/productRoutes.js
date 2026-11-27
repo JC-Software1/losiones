@@ -3,6 +3,7 @@ const auth = require("../middleware/auth");
 const { checkPermission } = require("../middleware/checkPermissions");
 const Sale = require("../models/Sale");
 const Product = require("../models/Product");
+const User = require("../models/Users");
 const {
     getPaginationParams,
     paginatedResponse,
@@ -307,11 +308,19 @@ router.get("/last", auth, checkPermission('verProductos'), async (req, res) => {
 // Create a new product
 router.post("/new", auth, checkPermission('crearProductos'), async (req, res) => {
     try {
-        const { name, costPrice, salePrice, category, brand, size, stock, barcode } = req.body;
+        const { name, costPrice, salePrice, category, brand, size, stock, barcode, taxType, taxPercent } = req.body;
 
 if (!name || costPrice === undefined || costPrice === null || salePrice === undefined || salePrice === null) {
     return res.status(400).json({ error: "Todos los campos son obligatorios" });
 }
+
+        let resolvedTaxType = taxType;
+        let resolvedTaxPercent = taxPercent;
+        if (!resolvedTaxType) {
+            const owner = await User.findById(req.user.id).select('matiasConfig');
+            resolvedTaxType = owner?.matiasConfig?.defaultTaxType || 'NINGUNO';
+            resolvedTaxPercent = owner?.matiasConfig?.defaultTaxPercent !== undefined ? owner.matiasConfig.defaultTaxPercent : 0;
+        }
 
         const product = new Product({
             name,
@@ -322,6 +331,8 @@ if (!name || costPrice === undefined || costPrice === null || salePrice === unde
             size,
             barcode: barcode || null,
             stock: stock || 1,
+            taxType: ['IVA', 'INC', 'NINGUNO'].includes(resolvedTaxType) ? resolvedTaxType : 'NINGUNO',
+            taxPercent: resolvedTaxType === 'NINGUNO' ? 0 : (Number(resolvedTaxPercent) || 0),
             user: req.user.linkedVendedor || req.user.id
         });
 
@@ -342,11 +353,19 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
         }
 
         const { vendedorId } = req.params;
-        const { name, costPrice, salePrice, category, brand, size, stock, barcode } = req.body;
+        const { name, costPrice, salePrice, category, brand, size, stock, barcode, taxType, taxPercent } = req.body;
 
         // ✅ VALIDACIÓN CORRECTA (permite 0 en precios)
         if (!name || costPrice === undefined || costPrice === null || salePrice === undefined || salePrice === null) {
             return res.status(400).json({ error: "Todos los campos son obligatorios" });
+        }
+
+        let resolvedTaxType = taxType;
+        let resolvedTaxPercent = taxPercent;
+        if (!resolvedTaxType) {
+            const owner = await User.findById(req.user.id).select('matiasConfig');
+            resolvedTaxType = owner?.matiasConfig?.defaultTaxType || 'NINGUNO';
+            resolvedTaxPercent = owner?.matiasConfig?.defaultTaxPercent !== undefined ? owner.matiasConfig.defaultTaxPercent : 0;
         }
 
         const product = new Product({
@@ -358,6 +377,8 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
             size,
             barcode: barcode || null,
             stock: stock || 1,
+            taxType: ['IVA', 'INC', 'NINGUNO'].includes(resolvedTaxType) ? resolvedTaxType : 'NINGUNO',
+            taxPercent: resolvedTaxType === 'NINGUNO' ? 0 : (Number(resolvedTaxPercent) || 0),
             user: vendedorId  // 👈 Usar el ID del vendedor seleccionado
         });
 
@@ -369,9 +390,40 @@ router.post("/vendedor/:vendedorId/new", auth, async (req, res) => {
     }
 });
 
+// 🏛️ Aplicar IVA/Impuesto de forma global a todos los productos
+router.put("/global-tax", auth, checkPermission('editarProductos'), async (req, res) => {
+    try {
+        const { taxType, taxPercent } = req.body;
+        if (!['IVA', 'INC', 'NINGUNO'].includes(taxType)) {
+            return res.status(400).json({ error: "Tipo de impuesto inválido (IVA, INC, NINGUNO)" });
+        }
+        const pct = taxType === 'NINGUNO' ? 0 : Math.max(0, Math.min(100, Number(taxPercent) || 0));
+
+        const query = baseProductQuery(req);
+        const result = await Product.updateMany(query, {
+            $set: { taxType, taxPercent: pct }
+        });
+
+        await User.findByIdAndUpdate(req.user.id, {
+            'matiasConfig.defaultTaxType': taxType,
+            'matiasConfig.defaultTaxPercent': pct
+        });
+
+        res.json({
+            message: `Impuesto global (${taxType} ${pct}%) aplicado a ${result.modifiedCount} producto(s).`,
+            modifiedCount: result.modifiedCount,
+            taxType,
+            taxPercent: pct
+        });
+    } catch (error) {
+        console.error("Error al aplicar impuesto global:", error);
+        res.status(500).json({ error: "Error al aplicar impuesto global" });
+    }
+});
+
 // Update a product
 router.put("/:id", auth, checkPermission('editarProductos'), async (req, res) => {
-    const { name, costPrice, salePrice, category, brand, size, stock, barcode } = req.body;
+    const { name, costPrice, salePrice, category, brand, size, stock, barcode, taxType, taxPercent } = req.body;
     try {
         const product = await findProductWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
 
@@ -401,6 +453,12 @@ router.put("/:id", auth, checkPermission('editarProductos'), async (req, res) =>
         product.size = size ? size.trim() : null;
         product.barcode = barcode !== undefined ? String(barcode).trim() : product.barcode;
         product.stock = stock !== undefined ? parseInt(stock) : product.stock;
+        if (taxType && ['IVA', 'INC', 'NINGUNO'].includes(taxType)) {
+            product.taxType = taxType;
+            product.taxPercent = taxType === 'NINGUNO' ? 0 : Math.max(0, Math.min(100, Number(taxPercent) || 0));
+        } else if (taxPercent !== undefined) {
+            product.taxPercent = Math.max(0, Math.min(100, Number(taxPercent) || 0));
+        }
 
         await product.save();
         

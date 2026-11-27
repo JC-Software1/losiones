@@ -13,7 +13,10 @@ const ProductSchema = new mongoose.Schema({
     size: { type: String, default: null, trim: true },
     barcode: { type: String, default: null, trim: true }, // Nuevo campo para código de fábrica
     liquidatedDay: { type: Boolean, default: false },
-    stock: { type: Number, default: 1, min: 0 } // Nuevo campo
+    stock: { type: Number, default: 1, min: 0 }, // Nuevo campo
+    // 🏛️ Configuración de Impuestos (IVA / INC)
+    taxType: { type: String, enum: ['IVA', 'INC', 'NINGUNO'], default: 'NINGUNO' },
+    taxPercent: { type: Number, default: 0, min: 0, max: 100 }
 }, { timestamps: true });
 
 // Índices para optimizar listados, paginación alfabética y filtros

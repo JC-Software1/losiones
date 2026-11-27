@@ -334,6 +334,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             products,  // ✅ NUEVO: array de productos con cantidades
             facturacionType, // ✅ MODO DE FACTURACION
             facturacionEmail,
+            clienteCcNit,
+            retenciones,
             metodoPago,
             clientRef // 📡 ID de sincronización offline
         } = req.body;
@@ -429,6 +431,8 @@ router.post("/new", auth, checkPermission('crearVentas'), async (req, res) => {
             productIds: productIdsToMarkSold,  // ✅ IDs de productos vendidos completamente
             facturacionType: facturacionType || 'ninguna',
             facturacionEmail: facturacionEmail || '',
+            clienteCcNit: clienteCcNit || '',
+            retenciones: retenciones || undefined,
             metodoPago: normalizarMetodoPago(metodoPago),
             agenteCredicitio: req.body.agenteCredicitio || false,
             clientRef: clientRef || null
@@ -511,6 +515,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             products,  // ✅ NUEVO: array de productos con cantidades
             facturacionType,
             facturacionEmail,
+            clienteCcNit,
+            retenciones,
             metodoPago,
             clientRef // 📡 ID de sincronización offline
         } = req.body;
@@ -597,6 +603,8 @@ router.post('/vendedor/:vendedorId/new', auth, async (req, res) => {
             productIds: productIdsToMarkSold,  // ✅ IDs de productos vendidos completamente
             facturacionType: facturacionType || 'ninguna',
             facturacionEmail: facturacionEmail || '',
+            clienteCcNit: clienteCcNit || '',
+            retenciones: retenciones || undefined,
             metodoPago: normalizarMetodoPago(metodoPago),
             agenteCredicitio: req.body.agenteCredicitio || false,
             clientRef: clientRef || null
@@ -973,7 +981,11 @@ router.post("/:id/factura-electronica", auth, checkPermission('crearVentas'), as
 
         try {
             const result = await matiasApi.emitirFactura(sale, req.user.id);
-            return res.json({ message: "Factura electrónica enviada", numero: result?.numero });
+            return res.json({
+                message: "Factura electrónica enviada",
+                numero: result?.numero,
+                cufe: result?.cufe
+            });
         } catch (err) {
             console.error("Error Matias FE (reenvío):", err.message);
             return res.status(502).json({ error: err.message || "No se pudo emitir la factura electrónica" });
@@ -981,6 +993,82 @@ router.post("/:id/factura-electronica", auth, checkPermission('crearVentas'), as
     } catch (error) {
         console.error("Error al enviar factura electrónica:", error);
         res.status(500).json({ error: "Error al enviar la factura electrónica" });
+    }
+});
+
+// 🏛️ Emitir Nota Crédito Electrónica (Anular / Devolver / Ajustar hacia abajo)
+router.post("/:id/nota-credito", auth, checkPermission('editarVentas'), async (req, res) => {
+    try {
+        const { reason, discrepancyCode, amount, items } = req.body || {};
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
+        if (!sale) return res.status(404).json({ error: "Venta no encontrada" });
+
+        const result = await matiasApi.emitirNotaCredito(sale, req.user.id, {
+            reason: reason || "Devolución o anulación de venta",
+            discrepancyCode: discrepancyCode || "2",
+            amount,
+            items
+        });
+
+        res.json({
+            message: "Nota Crédito electrónica emitida",
+            numero: result.numero,
+            cude: result.cude,
+            isValid: result.isValid
+        });
+    } catch (error) {
+        console.error("Error al emitir Nota Crédito:", error.message);
+        res.status(502).json({ error: error.message || "Error al emitir Nota Crédito" });
+    }
+});
+
+// 🏛️ Emitir Nota Débito Electrónica (Cargo adicional / Interés / Ajuste hacia arriba)
+router.post("/:id/nota-debito", auth, checkPermission('editarVentas'), async (req, res) => {
+    try {
+        const { reason, discrepancyCode, amount, items } = req.body || {};
+        if (!amount && (!items || items.length === 0)) {
+            return res.status(400).json({ error: "Debe indicar el monto o los ítems de la Nota Débito" });
+        }
+
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
+        if (!sale) return res.status(404).json({ error: "Venta no encontrada" });
+
+        const result = await matiasApi.emitirNotaDebito(sale, req.user.id, {
+            reason: reason || "Cargo adicional a factura",
+            discrepancyCode: discrepancyCode || "3",
+            amount,
+            items
+        });
+
+        res.json({
+            message: "Nota Débito electrónica emitida",
+            numero: result.numero,
+            cude: result.cude,
+            isValid: result.isValid
+        });
+    } catch (error) {
+        console.error("Error al emitir Nota Débito:", error.message);
+        res.status(502).json({ error: error.message || "Error al emitir Nota Débito" });
+    }
+});
+
+// 🏛️ Consultar estado en DIAN por CUFE
+router.post("/:id/estado-dian", auth, async (req, res) => {
+    try {
+        const sale = await findSaleWithAdminPermission(req.params.id, req.user.id, req.user.tipo);
+        if (!sale) return res.status(404).json({ error: "Venta no encontrada" });
+        if (!sale.dianCufe) return res.status(400).json({ error: "Esta venta aún no tiene CUFE registrado" });
+
+        const statusData = await matiasApi.consultarEstadoDocumento(sale.dianCufe, req.user.id);
+        const isValid = statusData?.is_valid === 1 || statusData?.response?.IsValid === 'true';
+        sale.dianIsValid = isValid;
+        sale.dianStatus = statusData?.response?.StatusDescription || sale.dianStatus;
+        await sale.save();
+
+        res.json({ isValid, status: sale.dianStatus, dian: statusData });
+    } catch (error) {
+        console.error("Error consultando estado DIAN:", error.message);
+        res.status(502).json({ error: error.message || "Error al consultar estado DIAN" });
     }
 });
 
